@@ -1,0 +1,284 @@
+/* ─── Neomorphism TodoCard ─── */
+
+/* Light-mode neumorphic surface */
+.todo-card {
+  --neo-bg: #e8e8e8;
+  --neo-shadow-dark: #c5c5c5;
+  --neo-shadow-light: #ffffff;
+  --neo-inset-dark: #d1d1d1;
+  --neo-inset-light: #ffffff;
+  --neo-text: #3a3a4a;
+  --neo-text-muted: #7a7a8a;
+  --neo-accent: #3b82f6;
+  --neo-radius: 20px;
+  --neo-radius-sm: 12px;
+
+  background: var(--neo-bg);
+  border-radius: var(--neo-radius);
+  padding: 24px 28px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--sans, system-ui, 'Segoe UI', Roboto, sans-serif);
+  color: var(--neo-text);
+  box-shadow:
+    8px 8px 16px var(--neo-shadow-dark),
+    -8px -8px 16px var(--neo-shadow-light);
+  transition: box-shadow 0.3s ease, opacity 0.3s ease;
+}
+
+.todo-card:hover {
+  box-shadow:
+    10px 10px 20px var(--neo-shadow-dark),
+    -10px -10px 20px var(--neo-shadow-light);
+}
+
+.todo-card--done {
+  opacity: 0.7;
+}
+
+/* ─── Dark mode ─── */
+@media (prefers-color-scheme: dark) {
+  .todo-card {
+    --neo-bg: #1e1f26;
+    --neo-shadow-dark: #141519;
+    --neo-shadow-light: #282933;
+    --neo-inset-dark: #19191f;
+    --neo-inset-light: #232430;
+    --neo-text: #e0e0ec;
+    --neo-text-muted: #8888a0;
+  }
+}
+
+/* ─── Header ─── */
+.todo-card__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+/* Checkbox */
+.todo-card__checkbox {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  background: var(--neo-bg);
+  box-shadow:
+    inset 3px 3px 6px var(--neo-inset-dark),
+    inset -3px -3px 6px var(--neo-inset-light);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.todo-card__checkbox--checked {
+  background: var(--neo-accent);
+  box-shadow:
+    inset 2px 2px 4px rgba(0, 0, 0, 0.2),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.1);
+}
+
+.todo-card__check-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Delete button */
+.todo-card__delete-btn {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  background: var(--neo-bg);
+  box-shadow:
+    3px 3px 6px var(--neo-shadow-dark),
+    -3px -3px 6px var(--neo-shadow-light);
+  transition: box-shadow 0.2s, background 0.2s;
+}
+
+.todo-card__delete-btn:hover {
+  background: rgba(231, 76, 60, 0.15);
+  box-shadow:
+    inset 2px 2px 4px var(--neo-inset-dark),
+    inset -2px -2px 4px var(--neo-inset-light);
+}
+
+.todo-card__delete-icon {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: #e74c3c;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Name */
+.todo-card__name {
+  flex: 1;
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--neo-text);
+  line-height: 1.3;
+}
+
+.todo-card__name--done {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+/* ─── Priority ─── */
+.todo-card__priority {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.todo-card__priority-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  background: var(--neo-bg);
+  box-shadow:
+    3px 3px 6px var(--neo-shadow-dark),
+    -3px -3px 6px var(--neo-shadow-light);
+  transition: box-shadow 0.2s;
+}
+
+.todo-card__priority-btn:hover:not(:disabled) {
+  box-shadow:
+    inset 2px 2px 4px var(--neo-inset-dark),
+    inset -2px -2px 4px var(--neo-inset-light);
+}
+
+.todo-card__priority-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.todo-card__arrow-icon {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--neo-text-muted);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ─── Notes ─── */
+.todo-card__notes {
+  margin-bottom: 18px;
+}
+
+.todo-card__section-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--neo-text-muted);
+  margin-bottom: 8px;
+}
+
+.todo-card__notes-display {
+  min-height: 52px;
+  padding: 12px 16px;
+  border-radius: var(--neo-radius-sm);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--neo-text);
+  cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--neo-bg);
+  box-shadow:
+    inset 3px 3px 6px var(--neo-inset-dark),
+    inset -3px -3px 6px var(--neo-inset-light);
+  transition: box-shadow 0.2s;
+}
+
+.todo-card__notes-display:hover {
+  box-shadow:
+    inset 4px 4px 8px var(--neo-inset-dark),
+    inset -4px -4px 8px var(--neo-inset-light);
+}
+
+.todo-card__placeholder {
+  color: var(--neo-text-muted);
+  font-style: italic;
+}
+
+.todo-card__notes-input {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 16px;
+  border: 2px solid var(--neo-accent);
+  border-radius: var(--neo-radius-sm);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  font-family: inherit;
+  color: var(--neo-text);
+  resize: vertical;
+  box-sizing: border-box;
+  background: var(--neo-bg);
+  box-shadow:
+    inset 3px 3px 6px var(--neo-inset-dark),
+    inset -3px -3px 6px var(--neo-inset-light);
+  outline: none;
+}
+
+/* ─── Dates footer ─── */
+.todo-card__dates {
+  display: flex;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--neo-inset-dark);
+}
+
+.todo-card__date {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: var(--neo-radius-sm);
+  background: var(--neo-bg);
+  box-shadow:
+    inset 2px 2px 5px var(--neo-inset-dark),
+    inset -2px -2px 5px var(--neo-inset-light);
+}
+
+.todo-card__date-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--neo-text-muted);
+}
+
+.todo-card__date-value {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--neo-text);
+}

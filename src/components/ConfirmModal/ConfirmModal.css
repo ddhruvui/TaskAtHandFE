@@ -1,0 +1,108 @@
+/* ─── Neomorphism Confirm Modal ─── */
+
+.confirm-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  animation: confirm-fade-in 0.15s ease;
+}
+
+.confirm-modal {
+  --neo-bg: #e8e8e8;
+  --neo-shadow-dark: #c5c5c5;
+  --neo-shadow-light: #ffffff;
+  --neo-inset-dark: #d1d1d1;
+  --neo-inset-light: #ffffff;
+  --neo-text: #3a3a4a;
+  --neo-text-muted: #7a7a8a;
+
+  background: var(--neo-bg);
+  border-radius: 20px;
+  padding: 32px 36px;
+  min-width: 320px;
+  max-width: 420px;
+  text-align: center;
+  box-shadow:
+    8px 8px 16px var(--neo-shadow-dark),
+    -8px -8px 16px var(--neo-shadow-light);
+  animation: confirm-scale-in 0.2s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .confirm-modal {
+    --neo-bg: #1e1f26;
+    --neo-shadow-dark: #141519;
+    --neo-shadow-light: #282933;
+    --neo-inset-dark: #19191f;
+    --neo-inset-light: #232430;
+    --neo-text: #e0e0ec;
+    --neo-text-muted: #8888a0;
+  }
+}
+
+.confirm-modal__message {
+  margin: 0 0 28px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--neo-text);
+}
+
+.confirm-modal__actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.confirm-modal__btn {
+  padding: 10px 28px;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: box-shadow 0.2s;
+}
+
+.confirm-modal__btn--cancel {
+  color: var(--neo-text);
+  background: var(--neo-bg);
+  box-shadow:
+    4px 4px 8px var(--neo-shadow-dark),
+    -4px -4px 8px var(--neo-shadow-light);
+}
+
+.confirm-modal__btn--cancel:hover {
+  box-shadow:
+    inset 3px 3px 6px var(--neo-inset-dark),
+    inset -3px -3px 6px var(--neo-inset-light);
+}
+
+.confirm-modal__btn--confirm {
+  color: #fff;
+  background: #e74c3c;
+  box-shadow:
+    4px 4px 8px var(--neo-shadow-dark),
+    -4px -4px 8px var(--neo-shadow-light);
+}
+
+.confirm-modal__btn--confirm:hover {
+  background: #c0392b;
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 0, 0, 0.2),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.05);
+}
+
+@keyframes confirm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes confirm-scale-in {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

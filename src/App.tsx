@@ -1,120 +1,110 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { TodoCard } from './components/TodoCard'
+import { ConfirmModal } from './components/ConfirmModal'
+import type { Todo } from './components/TodoCard'
 import './App.css'
 
+const initialTodos: Todo[] = [
+  {
+    id: '1',
+    name: 'Design landing page',
+    notes: 'Use the new brand colours and ensure mobile responsiveness.',
+    done: false,
+    priority: 2,
+    createdAt: '2026-03-15T09:00:00Z',
+    updatedAt: '2026-03-20T14:30:00Z',
+    ecd: '2026-03-28T00:00:00Z',
+  },
+  {
+    id: '2',
+    name: 'Set up CI/CD pipeline',
+    notes: '',
+    done: true,
+    priority: 1,
+    createdAt: '2026-03-10T08:00:00Z',
+    updatedAt: '2026-03-18T11:00:00Z',
+    ecd: '2026-03-20T00:00:00Z',
+  },
+  {
+    id: '3',
+    name: 'Write unit tests for auth module',
+    notes: 'Cover login, signup, and token refresh flows.',
+    done: false,
+    priority: 3,
+    createdAt: '2026-03-19T10:00:00Z',
+    updatedAt: '2026-03-21T09:00:00Z',
+    ecd: '2026-04-01T00:00:00Z',
+  },
+]
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [todos, setTodos] = useState<Todo[]>(initialTodos)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  const todoToDelete = deleteId ? todos.find((t) => t.id === deleteId) : null
+
+  const handleToggleDone = (id: string) => {
+    setTodos((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, done: !t.done, updatedAt: new Date().toISOString() } : t,
+      ),
+    )
+  }
+
+  const handleNotesChange = (id: string, notes: string) => {
+    setTodos((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, notes, updatedAt: new Date().toISOString() } : t,
+      ),
+    )
+  }
+
+  const handleDelete = (id: string) => {
+    setDeleteId(id)
+  }
+
+  const confirmDelete = () => {
+    if (deleteId) {
+      setTodos((prev) => prev.filter((t) => t.id !== deleteId))
+      setDeleteId(null)
+    }
+  }
+
+  const handlePriorityChange = (id: string, direction: 'up' | 'down') => {
+    setTodos((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t
+        const next = direction === 'up' ? t.priority - 1 : t.priority + 1
+        if (next < 1 || next > 5) return t
+        return { ...t, priority: next, updatedAt: new Date().toISOString() }
+      }),
+    )
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app-container">
+      <h1>Task At Hand</h1>
+      <div className="todo-grid">
+        {todos.map((todo) => (
+          <TodoCard
+            key={todo.id}
+            todo={todo}
+            onToggleDone={handleToggleDone}
+            onNotesChange={handleNotesChange}
+            onPriorityChange={handlePriorityChange}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      {todoToDelete && (
+        <ConfirmModal
+          message={`Delete "${todoToDelete.name}"?`}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteId(null)}
+        />
+      )}
+    </div>
   )
 }
 
