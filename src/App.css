@@ -122,7 +122,9 @@
   cursor: pointer;
   border-radius: 4px;
   padding: 0 3px;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .folder-tab__close:hover {

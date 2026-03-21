@@ -7,25 +7,33 @@ import "./App.css";
 
 function App() {
   const [folders, setFolders] = useState<Folder[]>(initialFolders);
-  const [activeTabId, setActiveTabId] = useState<string>(initialFolders[0]?.id ?? "");
+  const [activeTabId, setActiveTabId] = useState<string>(
+    initialFolders[0]?.id ?? "",
+  );
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "folder" | "todo";
     id: string;
   } | null>(null);
 
-  const activeFolder = folders.find((f) => f.id === activeTabId) ?? folders[0] ?? null;
+  const activeFolder =
+    folders.find((f) => f.id === activeTabId) ?? folders[0] ?? null;
 
   /* ---------- helpers to map into nested folder→todos ---------- */
 
   const updateTodoInFolder = (
     folderId: string,
     todoId: string,
-    updater: (t: (typeof folders)[0]["todos"][0]) => (typeof folders)[0]["todos"][0],
+    updater: (
+      t: (typeof folders)[0]["todos"][0],
+    ) => (typeof folders)[0]["todos"][0],
   ) => {
     setFolders((prev) =>
       prev.map((f) =>
         f.id === folderId
-          ? { ...f, todos: f.todos.map((t) => (t.id === todoId ? updater(t) : t)) }
+          ? {
+              ...f,
+              todos: f.todos.map((t) => (t.id === todoId ? updater(t) : t)),
+            }
           : f,
       ),
     );

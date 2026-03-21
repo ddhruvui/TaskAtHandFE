@@ -1,7 +1,11 @@
 import type { FolderCardProps } from "./FolderCard.types";
 import "./FolderCard.css";
 
-export default function FolderCard({ folder, onOpen, onDelete }: FolderCardProps) {
+export default function FolderCard({
+  folder,
+  onOpen,
+  onDelete,
+}: FolderCardProps) {
   const totalTodos = folder.todos.length;
   const doneTodos = folder.todos.filter((t) => t.done).length;
 
