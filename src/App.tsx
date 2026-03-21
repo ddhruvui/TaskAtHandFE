@@ -1,109 +1,193 @@
 import { useState } from "react";
 import { TodoCard } from "./components/TodoCard";
 import { ConfirmModal } from "./components/ConfirmModal";
-import type { Todo } from "./components/TodoCard";
+import type { Folder } from "./components/FolderCard";
+import initialFolders from "./data/initialFolders.json";
 import "./App.css";
 
-const initialTodos: Todo[] = [
-  {
-    id: "1",
-    name: "Design landing page",
-    notes: "Use the new brand colours and ensure mobile responsiveness.",
-    done: false,
-    priority: 2,
-    createdAt: "2026-03-15T09:00:00Z",
-    updatedAt: "2026-03-20T14:30:00Z",
-    ecd: "2026-03-28T00:00:00Z",
-  },
-  {
-    id: "2",
-    name: "Set up CI/CD pipeline",
-    notes: "",
-    done: true,
-    priority: 1,
-    createdAt: "2026-03-10T08:00:00Z",
-    updatedAt: "2026-03-18T11:00:00Z",
-    ecd: "2026-03-20T00:00:00Z",
-  },
-  {
-    id: "3",
-    name: "Write unit tests for auth module",
-    notes: "Cover login, signup, and token refresh flows.",
-    done: false,
-    priority: 3,
-    createdAt: "2026-03-19T10:00:00Z",
-    updatedAt: "2026-03-21T09:00:00Z",
-    ecd: "2026-04-01T00:00:00Z",
-  },
-];
-
 function App() {
-  const [todos, setTodos] = useState<Todo[]>(initialTodos);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [folders, setFolders] = useState<Folder[]>(initialFolders);
+  const [activeTabId, setActiveTabId] = useState<string>(initialFolders[0]?.id ?? "");
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "folder" | "todo";
+    id: string;
+  } | null>(null);
 
-  const todoToDelete = deleteId ? todos.find((t) => t.id === deleteId) : null;
+  const activeFolder = folders.find((f) => f.id === activeTabId) ?? folders[0] ?? null;
 
-  const handleToggleDone = (id: string) => {
-    setTodos((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? { ...t, done: !t.done, updatedAt: new Date().toISOString() }
-          : t,
+  /* ---------- helpers to map into nested folder→todos ---------- */
+
+  const updateTodoInFolder = (
+    folderId: string,
+    todoId: string,
+    updater: (t: (typeof folders)[0]["todos"][0]) => (typeof folders)[0]["todos"][0],
+  ) => {
+    setFolders((prev) =>
+      prev.map((f) =>
+        f.id === folderId
+          ? { ...f, todos: f.todos.map((t) => (t.id === todoId ? updater(t) : t)) }
+          : f,
       ),
     );
+  };
+
+  /* ---------- todo handlers (scoped to open folder) ---------- */
+
+  const handleToggleDone = (id: string) => {
+    if (!activeFolder) return;
+    updateTodoInFolder(activeFolder.id, id, (t) => ({
+      ...t,
+      done: !t.done,
+      updatedAt: new Date().toISOString(),
+    }));
   };
 
   const handleNotesChange = (id: string, notes: string) => {
-    setTodos((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, notes, updatedAt: new Date().toISOString() } : t,
-      ),
-    );
-  };
-
-  const handleDelete = (id: string) => {
-    setDeleteId(id);
-  };
-
-  const confirmDelete = () => {
-    if (deleteId) {
-      setTodos((prev) => prev.filter((t) => t.id !== deleteId));
-      setDeleteId(null);
-    }
+    if (!activeFolder) return;
+    updateTodoInFolder(activeFolder.id, id, (t) => ({
+      ...t,
+      notes,
+      updatedAt: new Date().toISOString(),
+    }));
   };
 
   const handlePriorityChange = (id: string, direction: "up" | "down") => {
-    setTodos((prev) =>
-      prev.map((t) => {
-        if (t.id !== id) return t;
-        const next = direction === "up" ? t.priority - 1 : t.priority + 1;
-        if (next < 1 || next > 5) return t;
-        return { ...t, priority: next, updatedAt: new Date().toISOString() };
-      }),
-    );
+    if (!activeFolder) return;
+    updateTodoInFolder(activeFolder.id, id, (t) => {
+      const next = direction === "up" ? t.priority - 1 : t.priority + 1;
+      if (next < 1 || next > 5) return t;
+      return { ...t, priority: next, updatedAt: new Date().toISOString() };
+    });
   };
+
+  /* ---------- delete logic ---------- */
+
+  const handleDeleteTodo = (id: string) => {
+    setDeleteTarget({ type: "todo", id });
+  };
+
+  const handleDeleteFolder = (id: string) => {
+    setDeleteTarget({ type: "folder", id });
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === "folder") {
+      const remaining = folders.filter((f) => f.id !== deleteTarget.id);
+      setFolders(remaining);
+      if (activeTabId === deleteTarget.id) {
+        setActiveTabId(remaining[0]?.id ?? "");
+      }
+    } else if (activeFolder) {
+      setFolders((prev) =>
+        prev.map((f) =>
+          f.id === activeFolder.id
+            ? { ...f, todos: f.todos.filter((t) => t.id !== deleteTarget.id) }
+            : f,
+        ),
+      );
+    }
+
+    setDeleteTarget(null);
+  };
+
+  const deleteLabel = (() => {
+    if (!deleteTarget) return "";
+    if (deleteTarget.type === "folder") {
+      const f = folders.find((f) => f.id === deleteTarget.id);
+      return f ? `Delete folder "${f.name}" and all its tasks?` : "";
+    }
+    if (activeFolder) {
+      const t = activeFolder.todos.find((t) => t.id === deleteTarget.id);
+      return t ? `Delete "${t.name}"?` : "";
+    }
+    return "";
+  })();
+
+  /* ---------- render ---------- */
 
   return (
     <div className="app-container">
       <h1>Task At Hand</h1>
-      <div className="todo-grid">
-        {todos.map((todo) => (
-          <TodoCard
-            key={todo.id}
-            todo={todo}
-            onToggleDone={handleToggleDone}
-            onNotesChange={handleNotesChange}
-            onPriorityChange={handlePriorityChange}
-            onDelete={handleDelete}
-          />
-        ))}
-      </div>
 
-      {todoToDelete && (
+      {/* ── Folder tabs ── */}
+      {folders.length > 0 && (
+        <div className="folder-tabs">
+          {folders.map((folder) => {
+            const isActive = activeFolder?.id === folder.id;
+            return (
+              <button
+                key={folder.id}
+                className={`folder-tab ${isActive ? "folder-tab--active" : ""}`}
+                style={
+                  {
+                    "--tab-color": folder.color,
+                  } as React.CSSProperties
+                }
+                onClick={() => setActiveTabId(folder.id)}
+              >
+                <svg
+                  className="folder-tab__icon"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" />
+                </svg>
+                <span className="folder-tab__label">{folder.name}</span>
+                <span className="folder-tab__badge">
+                  {folder.todos.filter((t) => !t.done).length}
+                </span>
+                <span
+                  className="folder-tab__close"
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteFolder(folder.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.stopPropagation();
+                      handleDeleteFolder(folder.id);
+                    }
+                  }}
+                  aria-label={`Delete ${folder.name}`}
+                >
+                  &times;
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Active folder's todos ── */}
+      {activeFolder ? (
+        <div className="todo-grid">
+          {activeFolder.todos.map((todo) => (
+            <TodoCard
+              key={todo.id}
+              todo={todo}
+              onToggleDone={handleToggleDone}
+              onNotesChange={handleNotesChange}
+              onPriorityChange={handlePriorityChange}
+              onDelete={handleDeleteTodo}
+            />
+          ))}
+          {activeFolder.todos.length === 0 && (
+            <p className="empty-message">No tasks yet — add one!</p>
+          )}
+        </div>
+      ) : (
+        <p className="empty-message">No folders yet — create one!</p>
+      )}
+
+      {deleteTarget && deleteLabel && (
         <ConfirmModal
-          message={`Delete "${todoToDelete.name}"?`}
+          message={deleteLabel}
           onConfirm={confirmDelete}
-          onCancel={() => setDeleteId(null)}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
     </div>

@@ -1,0 +1,110 @@
+[
+  {
+    "id": "folder-1",
+    "name": "Birthday",
+    "color": "#f472b6",
+    "todos": [
+      {
+        "id": "1",
+        "name": "Buy birthday cake",
+        "notes": "Chocolate flavour, serves 12.",
+        "done": false,
+        "priority": 1,
+        "createdAt": "2026-03-15T09:00:00Z",
+        "updatedAt": "2026-03-20T14:30:00Z",
+        "ecd": "2026-03-28T00:00:00Z"
+      },
+      {
+        "id": "2",
+        "name": "Send invitations",
+        "notes": "Email + WhatsApp group.",
+        "done": true,
+        "priority": 2,
+        "createdAt": "2026-03-10T08:00:00Z",
+        "updatedAt": "2026-03-18T11:00:00Z",
+        "ecd": "2026-03-20T00:00:00Z"
+      }
+    ]
+  },
+  {
+    "id": "folder-2",
+    "name": "Office Work",
+    "color": "#3b82f6",
+    "todos": [
+      {
+        "id": "3",
+        "name": "Design landing page",
+        "notes": "Use the new brand colours and ensure mobile responsiveness.",
+        "done": false,
+        "priority": 2,
+        "createdAt": "2026-03-15T09:00:00Z",
+        "updatedAt": "2026-03-20T14:30:00Z",
+        "ecd": "2026-03-28T00:00:00Z"
+      },
+      {
+        "id": "4",
+        "name": "Set up CI/CD pipeline",
+        "notes": "",
+        "done": true,
+        "priority": 1,
+        "createdAt": "2026-03-10T08:00:00Z",
+        "updatedAt": "2026-03-18T11:00:00Z",
+        "ecd": "2026-03-20T00:00:00Z"
+      },
+      {
+        "id": "5",
+        "name": "Write unit tests for auth module",
+        "notes": "Cover login, signup, and token refresh flows.",
+        "done": false,
+        "priority": 3,
+        "createdAt": "2026-03-19T10:00:00Z",
+        "updatedAt": "2026-03-21T09:00:00Z",
+        "ecd": "2026-04-01T00:00:00Z"
+      }
+    ]
+  },
+  {
+    "id": "folder-3",
+    "name": "Groceries",
+    "color": "#22c55e",
+    "todos": [
+      {
+        "id": "6",
+        "name": "Buy vegetables",
+        "notes": "Tomatoes, onions, peppers, spinach.",
+        "done": false,
+        "priority": 2,
+        "createdAt": "2026-03-20T07:00:00Z",
+        "updatedAt": "2026-03-20T07:00:00Z",
+        "ecd": "2026-03-22T00:00:00Z"
+      }
+    ]
+  },
+  {
+    "id": "folder-4",
+    "name": "Fitness",
+    "color": "#f59e0b",
+    "todos": [
+      {
+        "id": "7",
+        "name": "Morning run – 5 km",
+        "notes": "",
+        "done": true,
+        "priority": 1,
+        "createdAt": "2026-03-18T05:30:00Z",
+        "updatedAt": "2026-03-21T06:00:00Z",
+        "ecd": "2026-03-21T00:00:00Z"
+      },
+      {
+        "id": "8",
+        "name": "Book gym session",
+        "notes": "Strength training, Tuesday & Thursday.",
+        "done": false,
+        "priority": 3,
+        "createdAt": "2026-03-19T09:00:00Z",
+        "updatedAt": "2026-03-19T09:00:00Z",
+        "ecd": "2026-03-25T00:00:00Z"
+      }
+    ]
+  }
+]
