@@ -13,6 +13,6 @@ export interface TodoCardProps {
   todo: Todo;
   onToggleDone: (id: string) => void;
   onNotesChange: (id: string, notes: string) => void;
-  onPriorityChange: (id: string, direction: 'up' | 'down') => void;
+  onPriorityChange: (id: string, direction: "up" | "down") => void;
   onDelete: (id: string) => void;
 }

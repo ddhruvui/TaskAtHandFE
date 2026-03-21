@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
-import type { TodoCardProps } from './TodoCard.types';
-import './TodoCard.css';
+import { useState, useRef, useEffect } from "react";
+import type { TodoCardProps } from "./TodoCard.types";
+import "./TodoCard.css";
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -42,13 +42,13 @@ export default function TodoCard({
   };
 
   return (
-    <div className={`todo-card ${todo.done ? 'todo-card--done' : ''}`}>
+    <div className={`todo-card ${todo.done ? "todo-card--done" : ""}`}>
       {/* Header row: checkbox + name + priority */}
       <div className="todo-card__header">
         <button
-          className={`todo-card__checkbox ${todo.done ? 'todo-card__checkbox--checked' : ''}`}
+          className={`todo-card__checkbox ${todo.done ? "todo-card__checkbox--checked" : ""}`}
           onClick={() => onToggleDone(todo.id)}
-          aria-label={todo.done ? 'Mark as not done' : 'Mark as done'}
+          aria-label={todo.done ? "Mark as not done" : "Mark as done"}
         >
           {todo.done && (
             <svg viewBox="0 0 24 24" className="todo-card__check-icon">
@@ -57,7 +57,9 @@ export default function TodoCard({
           )}
         </button>
 
-        <h3 className={`todo-card__name ${todo.done ? 'todo-card__name--done' : ''}`}>
+        <h3
+          className={`todo-card__name ${todo.done ? "todo-card__name--done" : ""}`}
+        >
           {todo.name}
         </h3>
 
@@ -75,7 +77,7 @@ export default function TodoCard({
         <div className="todo-card__priority">
           <button
             className="todo-card__priority-btn"
-            onClick={() => onPriorityChange(todo.id, 'up')}
+            onClick={() => onPriorityChange(todo.id, "up")}
             aria-label="Increase priority"
             disabled={todo.priority <= 1}
           >
@@ -85,7 +87,7 @@ export default function TodoCard({
           </button>
           <button
             className="todo-card__priority-btn"
-            onClick={() => onPriorityChange(todo.id, 'down')}
+            onClick={() => onPriorityChange(todo.id, "down")}
             aria-label="Decrease priority"
             disabled={todo.priority >= 5}
           >
@@ -107,7 +109,7 @@ export default function TodoCard({
             onChange={(e) => setDraftNotes(e.target.value)}
             onBlur={commitNotes}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') {
+              if (e.key === "Escape") {
                 setDraftNotes(todo.notes);
                 setEditingNotes(false);
               }
@@ -121,10 +123,14 @@ export default function TodoCard({
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') setEditingNotes(true);
+              if (e.key === "Enter" || e.key === " ") setEditingNotes(true);
             }}
           >
-            {todo.notes || <span className="todo-card__placeholder">Click to add notes…</span>}
+            {todo.notes || (
+              <span className="todo-card__placeholder">
+                Click to add notes…
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -133,11 +139,15 @@ export default function TodoCard({
       <div className="todo-card__dates">
         <div className="todo-card__date">
           <span className="todo-card__date-label">Created</span>
-          <span className="todo-card__date-value">{formatDate(todo.createdAt)}</span>
+          <span className="todo-card__date-value">
+            {formatDate(todo.createdAt)}
+          </span>
         </div>
         <div className="todo-card__date">
           <span className="todo-card__date-label">Updated</span>
-          <span className="todo-card__date-value">{formatDate(todo.updatedAt)}</span>
+          <span className="todo-card__date-value">
+            {formatDate(todo.updatedAt)}
+          </span>
         </div>
         <div className="todo-card__date">
           <span className="todo-card__date-label">ECD</span>

@@ -18,12 +18,14 @@
   padding: 24px 28px;
   width: 100%;
   box-sizing: border-box;
-  font-family: var(--sans, system-ui, 'Segoe UI', Roboto, sans-serif);
+  font-family: var(--sans, system-ui, "Segoe UI", Roboto, sans-serif);
   color: var(--neo-text);
   box-shadow:
     8px 8px 16px var(--neo-shadow-dark),
     -8px -8px 16px var(--neo-shadow-light);
-  transition: box-shadow 0.3s ease, opacity 0.3s ease;
+  transition:
+    box-shadow 0.3s ease,
+    opacity 0.3s ease;
 }
 
 .todo-card:hover {
@@ -71,7 +73,9 @@
   box-shadow:
     inset 3px 3px 6px var(--neo-inset-dark),
     inset -3px -3px 6px var(--neo-inset-light);
-  transition: background 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
 }
 
 .todo-card__checkbox--checked {
@@ -105,7 +109,9 @@
   box-shadow:
     3px 3px 6px var(--neo-shadow-dark),
     -3px -3px 6px var(--neo-shadow-light);
-  transition: box-shadow 0.2s, background 0.2s;
+  transition:
+    box-shadow 0.2s,
+    background 0.2s;
 }
 
 .todo-card__delete-btn:hover {
