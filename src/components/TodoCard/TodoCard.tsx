@@ -1,159 +1,183 @@
-import { useState, useRef, useEffect } from "react";
-import type { TodoCardProps } from "./TodoCard.types";
+import { useState } from "react";
+import type { Todo, TodoCardProps } from "./TodoCard.types";
+import { EditNotesModal } from "../EditNotesModal";
 import "./TodoCard.css";
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+function getOrdinal(n: number): string {
+  const v = n % 100;
+  const suffix = ["th", "st", "nd", "rd"];
+  return n + (suffix[(v - 20) % 10] ?? suffix[v] ?? suffix[0]);
+}
+
+interface EcdDisplay {
+  label: string;
+  recurring: boolean;
+}
+
+function resolveEcd(todo: Todo): EcdDisplay {
+  if (todo.ecdDayOfWeek != null && todo.ecdDayOfWeek.length > 0) {
+    const label = [...todo.ecdDayOfWeek]
+      .sort((a, b) => a - b)
+      .map((d) => DOW_LABELS[Math.min(Math.max(d, 1), 7) - 1])
+      .join(", ");
+    return { label: `↻ ${label}`, recurring: true };
+  }
+  if (todo.ecdDayOfMonth != null && todo.ecdDayOfMonth.length > 0) {
+    const label = [...todo.ecdDayOfMonth]
+      .sort((a, b) => a - b)
+      .map((d) => getOrdinal(Math.min(Math.max(d, 1), 31)))
+      .join(", ");
+    return { label: `↻ ${label}`, recurring: true };
+  }
+  // Fall back to fixed date
+  const d = new Date(todo.ecd);
+  const currentYear = new Date().getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  if (d.getFullYear() === currentYear) {
+    return { label: `${month}/${day}`, recurring: false };
+  }
+  const yy = String(d.getFullYear()).slice(-2);
+  return { label: `${month}/${day}/${yy}`, recurring: false };
 }
 
 export default function TodoCard({
   todo,
+  isFirst,
+  isLast,
+  allowRecurring,
   onToggleDone,
-  onNotesChange,
-  onPriorityChange,
+  onEdit,
+  onMoveUp,
+  onMoveDown,
   onDelete,
 }: TodoCardProps) {
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [draftNotes, setDraftNotes] = useState(todo.notes);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (editingNotes && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.selectionStart = textareaRef.current.value.length;
-    }
-  }, [editingNotes]);
-
-  // Sync draft from prop only when not editing
-  if (!editingNotes && draftNotes !== todo.notes) {
-    setDraftNotes(todo.notes);
-  }
-
-  const commitNotes = () => {
-    setEditingNotes(false);
-    if (draftNotes !== todo.notes) {
-      onNotesChange(todo.id, draftNotes);
-    }
-  };
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const { label: ecdLabel, recurring: ecdRecurring } = resolveEcd(todo);
 
   return (
-    <div className={`todo-card ${todo.done ? "todo-card--done" : ""}`}>
-      {/* Header row: checkbox + name + priority */}
-      <div className="todo-card__header">
-        <button
-          className={`todo-card__checkbox ${todo.done ? "todo-card__checkbox--checked" : ""}`}
-          onClick={() => onToggleDone(todo.id)}
-          aria-label={todo.done ? "Mark as not done" : "Mark as done"}
-        >
-          {todo.done && (
-            <svg viewBox="0 0 24 24" className="todo-card__check-icon">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          )}
-        </button>
-
-        <h3
-          className={`todo-card__name ${todo.done ? "todo-card__name--done" : ""}`}
-        >
-          {todo.name}
-        </h3>
-
-        <button
-          className="todo-card__delete-btn"
-          onClick={() => onDelete(todo.id)}
-          aria-label="Delete todo"
-        >
-          <svg viewBox="0 0 24 24" className="todo-card__delete-icon">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-
-        <div className="todo-card__priority">
+    <>
+      <div className={`todo-card ${todo.done ? "todo-card--done" : ""}`}>
+        {/* ── Row: [checkbox] [body] [actions] ── */}
+        <div className="todo-card__header">
+          {/* Checkbox */}
           <button
-            className="todo-card__priority-btn"
-            onClick={() => onPriorityChange(todo.id, "up")}
-            aria-label="Increase priority"
-            disabled={todo.priority <= 1}
+            className={`todo-card__checkbox ${todo.done ? "todo-card__checkbox--checked" : ""}`}
+            onClick={() => onToggleDone(todo.id)}
+            aria-label={todo.done ? "Mark as not done" : "Mark as done"}
           >
-            <svg viewBox="0 0 24 24" className="todo-card__arrow-icon">
-              <polyline points="18 15 12 9 6 15" />
-            </svg>
-          </button>
-          <button
-            className="todo-card__priority-btn"
-            onClick={() => onPriorityChange(todo.id, "down")}
-            aria-label="Decrease priority"
-            disabled={todo.priority >= 5}
-          >
-            <svg viewBox="0 0 24 24" className="todo-card__arrow-icon">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Notes section */}
-      <div className="todo-card__notes">
-        <label className="todo-card__section-label">Notes</label>
-        {editingNotes ? (
-          <textarea
-            ref={textareaRef}
-            className="todo-card__notes-input"
-            value={draftNotes}
-            onChange={(e) => setDraftNotes(e.target.value)}
-            onBlur={commitNotes}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                setDraftNotes(todo.notes);
-                setEditingNotes(false);
-              }
-            }}
-            rows={3}
-          />
-        ) : (
-          <div
-            className="todo-card__notes-display"
-            onClick={() => setEditingNotes(true)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") setEditingNotes(true);
-            }}
-          >
-            {todo.notes || (
-              <span className="todo-card__placeholder">
-                Click to add notes…
-              </span>
+            {todo.done && (
+              <svg viewBox="0 0 16 16" className="todo-card__check-icon">
+                <path
+                  fillRule="evenodd"
+                  d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
+                />
+              </svg>
             )}
+          </button>
+
+          {/* Name + ECD + notes */}
+          <span className="todo-card__body">
+            <span className="todo-card__label">
+              <span
+                className={`todo-card__name ${todo.done ? "todo-card__name--done" : ""}`}
+              >
+                {todo.name}
+              </span>
+              <span
+                className={`todo-card__ecd${ecdRecurring ? " todo-card__ecd--recurring" : ""}`}
+              >
+                [ {ecdLabel} ]
+              </span>
+              {todo.notes && <span className="todo-card__arrow">=&gt;</span>}
+            </span>
+            {todo.notes && (
+              <span className="todo-card__notes-text">{todo.notes}</span>
+            )}
+          </span>
+
+          {/* Action buttons */}
+          <div className="todo-card__actions">
+            <button
+              className="todo-card__action-btn"
+              onClick={() => setEditModalOpen(true)}
+              aria-label="Edit notes"
+              title="Edit notes"
+            >
+              <svg viewBox="0 0 16 16" className="todo-card__action-icon">
+                <path
+                  fillRule="evenodd"
+                  d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z"
+                />
+              </svg>
+            </button>
+            <button
+              className="todo-card__action-btn"
+              onClick={() => onMoveUp(todo.id)}
+              disabled={isFirst}
+              aria-label="Move up"
+              title="Move up"
+            >
+              <svg viewBox="0 0 16 16" className="todo-card__action-icon">
+                <path
+                  fillRule="evenodd"
+                  d="M8 2.25a.75.75 0 0 1 .75.75v8.19l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06L7.25 11.19V3A.75.75 0 0 1 8 2.25z"
+                />
+              </svg>
+            </button>
+            <button
+              className="todo-card__action-btn"
+              onClick={() => onMoveDown(todo.id)}
+              disabled={isLast}
+              aria-label="Move down"
+              title="Move down"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                className="todo-card__action-icon todo-card__action-icon--flip"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8 2.25a.75.75 0 0 1 .75.75v8.19l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06L7.25 11.19V3A.75.75 0 0 1 8 2.25z"
+                />
+              </svg>
+            </button>
+            <button
+              className="todo-card__action-btn todo-card__action-btn--danger"
+              onClick={() => onDelete(todo.id)}
+              aria-label="Delete todo"
+              title="Delete"
+            >
+              <svg viewBox="0 0 16 16" className="todo-card__action-icon">
+                <path
+                  fillRule="evenodd"
+                  d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
+                />
+              </svg>
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Dates footer */}
-      <div className="todo-card__dates">
-        <div className="todo-card__date">
-          <span className="todo-card__date-label">Created</span>
-          <span className="todo-card__date-value">
-            {formatDate(todo.createdAt)}
-          </span>
-        </div>
-        <div className="todo-card__date">
-          <span className="todo-card__date-label">Updated</span>
-          <span className="todo-card__date-value">
-            {formatDate(todo.updatedAt)}
-          </span>
-        </div>
-        <div className="todo-card__date">
-          <span className="todo-card__date-label">ECD</span>
-          <span className="todo-card__date-value">{formatDate(todo.ecd)}</span>
-        </div>
-      </div>
-    </div>
+      {editModalOpen && (
+        <EditNotesModal
+          taskName={todo.name}
+          notes={todo.notes}
+          createdAt={todo.createdAt}
+          updatedAt={todo.updatedAt}
+          ecd={todo.ecd}
+          ecdDayOfWeek={todo.ecdDayOfWeek}
+          ecdDayOfMonth={todo.ecdDayOfMonth}
+          allowRecurring={allowRecurring}
+          onConfirm={(payload) => {
+            onEdit(todo.id, payload);
+            setEditModalOpen(false);
+          }}
+          onCancel={() => setEditModalOpen(false)}
+        />
+      )}
+    </>
   );
 }

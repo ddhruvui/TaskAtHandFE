@@ -1,0 +1,285 @@
+.edit-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  animation: edit-fade-in 0.15s ease;
+}
+
+@keyframes edit-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes edit-scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.edit-modal {
+  --m-bg: #ffffff;
+  --m-border: #d0d7de;
+  --m-text: #1f2328;
+  --m-text-muted: #656d76;
+  --m-accent: #1a7f37;
+  --m-accent-hover: #157a32;
+  --m-radius: 6px;
+
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  padding: 24px 28px;
+  width: min(540px, calc(100vw - 32px));
+  box-shadow: 0 8px 24px rgba(31, 35, 40, 0.15);
+  animation: edit-scale-in 0.18s ease;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
+    Arial, sans-serif;
+  font-size: 14px;
+  color: var(--m-text);
+}
+
+@media (prefers-color-scheme: dark) {
+  .edit-modal {
+    --m-bg: #161b22;
+    --m-border: #30363d;
+    --m-text: #e6edf3;
+    --m-text-muted: #8b949e;
+    --m-accent: #3fb950;
+    --m-accent-hover: #3aad49;
+  }
+}
+
+.edit-modal__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--m-text);
+}
+
+.edit-modal__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--m-text-muted);
+  margin-bottom: 16px;
+}
+
+.edit-modal__meta-label {
+  font-weight: 600;
+}
+
+.edit-modal__meta-sep {
+  color: var(--m-border);
+}
+
+.edit-modal__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--m-text);
+  background: var(--m-bg);
+  resize: vertical;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  margin-bottom: 16px;
+}
+
+.edit-modal__textarea:focus {
+  border-color: var(--m-accent);
+  box-shadow: 0 0 0 3px rgba(26, 127, 55, 0.12);
+}
+
+/* ─── ECD section ─── */
+.edit-modal__ecd {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-modal__ecd-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--m-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.edit-modal__ecd-modes {
+  display: flex;
+  gap: 4px;
+}
+
+.edit-modal__mode-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--m-border);
+  border-radius: 20px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--m-text-muted);
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.edit-modal__mode-btn:hover {
+  border-color: var(--m-accent);
+  color: var(--m-text);
+}
+
+.edit-modal__mode-btn--active {
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+  color: #fff;
+}
+
+/* Date input */
+.edit-modal__date-input {
+  padding: 6px 10px;
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--m-text);
+  background: var(--m-bg);
+  outline: none;
+  transition: border-color 0.15s;
+  align-self: flex-start;
+}
+
+.edit-modal__date-input:focus {
+  border-color: var(--m-accent);
+}
+
+/* Day-of-week selector */
+.edit-modal__dow {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.edit-modal__dow-btn {
+  width: 42px;
+  height: 32px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  cursor: pointer;
+  background: transparent;
+  color: var(--m-text-muted);
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.edit-modal__dow-btn:hover {
+  border-color: var(--m-accent);
+  color: var(--m-text);
+}
+
+.edit-modal__dow-btn--active {
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+  color: #fff;
+}
+
+/* Day-of-month grid */
+.edit-modal__dom {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.edit-modal__dom-btn {
+  height: 30px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  cursor: pointer;
+  background: transparent;
+  color: var(--m-text-muted);
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.edit-modal__dom-btn:hover {
+  border-color: var(--m-accent);
+  color: var(--m-text);
+}
+
+.edit-modal__dom-btn--active {
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+  color: #fff;
+}
+
+.edit-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.edit-modal__btn {
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: var(--m-radius);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.edit-modal__btn--cancel {
+  background: transparent;
+  border-color: var(--m-border);
+  color: var(--m-text);
+}
+
+.edit-modal__btn--cancel:hover {
+  background: rgba(31, 35, 40, 0.06);
+}
+
+.edit-modal__btn--confirm {
+  background: var(--m-accent);
+  color: #fff;
+}
+
+.edit-modal__btn--confirm:hover {
+  background: var(--m-accent-hover);
+}

@@ -3,7 +3,7 @@ import type { Todo } from "../TodoCard/TodoCard.types";
 export interface Folder {
   id: string;
   name: string;
-  color: string; // accent colour for the folder
+  allowRecurring?: boolean;
   todos: Todo[];
 }
 
