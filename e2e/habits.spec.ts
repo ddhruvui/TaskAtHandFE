@@ -9,9 +9,7 @@ import { test, expect, type Page } from "@playwright/test";
 // Helper to reset the database state before each test
 async function clearHabits(page: Page) {
   // Use API to delete all habits for faster test setup
-  const response = await page.request.get(
-    "http://localhost:3002/api/habbits",
-  );
+  const response = await page.request.get("http://localhost:3002/api/habbits");
   const data = await response.json();
 
   if (data.success && data.data && Array.isArray(data.data)) {
@@ -115,7 +113,9 @@ test.describe("Habits - Create Operations", () => {
       .first();
 
     // Click add button
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
 
     // Fill in name and notes
     await page
@@ -143,7 +143,9 @@ test.describe("Habits - Create Operations", () => {
     await todoCard.locator('button[aria-label*="Edit"]').click();
 
     // Verify notes are saved
-    await expect(page.locator("textarea")).toHaveValue("10 minutes mindfulness");
+    await expect(page.locator("textarea")).toHaveValue(
+      "10 minutes mindfulness",
+    );
 
     // Close modal
     await page.locator('button:has-text("Cancel")').click();
@@ -158,7 +160,9 @@ test.describe("Habits - Create Operations", () => {
       .first();
 
     // Click add button
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
 
     // Fill in name
     await page.locator('input[placeholder="Task name…"]').fill("Workout");
@@ -183,14 +187,19 @@ test.describe("Habits - Create Operations", () => {
       .first();
 
     // Click add button
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
 
     // Fill in name
     await page.locator('input[placeholder="Task name…"]').fill("Pay rent");
 
     // Switch to Monthly mode and select 5th
     await page.locator('.add-modal__mode-btn:has-text("Monthly")').click();
-    await page.locator('.add-modal__dom-btn').filter({ hasText: /^5$/ }).click();
+    await page
+      .locator(".add-modal__dom-btn")
+      .filter({ hasText: /^5$/ })
+      .click();
 
     // Submit
     await page.locator(".add-modal__btn--confirm").click();
@@ -208,15 +217,25 @@ test.describe("Habits - Create Operations", () => {
       .first();
 
     // Click add button
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
 
     // Fill in name
-    await page.locator('input[placeholder="Task name…"]').fill("Check finances");
+    await page
+      .locator('input[placeholder="Task name…"]')
+      .fill("Check finances");
 
     // Switch to Monthly mode and select 5th and 20th
     await page.locator('.add-modal__mode-btn:has-text("Monthly")').click();
-    await page.locator('.add-modal__dom-btn').filter({ hasText: /^5$/ }).click();
-    await page.locator('.add-modal__dom-btn').filter({ hasText: /^20$/ }).click();
+    await page
+      .locator(".add-modal__dom-btn")
+      .filter({ hasText: /^5$/ })
+      .click();
+    await page
+      .locator(".add-modal__dom-btn")
+      .filter({ hasText: /^20$/ })
+      .click();
 
     // Submit
     await page.locator(".add-modal__btn--confirm").click();
@@ -234,7 +253,9 @@ test.describe("Habits - Create Operations", () => {
       .first();
 
     // Click add button
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
 
     // Try to submit without name
     const addButton = page.locator(".add-modal__btn--confirm");
@@ -259,7 +280,9 @@ test.describe("Habits - Create Operations", () => {
       .first();
 
     // Click add button
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
 
     // Fill in some data
     await page.locator('input[placeholder="Task name…"]').fill("Test habit");
@@ -321,7 +344,9 @@ test.describe("Habits - Read Operations", () => {
       .first();
 
     // Create habit with day of week
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Weekly review");
     await page.locator('.add-modal__dow-btn:has-text("Fri")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -347,7 +372,9 @@ test.describe("Habits - Update Operations", () => {
       .first();
 
     // Create a habit
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Check email");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -362,7 +389,9 @@ test.describe("Habits - Update Operations", () => {
     await page.waitForTimeout(500);
 
     // Verify checked state (button has --checked class)
-    await expect(todoCard.locator(".todo-card__checkbox")).toHaveClass(/todo-card__checkbox--checked/);
+    await expect(todoCard.locator(".todo-card__checkbox")).toHaveClass(
+      /todo-card__checkbox--checked/,
+    );
   });
 
   test("can mark habit as undone", async ({ page }) => {
@@ -374,7 +403,9 @@ test.describe("Habits - Update Operations", () => {
       .first();
 
     // Create and mark as done
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Review notes");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -392,7 +423,9 @@ test.describe("Habits - Update Operations", () => {
     await page.waitForTimeout(500);
 
     // Verify unchecked state (button does not have --checked class)
-    await expect(todoCard.locator(".todo-card__checkbox")).not.toHaveClass(/todo-card__checkbox--checked/);
+    await expect(todoCard.locator(".todo-card__checkbox")).not.toHaveClass(
+      /todo-card__checkbox--checked/,
+    );
   });
 
   test("can edit habit notes", async ({ page }) => {
@@ -404,7 +437,9 @@ test.describe("Habits - Update Operations", () => {
       .first();
 
     // Create habit
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Drink water");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -435,7 +470,9 @@ test.describe("Habits - Update Operations", () => {
       .first();
 
     // Create habit with notes
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Study");
     await page.locator('textarea[placeholder*="optional"]').fill("30 minutes");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
@@ -473,13 +510,17 @@ test.describe("Habits - Priority Reordering", () => {
       .first();
 
     // Create two habits
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("First habit");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
     await page.waitForTimeout(300);
 
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Second habit");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -507,13 +548,17 @@ test.describe("Habits - Priority Reordering", () => {
       .first();
 
     // Create two habits
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("First habit");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
     await page.waitForTimeout(300);
 
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Second habit");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -541,7 +586,9 @@ test.describe("Habits - Priority Reordering", () => {
       .first();
 
     // Create one habit
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Only habit");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -564,7 +611,9 @@ test.describe("Habits - Priority Reordering", () => {
       .first();
 
     // Create one habit
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Only habit");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -670,8 +719,12 @@ test.describe("Habits - Delete Operations", () => {
       .first();
 
     // Create a habit
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
-    await page.locator('input[placeholder="Task name…"]').fill("Temporary habit");
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
+    await page
+      .locator('input[placeholder="Task name…"]')
+      .fill("Temporary habit");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
     await page.waitForTimeout(300);
@@ -702,8 +755,12 @@ test.describe("Habits - Delete Operations", () => {
       .first();
 
     // Create a habit
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
-    await page.locator('input[placeholder="Task name…"]').fill("Keep this habit");
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
+    await page
+      .locator('input[placeholder="Task name…"]')
+      .fill("Keep this habit");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
     await page.waitForTimeout(300);
@@ -766,19 +823,25 @@ test.describe("Habits - Delete Operations", () => {
       .first();
 
     // Create three habits
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("First");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
     await page.waitForTimeout(300);
 
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Second");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
     await page.waitForTimeout(300);
 
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Third");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -857,7 +920,9 @@ test.describe("Habits - Complex Scenarios", () => {
       .filter({ hasText: "Habits" })
       .first();
 
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Daily habit");
     // Click all day buttons
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
@@ -883,7 +948,9 @@ test.describe("Habits - Complex Scenarios", () => {
     const longName =
       "This is a very long habit name that should be handled properly by the application without breaking the UI layout or causing any display issues";
 
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill(longName);
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -906,8 +973,12 @@ test.describe("Habits - Complex Scenarios", () => {
         10,
       );
 
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
-    await page.locator('input[placeholder="Task name…"]').fill("Habit with long notes");
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
+    await page
+      .locator('input[placeholder="Task name…"]')
+      .fill("Habit with long notes");
     await page.locator('textarea[placeholder*="optional"]').fill(longNotes);
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -931,7 +1002,9 @@ test.describe("Habits - Complex Scenarios", () => {
 
     const specialName = "Habit @#$%^&*() with symbols!";
 
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill(specialName);
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
@@ -939,7 +1012,9 @@ test.describe("Habits - Complex Scenarios", () => {
     await expect(habitsSection.locator("text=Habit @#$%")).toBeVisible();
   });
 
-  test("creates habits with different recurrence patterns", async ({ page }) => {
+  test("creates habits with different recurrence patterns", async ({
+    page,
+  }) => {
     await page.goto("/");
 
     const habitsSection = page
@@ -948,17 +1023,24 @@ test.describe("Habits - Complex Scenarios", () => {
       .first();
 
     // Weekly habit
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Weekly habit");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
     await page.waitForTimeout(300);
 
     // Monthly habit
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Monthly habit");
     await page.locator('.add-modal__mode-btn:has-text("Monthly")').click();
-    await page.locator('.add-modal__dom-btn').filter({ hasText: /^1$/ }).click();
+    await page
+      .locator(".add-modal__dom-btn")
+      .filter({ hasText: /^1$/ })
+      .click();
     await page.locator(".add-modal__btn--confirm").click();
     await page.waitForTimeout(300);
 
@@ -985,7 +1067,9 @@ test.describe("Habits - Chron Endpoint Behavior", () => {
       .first();
 
     // Create and mark habit as done
-    await habitsSection.locator('button[aria-label="Add task to Habits"]').click();
+    await habitsSection
+      .locator('button[aria-label="Add task to Habits"]')
+      .click();
     await page.locator('input[placeholder="Task name…"]').fill("Exercise");
     await page.locator('.add-modal__dow-btn:has-text("Mon")').click();
     await page.locator(".add-modal__btn--confirm").click();
