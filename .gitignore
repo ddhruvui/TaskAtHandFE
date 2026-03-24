@@ -27,3 +27,8 @@ dist-ssr
 coverage
 playwright-report
 test-results
+
+# Environment variables — keep .env.example tracked, never .env
+.env
+.env.*
+!.env.example

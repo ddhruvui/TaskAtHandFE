@@ -1,19 +1,19 @@
 export interface Todo {
-  id: string;
+  _id: string; // MongoDB ObjectId
   name: string;
   notes: string;
   done: boolean;
-  priority: number;
+  priority: number; // 0-based (0 = highest priority)
   createdAt: string;
   updatedAt: string;
-  ecd: string; // Expected Completion Date (ISO string, used when no recurring rule is set)
+  ecd: string | null; // Expected Completion Date (ISO 8601). null for recurring todos.
   ecdDayOfWeek?: number[]; // 1–7 each, recurring weekly: 1=Monday … 7=Sunday
   ecdDayOfMonth?: number[]; // 1–31 each, recurring monthly: days of the calendar month
 }
 
 export interface EditPayload {
   notes: string;
-  ecd: string;
+  ecd: string | null;
   ecdDayOfWeek?: number[];
   ecdDayOfMonth?: number[];
 }

@@ -11,7 +11,7 @@ interface EditNotesModalProps {
   notes: string;
   createdAt: string;
   updatedAt: string;
-  ecd: string;
+  ecd: string | null;
   ecdDayOfWeek?: number[];
   ecdDayOfMonth?: number[];
   allowRecurring: boolean;
@@ -68,7 +68,7 @@ export default function EditNotesModal({
     if (allowRecurring) return detected === "date" ? "week" : detected;
     return detected !== "date" ? "date" : detected;
   });
-  const [dateVal, setDateVal] = useState(() => isoToDateInput(ecd));
+  const [dateVal, setDateVal] = useState(() => isoToDateInput(ecd ?? ""));
   const [dowVal, setDowVal] = useState<number[]>(
     ecdDayOfWeek && ecdDayOfWeek.length > 0 ? [...ecdDayOfWeek] : [1],
   );
@@ -88,7 +88,7 @@ export default function EditNotesModal({
     } else if (mode === "month") {
       payload = { notes: draft, ecd, ecdDayOfMonth: domVal };
     } else {
-      const isoEcd = dateVal ? new Date(dateVal).toISOString() : ecd;
+      const isoEcd = dateVal ? new Date(dateVal).toISOString() : (ecd ?? null);
       payload = { notes: draft, ecd: isoEcd };
     }
     onConfirm(payload);

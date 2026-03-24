@@ -52,14 +52,15 @@ export default function AddTaskModal({
     const trimmed = name.trim();
     if (!trimmed) return;
     const now = new Date().toISOString();
+    // Recurring modes have no fixed date — ecd must be null for habits
     const ecd =
-      mode === "date" && dateVal ? new Date(dateVal).toISOString() : now;
+      mode === "date" && dateVal ? new Date(dateVal).toISOString() : null;
     const todo: Folder["todos"][0] = {
-      id: `${Date.now()}`,
+      _id: `${Date.now()}`,
       name: trimmed,
       notes,
       done: false,
-      priority: 1,
+      priority: 0,
       createdAt: now,
       updatedAt: now,
       ecd,

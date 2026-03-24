@@ -32,14 +32,17 @@ function resolveEcd(todo: Todo): EcdDisplay {
     return { label: `↻ ${label}`, recurring: true };
   }
   // Fall back to fixed date
+  if (!todo.ecd) {
+    return { label: "No date", recurring: false };
+  }
   const d = new Date(todo.ecd);
-  const currentYear = new Date().getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  if (d.getFullYear() === currentYear) {
+  const currentYear = new Date().getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  if (d.getUTCFullYear() === currentYear) {
     return { label: `${month}/${day}`, recurring: false };
   }
-  const yy = String(d.getFullYear()).slice(-2);
+  const yy = String(d.getUTCFullYear()).slice(-2);
   return { label: `${month}/${day}/${yy}`, recurring: false };
 }
 
@@ -65,7 +68,7 @@ export default function TodoCard({
           {/* Checkbox */}
           <button
             className={`todo-card__checkbox ${todo.done ? "todo-card__checkbox--checked" : ""}`}
-            onClick={() => onToggleDone(todo.id)}
+            onClick={() => onToggleDone(todo._id)}
             aria-label={todo.done ? "Mark as not done" : "Mark as done"}
           >
             {todo.done && (
@@ -115,7 +118,7 @@ export default function TodoCard({
             </button>
             <button
               className="todo-card__action-btn"
-              onClick={() => onMoveUp(todo.id)}
+              onClick={() => onMoveUp(todo._id)}
               disabled={isFirst}
               aria-label="Move up"
               title="Move up"
@@ -129,7 +132,7 @@ export default function TodoCard({
             </button>
             <button
               className="todo-card__action-btn"
-              onClick={() => onMoveDown(todo.id)}
+              onClick={() => onMoveDown(todo._id)}
               disabled={isLast}
               aria-label="Move down"
               title="Move down"
@@ -146,7 +149,7 @@ export default function TodoCard({
             </button>
             <button
               className="todo-card__action-btn todo-card__action-btn--danger"
-              onClick={() => onDelete(todo.id)}
+              onClick={() => onDelete(todo._id)}
               aria-label="Delete todo"
               title="Delete"
             >
@@ -172,7 +175,7 @@ export default function TodoCard({
           ecdDayOfMonth={todo.ecdDayOfMonth}
           allowRecurring={allowRecurring}
           onConfirm={(payload) => {
-            onEdit(todo.id, payload);
+            onEdit(todo._id, payload);
             setEditModalOpen(false);
           }}
           onCancel={() => setEditModalOpen(false)}

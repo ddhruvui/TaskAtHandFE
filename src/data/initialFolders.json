@@ -1,158 +1,39 @@
 [
   {
     "id": "folder-1",
-    "name": "Birthday",
-    "todos": [
-      {
-        "id": "1",
-        "name": "Buy birthday cake",
-        "notes": "Chocolate flavour, serves 12. Get from the bakery on 25th March. Check for allergies - no nuts. Confirm headcount by 22nd March. Remember to pick up decorations and candles. Order in advance to ensure availability. Consider dietary preferences like vegan or gluten-free options. Arrange for a cake knife and serving plates. Don't forget napkins and forks for guests. Check if the bakery offers custom decorations or personalization. Plan for storage in a cool place before the party. Arrange transportation if the cake is large. Confirm delivery time with the bakery. Have a backup plan in case the bakery runs out.",
-        "done": false,
-        "priority": 1,
-        "createdAt": "2026-03-15T09:00:00Z",
-        "updatedAt": "2026-03-20T14:30:00Z",
-        "ecd": "2026-03-28T00:00:00Z"
-      },
-      {
-        "id": "2",
-        "name": "Send invitations",
-        "notes": "Email + WhatsApp group.",
-        "done": true,
-        "priority": 2,
-        "createdAt": "2026-03-10T08:00:00Z",
-        "updatedAt": "2026-03-18T11:00:00Z",
-        "ecd": "2026-03-20T00:00:00Z"
-      }
-    ]
+    "name": "Work On Dreams",
+    "collection": "workondreams",
+    "todos": []
   },
   {
     "id": "folder-2",
-    "name": "Office Work",
-    "todos": [
-      {
-        "id": "3",
-        "name": "Design landing page",
-        "notes": "Use the new brand colours and ensure mobile responsiveness.",
-        "done": false,
-        "priority": 2,
-        "createdAt": "2026-03-15T09:00:00Z",
-        "updatedAt": "2026-03-20T14:30:00Z",
-        "ecd": "2026-03-28T00:00:00Z"
-      },
-      {
-        "id": "4",
-        "name": "Set up CI/CD pipeline",
-        "notes": "",
-        "done": true,
-        "priority": 1,
-        "createdAt": "2026-03-10T08:00:00Z",
-        "updatedAt": "2026-03-18T11:00:00Z",
-        "ecd": "2026-03-20T00:00:00Z"
-      },
-      {
-        "id": "5",
-        "name": "Write unit tests for auth module",
-        "notes": "Cover login, signup, and token refresh flows.",
-        "done": false,
-        "priority": 3,
-        "createdAt": "2026-03-19T10:00:00Z",
-        "updatedAt": "2026-03-21T09:00:00Z",
-        "ecd": "2026-04-01T00:00:00Z"
-      }
-    ]
+    "name": "Events",
+    "collection": "events",
+    "todos": []
   },
   {
     "id": "folder-3",
-    "name": "Groceries",
-    "todos": [
-      {
-        "id": "6",
-        "name": "Buy vegetables",
-        "notes": "Tomatoes, onions, peppers, spinach.",
-        "done": false,
-        "priority": 2,
-        "createdAt": "2026-03-20T07:00:00Z",
-        "updatedAt": "2026-03-20T07:00:00Z",
-        "ecd": "2026-03-22T00:00:00Z"
-      }
-    ]
+    "name": "Habits",
+    "collection": "habbits",
+    "allowRecurring": true,
+    "todos": []
   },
   {
     "id": "folder-4",
-    "name": "Fitness",
-    "allowRecurring": false,
-    "todos": [
-      {
-        "id": "7",
-        "name": "Morning run – 5 km",
-        "notes": "",
-        "done": true,
-        "priority": 1,
-        "createdAt": "2026-03-18T05:30:00Z",
-        "updatedAt": "2026-03-21T06:00:00Z",
-        "ecd": "2026-03-21T00:00:00Z"
-      },
-      {
-        "id": "8",
-        "name": "Book gym session",
-        "notes": "Strength training, Tuesday & Thursday.",
-        "done": false,
-        "priority": 3,
-        "createdAt": "2026-03-19T09:00:00Z",
-        "updatedAt": "2026-03-19T09:00:00Z",
-        "ecd": "2026-03-25T00:00:00Z"
-      }
-    ]
+    "name": "Office Tasks",
+    "collection": "office",
+    "todos": []
   },
   {
     "id": "folder-5",
-    "name": "Recurring",
-    "allowRecurring": true,
-    "todos": [
-      {
-        "id": "9",
-        "name": "Weekly team standup",
-        "notes": "Every Monday at 9 am — share blockers and priorities.",
-        "done": false,
-        "priority": 1,
-        "createdAt": "2026-03-01T08:00:00Z",
-        "updatedAt": "2026-03-23T08:00:00Z",
-        "ecd": "2026-03-23T09:00:00Z",
-        "ecdDayOfWeek": [1]
-      },
-      {
-        "id": "10",
-        "name": "Weekend code review",
-        "notes": "Review open PRs and leave feedback.",
-        "done": false,
-        "priority": 2,
-        "createdAt": "2026-03-01T08:00:00Z",
-        "updatedAt": "2026-03-23T08:00:00Z",
-        "ecd": "2026-03-28T00:00:00Z",
-        "ecdDayOfWeek": [6]
-      },
-      {
-        "id": "11",
-        "name": "Pay rent",
-        "notes": "Bank transfer — due on the 1st of every month.",
-        "done": false,
-        "priority": 1,
-        "createdAt": "2026-03-01T08:00:00Z",
-        "updatedAt": "2026-03-23T08:00:00Z",
-        "ecd": "2026-04-01T00:00:00Z",
-        "ecdDayOfMonth": [1]
-      },
-      {
-        "id": "12",
-        "name": "Monthly budget review",
-        "notes": "Check spending vs. budget, update savings goal.",
-        "done": false,
-        "priority": 2,
-        "createdAt": "2026-03-01T08:00:00Z",
-        "updatedAt": "2026-03-23T08:00:00Z",
-        "ecd": "2026-03-28T00:00:00Z",
-        "ecdDayOfMonth": [28]
-      }
-    ]
+    "name": "Todos",
+    "collection": "todos",
+    "todos": []
+  },
+  {
+    "id": "folder-6",
+    "name": "Dreams",
+    "collection": "dreams",
+    "todos": []
   }
 ]
