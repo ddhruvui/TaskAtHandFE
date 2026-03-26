@@ -137,31 +137,19 @@ function App() {
     };
 
   /* ── Move up (decrease priority) ── */
-  // Use array index for guards (priorities may be non-contiguous after deletes).
-  // Send the *neighbour's actual priority* so the backend places the item correctly.
   const handleMoveUp = (folder: Folder) => async (id: string) => {
-    const idx = folder.todos.findIndex((t) => t._id === id);
-    if (idx <= 0) return;
-    const targetPriority = folder.todos[idx - 1].priority;
-    // Optimistic UI
-    setFolders((prev) =>
-      prev.map((f) => {
-        if (f.id !== folder.id) return f;
-        const todos = [...f.todos];
-        const i = todos.findIndex((t) => t._id === id);
-        if (i <= 0) return f;
-        [todos[i - 1], todos[i]] = [todos[i], todos[i - 1]];
-        return { ...f, todos };
-      }),
-    );
+    const todo = folder.todos.find((t) => t._id === id);
+    if (!todo) return;
+    const newPriority = todo.priority - 1;
     try {
       if (folder.collection === "habbits") {
-        await habitsApi.update(id, { priority: targetPriority });
+        await habitsApi.update(id, { priority: newPriority });
       } else {
         await itemsApi.update(folder.collection, id, {
-          priority: targetPriority,
+          priority: newPriority,
         });
       }
+      await refreshFolder(folder.id);
     } catch (err) {
       console.error("Move up failed:", err);
       await refreshFolder(folder.id);
@@ -170,28 +158,18 @@ function App() {
 
   /* ── Move down (increase priority) ── */
   const handleMoveDown = (folder: Folder) => async (id: string) => {
-    const idx = folder.todos.findIndex((t) => t._id === id);
-    if (idx < 0 || idx >= folder.todos.length - 1) return;
-    const targetPriority = folder.todos[idx + 1].priority;
-    // Optimistic UI
-    setFolders((prev) =>
-      prev.map((f) => {
-        if (f.id !== folder.id) return f;
-        const todos = [...f.todos];
-        const i = todos.findIndex((t) => t._id === id);
-        if (i < 0 || i >= todos.length - 1) return f;
-        [todos[i], todos[i + 1]] = [todos[i + 1], todos[i]];
-        return { ...f, todos };
-      }),
-    );
+    const todo = folder.todos.find((t) => t._id === id);
+    if (!todo) return;
+    const newPriority = todo.priority + 1;
     try {
       if (folder.collection === "habbits") {
-        await habitsApi.update(id, { priority: targetPriority });
+        await habitsApi.update(id, { priority: newPriority });
       } else {
         await itemsApi.update(folder.collection, id, {
-          priority: targetPriority,
+          priority: newPriority,
         });
       }
+      await refreshFolder(folder.id);
     } catch (err) {
       console.error("Move down failed:", err);
       await refreshFolder(folder.id);
@@ -333,6 +311,8 @@ function App() {
                   todo={todo}
                   isFirst={idx === 0}
                   isLast={idx === folder.todos.length - 1}
+                  prevTodoDone={idx > 0 ? folder.todos[idx - 1].done : undefined}
+                  nextTodoDone={idx < folder.todos.length - 1 ? folder.todos[idx + 1].done : undefined}
                   allowRecurring={folder.allowRecurring ?? false}
                   onToggleDone={handleToggleDone(folder)}
                   onEdit={handleEdit(folder)}

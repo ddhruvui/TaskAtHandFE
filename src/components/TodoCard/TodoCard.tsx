@@ -50,6 +50,8 @@ export default function TodoCard({
   todo,
   isFirst,
   isLast,
+  prevTodoDone,
+  nextTodoDone,
   allowRecurring,
   onToggleDone,
   onEdit,
@@ -59,6 +61,10 @@ export default function TodoCard({
 }: TodoCardProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const { label: ecdLabel, recurring: ecdRecurring } = resolveEcd(todo);
+
+  // Not-done tasks must stay above done tasks
+  const canMoveUp = !isFirst && !(todo.done && prevTodoDone === false);
+  const canMoveDown = !isLast && !(!todo.done && nextTodoDone === true);
 
   return (
     <>
@@ -118,10 +124,10 @@ export default function TodoCard({
             </button>
             <button
               className="todo-card__action-btn"
-              onClick={() => onMoveUp(todo._id)}
-              disabled={isFirst}
-              aria-label="Move up"
-              title="Move up"
+              onClick={() => onMoveDown(todo._id)}
+              disabled={!canMoveDown}
+              aria-label="Move down"
+              title="Move down"
             >
               <svg viewBox="0 0 16 16" className="todo-card__action-icon">
                 <path
@@ -132,10 +138,10 @@ export default function TodoCard({
             </button>
             <button
               className="todo-card__action-btn"
-              onClick={() => onMoveDown(todo._id)}
-              disabled={isLast}
-              aria-label="Move down"
-              title="Move down"
+              onClick={() => onMoveUp(todo._id)}
+              disabled={!canMoveUp}
+              aria-label="Move up"
+              title="Move up"
             >
               <svg
                 viewBox="0 0 16 16"

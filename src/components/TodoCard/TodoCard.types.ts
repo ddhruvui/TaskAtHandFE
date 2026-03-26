@@ -22,6 +22,8 @@ export interface TodoCardProps {
   todo: Todo;
   isFirst: boolean;
   isLast: boolean;
+  prevTodoDone?: boolean; // Whether the previous todo is done
+  nextTodoDone?: boolean; // Whether the next todo is done
   allowRecurring: boolean;
   onToggleDone: (id: string) => void;
   onEdit: (id: string, payload: EditPayload) => void;
