@@ -281,13 +281,13 @@ function App() {
           <p className="empty-message">Action failed: {actionError}</p>
         )}
         {/* Add Header button at the top */}
-        <div style={{ marginBottom: "24px", display: "flex", gap: "12px" }}>
+        <div style={{ marginBottom: "24px", display: "flex", gap: "12px", justifyContent: "flex-end" }}>
           <button
             className="readme-heading__add-btn"
             onClick={() => setHeaderModalState({ mode: "add" })}
             aria-label="Add header"
             title="Add header"
-            style={{ width: "auto", padding: "8px 16px" }}
+            style={{ width: "auto", padding: "8px 16px", display: "flex", alignItems: "center" }}
           >
             <span style={{ marginRight: "6px" }}>+</span> Add Header
           </button>
