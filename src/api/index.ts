@@ -3,12 +3,12 @@
  * Import individual modules for tree-shaking, or use named exports here.
  *
  * Collections:
- *   items   – todos · office · dreams · workondreams · events
- *   habits  – habbits (recurring, day-of-week / day-of-month)
+ *   headers – top-level containers for tasks
+ *   tasks   – tasks belonging to headers
  *
  * Base URL comes from VITE_API_BASE_URL (see .env / .env.example).
  */
 
-export * as itemsApi from "./items";
-export * as habitsApi from "./habits";
+export * as headersApi from "./headers";
+export * as tasksApi from "./tasks";
 export { apiFetch } from "./client";

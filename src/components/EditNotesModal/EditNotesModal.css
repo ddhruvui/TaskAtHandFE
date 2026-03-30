@@ -70,6 +70,29 @@
   color: var(--m-text);
 }
 
+.edit-modal__name-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 12px;
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--m-text);
+  background: var(--m-bg);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  margin-bottom: 10px;
+}
+
+.edit-modal__name-input:focus {
+  border-color: var(--m-accent);
+  box-shadow: 0 0 0 3px rgba(26, 127, 55, 0.12);
+}
+
 .edit-modal__meta {
   display: flex;
   align-items: center;
@@ -244,6 +267,13 @@
   background: var(--m-accent);
   border-color: var(--m-accent);
   color: #fff;
+}
+
+.edit-modal__ecd-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--m-text-muted);
+  font-style: italic;
 }
 
 .edit-modal__actions {

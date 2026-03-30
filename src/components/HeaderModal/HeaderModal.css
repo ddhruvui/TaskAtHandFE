@@ -1,0 +1,158 @@
+/* ─── Header Modal (Add/Edit) ─── */
+
+.header-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  animation: header-fade-in 0.15s ease;
+}
+
+@keyframes header-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes header-scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.header-modal {
+  --m-bg: #ffffff;
+  --m-border: #d0d7de;
+  --m-text: #1f2328;
+  --m-text-muted: #656d76;
+  --m-accent: #1a7f37;
+  --m-accent-hover: #157a32;
+  --m-radius: 6px;
+
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  padding: 24px 28px;
+  width: min(420px, calc(100vw - 32px));
+  box-shadow: 0 8px 24px rgba(31, 35, 40, 0.15);
+  animation: header-scale-in 0.18s ease;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
+    Arial, sans-serif;
+  font-size: 14px;
+  color: var(--m-text);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .header-modal {
+    --m-bg: #161b22;
+    --m-border: #30363d;
+    --m-text: #e6edf3;
+    --m-text-muted: #8b949e;
+    --m-accent: #3fb950;
+    --m-accent-hover: #3aad49;
+  }
+}
+
+/* ── Title ── */
+.header-modal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--m-text);
+}
+
+/* ── Name input ── */
+.header-modal__name-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 12px;
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--m-text);
+  background: var(--m-bg);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.header-modal__name-input:focus {
+  border-color: #0969da;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .header-modal__name-input:focus {
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+  }
+}
+
+/* ── Actions ── */
+.header-modal__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.header-modal__btn {
+  padding: 8px 16px;
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.header-modal__btn--cancel {
+  color: var(--m-text);
+  background: var(--m-bg);
+}
+
+.header-modal__btn--cancel:hover {
+  background: #f6f8fa;
+}
+
+@media (prefers-color-scheme: dark) {
+  .header-modal__btn--cancel:hover {
+    background: #21262d;
+  }
+}
+
+.header-modal__btn--confirm {
+  color: #ffffff;
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+}
+
+.header-modal__btn--confirm:hover:not(:disabled) {
+  background: var(--m-accent-hover);
+  border-color: var(--m-accent-hover);
+}
+
+.header-modal__btn--confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

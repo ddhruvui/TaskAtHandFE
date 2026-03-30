@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import type { Folder } from "../FolderCard";
+import type { ECD } from "../../types";
+import { buildEcdFromInputs } from "../../utils/ecd";
 import "./AddTaskModal.css";
 
-type EcdMode = "date" | "week" | "month";
+type EcdMode = "date" | "week" | "month" | "year" | "none";
 
 const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -16,58 +17,61 @@ function todayInputVal(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function todayDMY(): string {
+  const d = new Date();
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+}
+
+function toggleInArray<T>(arr: T[], val: T): T[] {
+  if (arr.includes(val)) {
+    return arr.length > 1 ? arr.filter((v) => v !== val) : arr;
+  }
+  return [...arr, val].sort();
+}
+
 interface AddTaskModalProps {
-  folderName: string;
-  allowRecurring: boolean;
-  onConfirm: (todo: Folder["todos"][0]) => void;
+  headerName: string;
+  onConfirm: (task: { name: string; notes: string; ecd: ECD | null }) => void;
   onCancel: () => void;
 }
 
 export default function AddTaskModal({
-  folderName,
-  allowRecurring,
+  headerName,
   onConfirm,
   onCancel,
 }: AddTaskModalProps) {
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
-  const [mode, setMode] = useState<EcdMode>(allowRecurring ? "week" : "date");
+  const [mode, setMode] = useState<EcdMode>("none");
   const [dateVal, setDateVal] = useState(todayInputVal);
-  const [dowVal, setDowVal] = useState<number[]>([1]);
+  const [dowVal, setDowVal] = useState<(typeof DOW_LABELS)[number][]>(["Mon"]);
   const [domVal, setDomVal] = useState<number[]>([1]);
+  const [yearVal, setYearVal] = useState(todayDMY());
+  const [formError, setFormError] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     nameRef.current?.focus();
   }, []);
 
-  function toggle(arr: number[], val: number): number[] {
-    if (arr.includes(val)) {
-      return arr.length > 1 ? arr.filter((v) => v !== val) : arr;
-    }
-    return [...arr, val].sort((a, b) => a - b);
-  }
-
   function handleAdd() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const now = new Date().toISOString();
-    // Recurring modes have no fixed date — ecd must be null for habits
-    const ecd =
-      mode === "date" && dateVal ? new Date(dateVal).toISOString() : null;
-    const todo: Folder["todos"][0] = {
-      _id: `${Date.now()}`,
-      name: trimmed,
-      notes,
-      done: false,
-      priority: 0,
-      createdAt: now,
-      updatedAt: now,
-      ecd,
-      ...(mode === "week" ? { ecdDayOfWeek: dowVal } : {}),
-      ...(mode === "month" ? { ecdDayOfMonth: domVal } : {}),
-    };
-    onConfirm(todo);
+
+    const { ecd, error } = buildEcdFromInputs({
+      mode,
+      dateVal,
+      dowVal: [...dowVal],
+      domVal: [...domVal],
+      yearVal,
+    });
+    if (error) {
+      setFormError(error);
+      return;
+    }
+    setFormError(null);
+
+    onConfirm({ name: trimmed, notes, ecd });
   }
 
   return (
@@ -75,8 +79,9 @@ export default function AddTaskModal({
       <div className="add-modal" onClick={(e) => e.stopPropagation()}>
         <h3 className="add-modal__title">
           Add task{" "}
-          <span className="add-modal__title-folder">— {folderName}</span>
+          <span className="add-modal__title-folder">— {headerName}</span>
         </h3>
+        {formError && <p className="add-modal__ecd-hint">{formError}</p>}
 
         {/* Task name */}
         <input
@@ -96,7 +101,7 @@ export default function AddTaskModal({
         <div className="add-modal__ecd">
           <span className="add-modal__ecd-label">Due</span>
           <div className="add-modal__ecd-modes">
-            {((allowRecurring ? ["week", "month"] : ["date"]) as EcdMode[]).map(
+            {(["none", "date", "week", "month", "year"] as EcdMode[]).map(
               (m) => (
                 <button
                   key={m}
@@ -104,7 +109,15 @@ export default function AddTaskModal({
                   className={`add-modal__mode-btn${mode === m ? " add-modal__mode-btn--active" : ""}`}
                   onClick={() => setMode(m)}
                 >
-                  {m === "date" ? "Date" : m === "week" ? "Weekly" : "Monthly"}
+                  {m === "none"
+                    ? "None"
+                    : m === "date"
+                      ? "Date"
+                      : m === "week"
+                        ? "Weekly"
+                        : m === "month"
+                          ? "Monthly"
+                          : "Yearly"}
                 </button>
               ),
             )}
@@ -121,12 +134,14 @@ export default function AddTaskModal({
 
           {mode === "week" && (
             <div className="add-modal__dow">
-              {DOW_LABELS.map((label, i) => (
+              {DOW_LABELS.map((label) => (
                 <button
                   key={label}
                   type="button"
-                  className={`add-modal__dow-btn${dowVal.includes(i + 1) ? " add-modal__dow-btn--active" : ""}`}
-                  onClick={() => setDowVal((prev) => toggle(prev, i + 1))}
+                  className={`add-modal__dow-btn${dowVal.includes(label) ? " add-modal__dow-btn--active" : ""}`}
+                  onClick={() =>
+                    setDowVal((prev) => toggleInArray(prev, label))
+                  }
                 >
                   {label}
                 </button>
@@ -141,7 +156,7 @@ export default function AddTaskModal({
                   key={d}
                   type="button"
                   className={`add-modal__dom-btn${domVal.includes(d) ? " add-modal__dom-btn--active" : ""}`}
-                  onClick={() => setDomVal((prev) => toggle(prev, d))}
+                  onClick={() => setDomVal((prev) => toggleInArray(prev, d))}
                 >
                   {d}
                 </button>
@@ -149,16 +164,22 @@ export default function AddTaskModal({
             </div>
           )}
 
-          {mode === "week" && (
+          {mode === "year" && (
+            <input
+              type="text"
+              className="add-modal__date-input"
+              value={yearVal}
+              onChange={(e) => setYearVal(e.target.value)}
+              placeholder="D/M/YYYY (e.g., 25/12/2026)"
+            />
+          )}
+
+          {mode === "week" && dowVal.length > 0 && (
             <p className="add-modal__ecd-hint">
-              Repeats every{" "}
-              {[...dowVal]
-                .sort((a, b) => a - b)
-                .map((d) => DOW_LABELS[d - 1])
-                .join(", ")}
+              Repeats every {dowVal.join(", ")}
             </p>
           )}
-          {mode === "month" && (
+          {mode === "month" && domVal.length > 0 && (
             <p className="add-modal__ecd-hint">
               Repeats on the{" "}
               {[...domVal]
@@ -167,6 +188,9 @@ export default function AddTaskModal({
                 .join(", ")}{" "}
               of each month
             </p>
+          )}
+          {mode === "year" && yearVal && (
+            <p className="add-modal__ecd-hint">Repeats annually on {yearVal}</p>
           )}
         </div>
 

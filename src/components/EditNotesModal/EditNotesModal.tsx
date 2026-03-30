@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import type { EditPayload } from "../TodoCard/TodoCard.types";
+import type { EditPayload } from "../TaskCard/TaskCard.types";
+import type { ECD } from "../../types";
+import { buildEcdFromInputs } from "../../utils/ecd";
 import "./EditNotesModal.css";
 
-type EcdMode = "date" | "week" | "month";
+type EcdMode = "date" | "week" | "month" | "year" | "none";
 
 const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
@@ -11,10 +13,7 @@ interface EditNotesModalProps {
   notes: string;
   createdAt: string;
   updatedAt: string;
-  ecd: string | null;
-  ecdDayOfWeek?: number[];
-  ecdDayOfMonth?: number[];
-  allowRecurring: boolean;
+  ecd: ECD | null;
   onConfirm: (payload: EditPayload) => void;
   onCancel: () => void;
 }
@@ -28,26 +27,82 @@ function formatDate(dateStr: string): string {
   });
 }
 
-/** Convert ISO string to YYYY-MM-DD for <input type="date"> */
-function isoToDateInput(iso: string): string {
-  return iso ? iso.slice(0, 10) : "";
+function getOrdinal(n: number): string {
+  const v = n % 100;
+  const suffix = ["th", "st", "nd", "rd"];
+  return n + (suffix[(v - 20) % 10] ?? suffix[v] ?? suffix[0]);
 }
 
-function detectMode(
-  ecdDayOfWeek?: number[],
-  ecdDayOfMonth?: number[],
-): EcdMode {
-  if (ecdDayOfWeek != null && ecdDayOfWeek.length > 0) return "week";
-  if (ecdDayOfMonth != null && ecdDayOfMonth.length > 0) return "month";
-  return "date";
-}
-
-function toggle(arr: number[], val: number): number[] {
+function toggleInArray<T>(arr: T[], val: T): T[] {
   if (arr.includes(val)) {
-    // keep at least one selected
     return arr.length > 1 ? arr.filter((v) => v !== val) : arr;
   }
-  return [...arr, val].sort((a, b) => a - b);
+  return [...arr, val].sort();
+}
+
+function detectInitialState(ecd: ECD | null): {
+  mode: EcdMode;
+  dateVal: string;
+  dowVal: (typeof DOW_LABELS)[number][];
+  domVal: number[];
+  yearVal: string;
+} {
+  if (!ecd) {
+    return {
+      mode: "none",
+      dateVal: new Date().toISOString().slice(0, 10),
+      dowVal: ["Mon"],
+      domVal: [1],
+      yearVal: `${new Date().getDate()}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`,
+    };
+  }
+
+  switch (ecd.type) {
+    case "date":
+      return {
+        mode: "date",
+        dateVal: ecd.value,
+        dowVal: ["Mon"],
+        domVal: [1],
+        yearVal: "",
+      };
+
+    case "day_of_week":
+      return {
+        mode: "week",
+        dateVal: "",
+        dowVal: ecd.value,
+        domVal: [1],
+        yearVal: "",
+      };
+
+    case "day_of_month":
+      return {
+        mode: "month",
+        dateVal: "",
+        dowVal: ["Mon"],
+        domVal: ecd.value,
+        yearVal: "",
+      };
+
+    case "day_of_year":
+      return {
+        mode: "year",
+        dateVal: "",
+        dowVal: ["Mon"],
+        domVal: [1],
+        yearVal: ecd.value,
+      };
+
+    default:
+      return {
+        mode: "none",
+        dateVal: "",
+        dowVal: ["Mon"],
+        domVal: [1],
+        yearVal: "",
+      };
+  }
 }
 
 export default function EditNotesModal({
@@ -56,25 +111,20 @@ export default function EditNotesModal({
   createdAt,
   updatedAt,
   ecd,
-  ecdDayOfWeek,
-  ecdDayOfMonth,
-  allowRecurring,
   onConfirm,
   onCancel,
 }: EditNotesModalProps) {
+  const [nameDraft, setNameDraft] = useState(taskName);
   const [draft, setDraft] = useState(notes);
-  const [mode, setMode] = useState<EcdMode>(() => {
-    const detected = detectMode(ecdDayOfWeek, ecdDayOfMonth);
-    if (allowRecurring) return detected === "date" ? "week" : detected;
-    return detected !== "date" ? "date" : detected;
-  });
-  const [dateVal, setDateVal] = useState(() => isoToDateInput(ecd ?? ""));
-  const [dowVal, setDowVal] = useState<number[]>(
-    ecdDayOfWeek && ecdDayOfWeek.length > 0 ? [...ecdDayOfWeek] : [1],
+  const initial = detectInitialState(ecd);
+  const [mode, setMode] = useState<EcdMode>(initial.mode);
+  const [dateVal, setDateVal] = useState(initial.dateVal);
+  const [dowVal, setDowVal] = useState<(typeof DOW_LABELS)[number][]>(
+    initial.dowVal,
   );
-  const [domVal, setDomVal] = useState<number[]>(
-    ecdDayOfMonth && ecdDayOfMonth.length > 0 ? [...ecdDayOfMonth] : [1],
-  );
+  const [domVal, setDomVal] = useState<number[]>(initial.domVal);
+  const [yearVal, setYearVal] = useState(initial.yearVal);
+  const [formError, setFormError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -82,22 +132,40 @@ export default function EditNotesModal({
   }, []);
 
   function handleSave() {
-    let payload: EditPayload;
-    if (mode === "week") {
-      payload = { notes: draft, ecd, ecdDayOfWeek: dowVal };
-    } else if (mode === "month") {
-      payload = { notes: draft, ecd, ecdDayOfMonth: domVal };
-    } else {
-      const isoEcd = dateVal ? new Date(dateVal).toISOString() : (ecd ?? null);
-      payload = { notes: draft, ecd: isoEcd };
+    const trimmedName = nameDraft.trim();
+    if (!trimmedName) {
+      setFormError("Task name is required.");
+      return;
     }
-    onConfirm(payload);
+
+    const { ecd: newEcd, error } = buildEcdFromInputs({
+      mode,
+      dateVal,
+      dowVal: [...dowVal],
+      domVal: [...domVal],
+      yearVal,
+    });
+    if (error) {
+      setFormError(error);
+      return;
+    }
+    setFormError(null);
+
+    onConfirm({ name: trimmedName, notes: draft, ecd: newEcd });
   }
 
   return (
     <div className="edit-modal__overlay" onClick={onCancel}>
       <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
         <h3 className="edit-modal__title">{taskName}</h3>
+        <input
+          className="edit-modal__name-input"
+          type="text"
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          placeholder="Task name"
+        />
+        {formError && <p className="edit-modal__ecd-hint">{formError}</p>}
 
         <div className="edit-modal__meta">
           <span>
@@ -115,7 +183,7 @@ export default function EditNotesModal({
         <div className="edit-modal__ecd">
           <span className="edit-modal__ecd-label">Due</span>
           <div className="edit-modal__ecd-modes">
-            {((allowRecurring ? ["week", "month"] : ["date"]) as EcdMode[]).map(
+            {(["none", "date", "week", "month", "year"] as EcdMode[]).map(
               (m) => (
                 <button
                   key={m}
@@ -125,7 +193,15 @@ export default function EditNotesModal({
                   onClick={() => setMode(m)}
                   type="button"
                 >
-                  {m === "date" ? "Date" : m === "week" ? "Weekly" : "Monthly"}
+                  {m === "none"
+                    ? "None"
+                    : m === "date"
+                      ? "Date"
+                      : m === "week"
+                        ? "Weekly"
+                        : m === "month"
+                          ? "Monthly"
+                          : "Yearly"}
                 </button>
               ),
             )}
@@ -142,14 +218,16 @@ export default function EditNotesModal({
 
           {mode === "week" && (
             <div className="edit-modal__dow">
-              {DOW_LABELS.map((label, i) => (
+              {DOW_LABELS.map((label) => (
                 <button
                   key={label}
                   type="button"
                   className={`edit-modal__dow-btn${
-                    dowVal.includes(i + 1) ? " edit-modal__dow-btn--active" : ""
+                    dowVal.includes(label) ? " edit-modal__dow-btn--active" : ""
                   }`}
-                  onClick={() => setDowVal((prev) => toggle(prev, i + 1))}
+                  onClick={() =>
+                    setDowVal((prev) => toggleInArray(prev, label))
+                  }
                 >
                   {label}
                 </button>
@@ -166,12 +244,43 @@ export default function EditNotesModal({
                   className={`edit-modal__dom-btn${
                     domVal.includes(d) ? " edit-modal__dom-btn--active" : ""
                   }`}
-                  onClick={() => setDomVal((prev) => toggle(prev, d))}
+                  onClick={() => setDomVal((prev) => toggleInArray(prev, d))}
                 >
                   {d}
                 </button>
               ))}
             </div>
+          )}
+
+          {mode === "year" && (
+            <input
+              type="text"
+              className="edit-modal__date-input"
+              value={yearVal}
+              onChange={(e) => setYearVal(e.target.value)}
+              placeholder="D/M/YYYY (e.g., 25/12/2026)"
+            />
+          )}
+
+          {mode === "week" && dowVal.length > 0 && (
+            <p className="edit-modal__ecd-hint">
+              Repeats every {dowVal.join(", ")}
+            </p>
+          )}
+          {mode === "month" && domVal.length > 0 && (
+            <p className="edit-modal__ecd-hint">
+              Repeats on the{" "}
+              {[...domVal]
+                .sort((a, b) => a - b)
+                .map((d) => getOrdinal(d))
+                .join(", ")}{" "}
+              of each month
+            </p>
+          )}
+          {mode === "year" && yearVal && (
+            <p className="edit-modal__ecd-hint">
+              Repeats annually on {yearVal}
+            </p>
           )}
         </div>
 
