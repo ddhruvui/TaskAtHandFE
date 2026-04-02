@@ -37,7 +37,16 @@ test.describe("Integration - Complete Workflows", () => {
     await page.getByPlaceholder("Task name…").fill("Complete project");
     await page.getByPlaceholder("Notes (optional)…").fill("Initial notes");
     await page.getByRole("button", { name: "Date" }).click();
-    await page.locator('input[type="date"]').fill("2026-12-31");
+
+    // Navigate calendar from April 2026 → December 2026
+    for (let i = 0; i < 8; i++) {
+      await page.getByLabel("Next month").click();
+    }
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      "December 2026",
+    );
+    await page.locator(".ecd-calendar__day", { hasText: /^31$/ }).click();
+
     await page.getByRole("button", { name: "Add task", exact: true }).click();
 
     // Verify task created
@@ -149,39 +158,42 @@ test.describe("Integration - Complete Workflows", () => {
     // Swap undone tasks
     const undone2 = getTask(page, "Not done second");
     await undone2.getByTitle("Move up").click();
-    await page.waitForTimeout(500);
 
-    tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual([
-      "Not done second",
-      "Not done first",
-      "Finished first",
-      "Finished second",
-    ]);
+    await expect(async () => {
+      tasks = await getTaskNamesInHeader(page, "Work");
+      expect(tasks).toEqual([
+        "Not done second",
+        "Not done first",
+        "Finished first",
+        "Finished second",
+      ]);
+    }).toPass({ timeout: 5000 });
 
     // Mark Not done second as done (should move to end)
     await toggleTaskDone(page, "Not done second");
-    await page.waitForTimeout(500);
 
-    tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual([
-      "Not done first",
-      "Finished first",
-      "Finished second",
-      "Not done second",
-    ]);
+    await expect(async () => {
+      tasks = await getTaskNamesInHeader(page, "Work");
+      expect(tasks).toEqual([
+        "Not done first",
+        "Finished first",
+        "Finished second",
+        "Not done second",
+      ]);
+    }).toPass({ timeout: 5000 });
 
     // Mark Finished first as undone (should move before other done tasks)
     await toggleTaskDone(page, "Finished first");
-    await page.waitForTimeout(500);
 
-    tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual([
-      "Not done first",
-      "Finished first",
-      "Finished second",
-      "Not done second",
-    ]);
+    await expect(async () => {
+      tasks = await getTaskNamesInHeader(page, "Work");
+      expect(tasks).toEqual([
+        "Not done first",
+        "Finished first",
+        "Finished second",
+        "Not done second",
+      ]);
+    }).toPass({ timeout: 5000 });
   });
 
   test("should persist state across page reload", async ({ page }) => {
@@ -410,10 +422,11 @@ test.describe("Integration - Modal Interactions", () => {
     // Should be able to add
     await page.getByPlaceholder("Header name…").fill("Personal");
     await page.getByRole("button", { name: "Add", exact: true }).click();
-    await page.waitForTimeout(200);
 
-    const headers = await getHeaderNames(page);
-    expect(headers).toEqual(["Work", "Personal"]);
+    await expect(async () => {
+      const headers = await getHeaderNames(page);
+      expect(headers).toEqual(["Work", "Personal"]);
+    }).toPass({ timeout: 5000 });
   });
 
   test("should handle opening and canceling multiple modals in sequence", async ({
@@ -505,24 +518,27 @@ test.describe("Integration - Data Consistency", () => {
 
     // Toggle Task 2 done
     await toggleTaskDone(page, "Task 2");
-    await page.waitForTimeout(500);
 
-    let tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual(["Task 1", "Task 3", "Task 2"]);
+    await expect(async () => {
+      const t = await getTaskNamesInHeader(page, "Work");
+      expect(t).toEqual(["Task 1", "Task 3", "Task 2"]);
+    }).toPass({ timeout: 5000 });
 
     // Toggle Task 2 undone
     await toggleTaskDone(page, "Task 2");
-    await page.waitForTimeout(500);
 
-    tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual(["Task 1", "Task 3", "Task 2"]);
+    await expect(async () => {
+      const t = await getTaskNamesInHeader(page, "Work");
+      expect(t).toEqual(["Task 1", "Task 3", "Task 2"]);
+    }).toPass({ timeout: 5000 });
 
     // Toggle Task 2 done again
     await toggleTaskDone(page, "Task 2");
-    await page.waitForTimeout(500);
 
-    tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual(["Task 1", "Task 3", "Task 2"]);
+    await expect(async () => {
+      const t = await getTaskNamesInHeader(page, "Work");
+      expect(t).toEqual(["Task 1", "Task 3", "Task 2"]);
+    }).toPass({ timeout: 5000 });
   });
 });
 

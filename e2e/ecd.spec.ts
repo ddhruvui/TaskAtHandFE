@@ -65,7 +65,16 @@ test.describe("ECD - Date Type", () => {
 
     await page.getByPlaceholder("Task name…").fill("Project deadline");
     await page.getByRole("button", { name: "Date" }).click();
-    await page.locator('input[type="date"]').fill("2026-12-31");
+
+    // Navigate calendar from April 2026 → December 2026
+    for (let i = 0; i < 8; i++) {
+      await page.getByLabel("Next month").click();
+    }
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      "December 2026",
+    );
+    await page.locator(".ecd-calendar__day", { hasText: /^31$/ }).click();
+
     await page.getByRole("button", { name: "Add task", exact: true }).click();
 
     const task = getTask(page, "Project deadline");
@@ -86,14 +95,21 @@ test.describe("ECD - Date Type", () => {
     const task = getTask(page, "Task 1");
     await task.getByTitle("Edit notes").click();
 
-    // Change date
-    await page.locator('input[type="date"]').fill("2026-09-20");
+    // Calendar opens on June 2026 (current ECD month). Navigate to September.
+    for (let i = 0; i < 3; i++) {
+      await page.getByLabel("Next month").click();
+    }
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      "September 2026",
+    );
+    await page.locator(".ecd-calendar__day", { hasText: /^20$/ }).click();
+
     await page.getByRole("button", { name: "Save" }).click();
 
     await expect(task.getByText("[ 09/20 ]")).toBeVisible();
   });
 
-  test("should validate date format", async ({ page }) => {
+  test("should show calendar when Date mode selected", async ({ page }) => {
     const header = await createHeader("Work");
     await page.reload();
     await waitForPageLoad(page);
@@ -104,9 +120,11 @@ test.describe("ECD - Date Type", () => {
     await page.getByPlaceholder("Task name…").fill("Task 1");
     await page.getByRole("button", { name: "Date" }).click();
 
-    // The browser's date input should validate automatically
-    const dateInput = page.locator('input[type="date"]');
-    await expect(dateInput).toHaveAttribute("type", "date");
+    // Calendar should be visible with navigation and day grid
+    await expect(page.locator(".ecd-calendar")).toBeVisible();
+    await expect(page.locator(".ecd-calendar__month-label")).toBeVisible();
+    await expect(page.getByLabel("Previous month")).toBeVisible();
+    await expect(page.getByLabel("Next month")).toBeVisible();
   });
 });
 
@@ -453,9 +471,15 @@ test.describe("ECD - Day of Year Type", () => {
 
     await page.getByPlaceholder("Task name…").fill("Anniversary");
     await page.getByRole("button", { name: "Yearly" }).click();
-    await page
-      .locator('input[placeholder="D/M/YYYY (e.g., 25/12/2026)"]')
-      .fill("14/2/2027");
+
+    // Navigate calendar from April 2026 → February 2027 (10 months forward)
+    for (let i = 0; i < 10; i++) {
+      await page.getByLabel("Next month").click();
+    }
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      "February 2027",
+    );
+    await page.locator(".ecd-calendar__day", { hasText: /^14$/ }).click();
 
     await page.getByRole("button", { name: "Add task", exact: true }).click();
 
@@ -477,15 +501,19 @@ test.describe("ECD - Day of Year Type", () => {
     const task = getTask(page, "Birthday");
     await task.getByTitle("Edit notes").click();
 
-    await page
-      .locator('input[placeholder="D/M/YYYY (e.g., 25/12/2026)"]')
-      .fill("1/1/2027");
+    // Calendar opens on December 2026 (current ECD month). Navigate to January 2027.
+    await page.getByLabel("Next month").click();
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      "January 2027",
+    );
+    await page.locator(".ecd-calendar__day", { hasText: /^1$/ }).click();
+
     await page.getByRole("button", { name: "Save" }).click();
 
     await expect(task.getByText("↻ 1/1/2027")).toBeVisible();
   });
 
-  test("should default to today's date for new yearly ECD", async ({
+  test("should default to today's month for new yearly ECD", async ({
     page,
   }) => {
     const header = await createHeader("Personal");
@@ -500,15 +528,19 @@ test.describe("ECD - Day of Year Type", () => {
     await page.getByPlaceholder("Task name…").fill("Task 1");
     await page.getByRole("button", { name: "Yearly" }).click();
 
-    const yearInput = page.locator(
-      'input[placeholder="D/M/YYYY (e.g., 25/12/2026)"]',
-    );
-    const value = await yearInput.inputValue();
-
-    // Should have today's date in D/M/YYYY format
+    // Calendar should open on current month with today highlighted
     const today = new Date();
-    const expected = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
-    expect(value).toBe(expected);
+    const expectedMonth = today.toLocaleString("en-US", { month: "long" });
+    const expectedYear = today.getFullYear();
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      `${expectedMonth} ${expectedYear}`,
+    );
+    // Today's date should have the "today" class
+    await expect(
+      page.locator(".ecd-calendar__day--today", {
+        hasText: String(today.getDate()),
+      }),
+    ).toBeVisible();
   });
 });
 
@@ -620,9 +652,16 @@ test.describe("ECD - Type Conversion", () => {
 
     // Change to yearly
     await page.getByRole("button", { name: "Yearly" }).click();
-    await page
-      .locator('input[placeholder="D/M/YYYY (e.g., 25/12/2026)"]')
-      .fill("1/1/2027");
+
+    // Calendar opens on April 2026 (default). Navigate to January 2027 (9 months forward).
+    for (let i = 0; i < 9; i++) {
+      await page.getByLabel("Next month").click();
+    }
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      "January 2027",
+    );
+    await page.locator(".ecd-calendar__day", { hasText: /^1$/ }).click();
+
     await page.getByRole("button", { name: "Save" }).click();
 
     await expect(task.getByText("↻ 1/1/2027")).toBeVisible();

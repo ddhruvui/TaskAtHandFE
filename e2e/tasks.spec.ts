@@ -60,7 +60,14 @@ test.describe("Tasks - Create", () => {
 
     // Select "Date" mode
     await page.getByRole("button", { name: "Date" }).click();
-    await page.locator('input[type="date"]').fill("2026-06-15");
+
+    // Navigate calendar from April 2026 → June 2026
+    await page.getByLabel("Next month").click();
+    await page.getByLabel("Next month").click();
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText("June 2026");
+
+    // Click day 15
+    await page.locator(".ecd-calendar__day", { hasText: /^15$/ }).click();
 
     await page.getByRole("button", { name: "Add task", exact: true }).click();
 
@@ -126,9 +133,15 @@ test.describe("Tasks - Create", () => {
 
     // Select "Yearly" mode
     await page.getByRole("button", { name: "Yearly" }).click();
-    await page
-      .locator('input[placeholder="D/M/YYYY (e.g., 25/12/2026)"]')
-      .fill("25/12/2026");
+
+    // Navigate calendar from April 2026 → December 2026
+    for (let i = 0; i < 8; i++) {
+      await page.getByLabel("Next month").click();
+    }
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText("December 2026");
+
+    // Click day 25
+    await page.locator(".ecd-calendar__day", { hasText: /^25$/ }).click();
 
     await page.getByRole("button", { name: "Add task", exact: true }).click();
 
@@ -507,10 +520,11 @@ test.describe("Tasks - Update Move Priority", () => {
     // Move Task 2 up
     const task = getTask(page, "Task 2");
     await task.getByTitle("Move up").click();
-    await page.waitForTimeout(500);
 
-    const tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual(["Task 2", "Task 1", "Task 3"]);
+    await expect(async () => {
+      const tasks = await getTaskNamesInHeader(page, "Work");
+      expect(tasks).toEqual(["Task 2", "Task 1", "Task 3"]);
+    }).toPass({ timeout: 5000 });
   });
 
   test("should move task down in priority", async ({ page }) => {
@@ -525,10 +539,11 @@ test.describe("Tasks - Update Move Priority", () => {
     // Move Task 2 down
     const task = getTask(page, "Task 2");
     await task.getByTitle("Move down").click();
-    await page.waitForTimeout(500);
 
-    const tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual(["Task 1", "Task 3", "Task 2"]);
+    await expect(async () => {
+      const tasks = await getTaskNamesInHeader(page, "Work");
+      expect(tasks).toEqual(["Task 1", "Task 3", "Task 2"]);
+    }).toPass({ timeout: 5000 });
   });
 
   test("should disable move up for first undone task", async ({ page }) => {
@@ -599,10 +614,11 @@ test.describe("Tasks - Update Move Priority", () => {
     // Move Done Task 2 up
     const task = getTask(page, "Done Task 2");
     await task.getByTitle("Move up").click();
-    await page.waitForTimeout(500);
 
-    const tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual(["Done Task 2", "Done Task 1", "Done Task 3"]);
+    await expect(async () => {
+      const tasks = await getTaskNamesInHeader(page, "Work");
+      expect(tasks).toEqual(["Done Task 2", "Done Task 1", "Done Task 3"]);
+    }).toPass({ timeout: 5000 });
   });
 
   test("should move done task down within done section", async ({ page }) => {
@@ -617,10 +633,11 @@ test.describe("Tasks - Update Move Priority", () => {
     // Move Done Task 2 down
     const task = getTask(page, "Done Task 2");
     await task.getByTitle("Move down").click();
-    await page.waitForTimeout(500);
 
-    const tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual(["Done Task 1", "Done Task 3", "Done Task 2"]);
+    await expect(async () => {
+      const tasks = await getTaskNamesInHeader(page, "Work");
+      expect(tasks).toEqual(["Done Task 1", "Done Task 3", "Done Task 2"]);
+    }).toPass({ timeout: 5000 });
   });
 
   test("should disable move up for first done task", async ({ page }) => {
@@ -914,12 +931,14 @@ test.describe("Tasks - Edge Cases with Done Tasks", () => {
 
     // Mark all as done
     await toggleTaskDone(page, "Task 1");
-    await page.waitForTimeout(500);
+    await expect(getTask(page, "Task 1")).toHaveClass(/task-card--done/);
     await toggleTaskDone(page, "Task 2");
-    await page.waitForTimeout(500);
+    await expect(getTask(page, "Task 2")).toHaveClass(/task-card--done/);
 
-    let tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual(["Task 1", "Task 2"]);
+    await expect(async () => {
+      const t = await getTaskNamesInHeader(page, "Work");
+      expect(t).toEqual(["Task 1", "Task 2"]);
+    }).toPass({ timeout: 5000 });
 
     // Both should be done
     await expect(getTask(page, "Task 1")).toHaveClass(/task-card--done/);
@@ -927,12 +946,14 @@ test.describe("Tasks - Edge Cases with Done Tasks", () => {
 
     // Mark all as undone
     await toggleTaskDone(page, "Task 1");
-    await page.waitForTimeout(500);
+    await expect(getTask(page, "Task 1")).not.toHaveClass(/task-card--done/);
     await toggleTaskDone(page, "Task 2");
-    await page.waitForTimeout(500);
+    await expect(getTask(page, "Task 2")).not.toHaveClass(/task-card--done/);
 
-    tasks = await getTaskNamesInHeader(page, "Work");
-    expect(tasks).toEqual(["Task 1", "Task 2"]);
+    await expect(async () => {
+      const t = await getTaskNamesInHeader(page, "Work");
+      expect(t).toEqual(["Task 1", "Task 2"]);
+    }).toPass({ timeout: 5000 });
 
     // Both should be undone
     await expect(getTask(page, "Task 1")).not.toHaveClass(/task-card--done/);

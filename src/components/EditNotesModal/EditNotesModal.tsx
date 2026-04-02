@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import type { EditPayload } from "../TaskCard/TaskCard.types";
 import type { ECD } from "../../types";
 import { buildEcdFromInputs } from "../../utils/ecd";
+import { EcdCalendar } from "../DatePicker";
 import "./EditNotesModal.css";
 
 type EcdMode = "date" | "week" | "month" | "year" | "none";
@@ -208,12 +209,7 @@ export default function EditNotesModal({
           </div>
 
           {mode === "date" && (
-            <input
-              type="date"
-              className="edit-modal__date-input"
-              value={dateVal}
-              onChange={(e) => setDateVal(e.target.value)}
-            />
+            <EcdCalendar mode="date" value={dateVal} onChange={setDateVal} />
           )}
 
           {mode === "week" && (
@@ -253,13 +249,7 @@ export default function EditNotesModal({
           )}
 
           {mode === "year" && (
-            <input
-              type="text"
-              className="edit-modal__date-input"
-              value={yearVal}
-              onChange={(e) => setYearVal(e.target.value)}
-              placeholder="D/M/YYYY (e.g., 25/12/2026)"
-            />
+            <EcdCalendar mode="year" value={yearVal} onChange={setYearVal} />
           )}
 
           {mode === "week" && dowVal.length > 0 && (

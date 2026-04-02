@@ -1,0 +1,120 @@
+/* ── Calendar container ── */
+.ecd-calendar {
+  width: 280px;
+  margin: 0 auto; /* centered */
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius, 6px);
+  padding: 12px;
+  background: var(--m-bg, #ffffff);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--m-text, #1f2328);
+}
+
+/* ── Month navigation row ── */
+.ecd-calendar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ecd-calendar__nav {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--m-text-muted, #656d76);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+  font-family: inherit;
+}
+
+.ecd-calendar__nav:hover {
+  background: rgba(31, 35, 40, 0.08);
+  color: var(--m-text, #1f2328);
+}
+
+.ecd-calendar__month-label {
+  font-weight: 600;
+  font-size: 13px;
+  user-select: none;
+}
+
+/* ── 7-column grid ── */
+.ecd-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+
+.ecd-calendar__day-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--m-text-muted, #656d76);
+  padding: 4px 0;
+  user-select: none;
+}
+
+.ecd-calendar__blank {
+  /* empty cell */
+}
+
+/* ── Day button ── */
+.ecd-calendar__day {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 400;
+  font-family: inherit;
+  color: var(--m-text, #1f2328);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.ecd-calendar__day:hover {
+  background: rgba(31, 35, 40, 0.08);
+}
+
+.ecd-calendar__day--today {
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--m-accent, #1a7f37);
+}
+
+.ecd-calendar__day--selected {
+  background: var(--m-accent, #1a7f37);
+  color: #fff;
+  font-weight: 600;
+}
+
+.ecd-calendar__day--selected:hover {
+  background: var(--m-accent-hover, #157a32);
+}
+
+/* ── Dark mode overrides ── */
+@media (prefers-color-scheme: dark) {
+  .ecd-calendar__nav:hover {
+    background: rgba(230, 237, 243, 0.1);
+    color: var(--m-text, #e6edf3);
+  }
+
+  .ecd-calendar__day:hover {
+    background: rgba(230, 237, 243, 0.1);
+  }
+}
