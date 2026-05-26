@@ -40,6 +40,25 @@ export function isTaskDueToday(ecd: ECD | null): boolean {
   }
 }
 
+/**
+ * Returns true if the task's ECD is in the past and not a yearly event.
+ * This includes past dates, but excludes day_of_week, day_of_month, and day_of_year.
+ */
+export function isTaskPast(ecd: ECD | null): boolean {
+  if (!ecd) return false;
+  const now = new Date();
+
+  // Only show past dates; exclude recurring patterns (week, month, year)
+  if (ecd.type === "date") {
+    return (
+      ecd.value <
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+    );
+  }
+
+  return false;
+}
+
 export function isValidYearDate(value: string): boolean {
   return /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value.trim());
 }

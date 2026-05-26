@@ -7,7 +7,7 @@ import type { Header, Task } from "./types";
 import type { EditPayload } from "./components/TaskCard/TaskCard.types";
 import * as headersApi from "./api/headers";
 import * as tasksApi from "./api/tasks";
-import { isTaskDueToday } from "./utils/ecd";
+import { isTaskDueToday, isTaskPast } from "./utils/ecd";
 import "./App.css";
 
 interface HeaderWithTasks extends Header {
@@ -20,6 +20,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
+  const [pastMode, setPastMode] = useState(false);
 
   // Modal states
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -298,7 +299,9 @@ function App() {
             aria-pressed={focusMode}
             title={
               focusMode
-                ? "Focus mode on — showing today's tasks only"
+                ? pastMode
+                  ? "Focus mode on — showing today's and past tasks"
+                  : "Focus mode on — showing today's tasks only"
                 : "Enable focus mode"
             }
             style={{
@@ -313,6 +316,32 @@ function App() {
               <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm0 1.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zM8 4a4 4 0 1 1 0 8A4 4 0 0 1 8 4zm0 1.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM8 7a1 1 0 1 1 0 2A1 1 0 0 1 8 7z" />
             </svg>
             Focus
+          </button>
+          <button
+            className={`readme-heading__add-btn past-toggle-btn${pastMode ? " past-toggle-btn--active" : ""}`}
+            onClick={() => setPastMode((prev) => !prev)}
+            aria-label={pastMode ? "Disable past mode" : "Enable past mode"}
+            aria-pressed={pastMode}
+            title={
+              pastMode
+                ? focusMode
+                  ? "Past mode on — showing today's and past tasks"
+                  : "Past mode on — showing overdue tasks only"
+                : "Enable past mode"
+            }
+            style={{
+              width: "auto",
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+              <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8z" />
+              <path d="M8 3.75a.75.75 0 0 0-.75.75v3.5H5.5a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 .75-.75V4.5a.75.75 0 0 0-.75-.75z" />
+            </svg>
+            Past
           </button>
           <button
             className="readme-heading__add-btn"
@@ -331,10 +360,19 @@ function App() {
         </div>
 
         {headers.map((header, idx) => {
-          const visibleTasks = focusMode
-            ? header.tasks.filter((t) => isTaskDueToday(t.ecd))
-            : header.tasks;
-          if (focusMode && visibleTasks.length === 0) return null;
+          let visibleTasks = header.tasks;
+
+          if (focusMode && pastMode) {
+            visibleTasks = visibleTasks.filter(
+              (t) => isTaskDueToday(t.ecd) || isTaskPast(t.ecd),
+            );
+          } else if (focusMode) {
+            visibleTasks = visibleTasks.filter((t) => isTaskDueToday(t.ecd));
+          } else if (pastMode) {
+            visibleTasks = visibleTasks.filter((t) => isTaskPast(t.ecd));
+          }
+
+          if ((focusMode || pastMode) && visibleTasks.length === 0) return null;
           return (
             <section key={header._id} className="readme-section">
               {/* ── Header heading ── */}
@@ -462,9 +500,25 @@ function App() {
           <p className="empty-message">No headers yet — add one!</p>
         )}
         {focusMode &&
+          pastMode &&
+          headers.length > 0 &&
+          headers.every(
+            (h) =>
+              !h.tasks.some((t) => isTaskDueToday(t.ecd) || isTaskPast(t.ecd)),
+          ) && (
+            <p className="empty-message">No tasks due today or in the past.</p>
+          )}
+        {focusMode &&
+          !pastMode &&
           headers.length > 0 &&
           headers.every((h) => !h.tasks.some((t) => isTaskDueToday(t.ecd))) && (
             <p className="empty-message">No tasks due today.</p>
+          )}
+        {!focusMode &&
+          pastMode &&
+          headers.length > 0 &&
+          headers.every((h) => !h.tasks.some((t) => isTaskPast(t.ecd))) && (
+            <p className="empty-message">No past tasks.</p>
           )}
       </div>
 

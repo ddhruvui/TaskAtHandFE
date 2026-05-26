@@ -132,6 +132,18 @@
   border-color: #0860ca !important;
 }
 
+/* ─── Past toggle button active state ─── */
+.past-toggle-btn--active {
+  background: #d1444a !important;
+  border-color: #d1444a !important;
+  color: #ffffff !important;
+}
+
+.past-toggle-btn--active:hover {
+  background: #c42e34 !important;
+  border-color: #c42e34 !important;
+}
+
 @media (prefers-color-scheme: dark) {
   .focus-toggle-btn--active {
     background: #1f6feb !important;
@@ -142,6 +154,17 @@
   .focus-toggle-btn--active:hover {
     background: #388bfd !important;
     border-color: #388bfd !important;
+  }
+
+  .past-toggle-btn--active {
+    background: #da3633 !important;
+    border-color: #da3633 !important;
+    color: #ffffff !important;
+  }
+
+  .past-toggle-btn--active:hover {
+    background: #f85149 !important;
+    border-color: #f85149 !important;
   }
 }
 
