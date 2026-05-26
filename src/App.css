@@ -120,6 +120,31 @@
   padding: 24px 0;
 }
 
+/* ─── Focus toggle button active state ─── */
+.focus-toggle-btn--active {
+  background: #0969da !important;
+  border-color: #0969da !important;
+  color: #ffffff !important;
+}
+
+.focus-toggle-btn--active:hover {
+  background: #0860ca !important;
+  border-color: #0860ca !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .focus-toggle-btn--active {
+    background: #1f6feb !important;
+    border-color: #1f6feb !important;
+    color: #ffffff !important;
+  }
+
+  .focus-toggle-btn--active:hover {
+    background: #388bfd !important;
+    border-color: #388bfd !important;
+  }
+}
+
 @media (max-width: 640px) {
   .readme {
     padding: 16px 12px;

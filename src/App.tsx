@@ -7,6 +7,7 @@ import type { Header, Task } from "./types";
 import type { EditPayload } from "./components/TaskCard/TaskCard.types";
 import * as headersApi from "./api/headers";
 import * as tasksApi from "./api/tasks";
+import { isTaskDueToday } from "./utils/ecd";
 import "./App.css";
 
 interface HeaderWithTasks extends Header {
@@ -18,6 +19,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [focusMode, setFocusMode] = useState(false);
 
   // Modal states
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -281,143 +283,189 @@ function App() {
           <p className="empty-message">Action failed: {actionError}</p>
         )}
         {/* Add Header button at the top */}
-        <div style={{ marginBottom: "24px", display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+        <div
+          style={{
+            marginBottom: "24px",
+            display: "flex",
+            gap: "12px",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button
+            className={`readme-heading__add-btn focus-toggle-btn${focusMode ? " focus-toggle-btn--active" : ""}`}
+            onClick={() => setFocusMode((prev) => !prev)}
+            aria-label={focusMode ? "Disable focus mode" : "Enable focus mode"}
+            aria-pressed={focusMode}
+            title={
+              focusMode
+                ? "Focus mode on — showing today's tasks only"
+                : "Enable focus mode"
+            }
+            style={{
+              width: "auto",
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+              <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm0 1.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zM8 4a4 4 0 1 1 0 8A4 4 0 0 1 8 4zm0 1.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM8 7a1 1 0 1 1 0 2A1 1 0 0 1 8 7z" />
+            </svg>
+            Focus
+          </button>
           <button
             className="readme-heading__add-btn"
             onClick={() => setHeaderModalState({ mode: "add" })}
             aria-label="Add header"
             title="Add header"
-            style={{ width: "auto", padding: "8px 16px", display: "flex", alignItems: "center" }}
+            style={{
+              width: "auto",
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+            }}
           >
             <span style={{ marginRight: "6px" }}>+</span> Add Header
           </button>
         </div>
 
-        {headers.map((header, idx) => (
-          <section key={header._id} className="readme-section">
-            {/* ── Header heading ── */}
-            <div className="readme-heading">
-              <h2 className="readme-heading__text">{header.name}</h2>
+        {headers.map((header, idx) => {
+          const visibleTasks = focusMode
+            ? header.tasks.filter((t) => isTaskDueToday(t.ecd))
+            : header.tasks;
+          if (focusMode && visibleTasks.length === 0) return null;
+          return (
+            <section key={header._id} className="readme-section">
+              {/* ── Header heading ── */}
+              <div className="readme-heading">
+                <h2 className="readme-heading__text">{header.name}</h2>
 
-              {/* Header action buttons */}
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => handleMoveHeaderUp(header._id)}
-                disabled={idx === 0}
-                aria-label="Move header up"
-                title="Move header up"
-              >
-                ↑
-              </button>
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => handleMoveHeaderDown(header._id)}
-                disabled={idx === headers.length - 1}
-                aria-label="Move header down"
-                title="Move header down"
-              >
-                ↓
-              </button>
-              <button
-                className="readme-heading__add-btn"
-                onClick={() =>
-                  setHeaderModalState({
-                    mode: "edit",
-                    headerId: header._id,
-                    name: header.name,
-                  })
-                }
-                aria-label="Edit header"
-                title="Edit header"
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  width="14"
-                  height="14"
-                  fill="currentColor"
+                {/* Header action buttons */}
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() => handleMoveHeaderUp(header._id)}
+                  disabled={idx === 0}
+                  aria-label="Move header up"
+                  title="Move header up"
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z"
-                  />
-                </svg>
-              </button>
-              <button
-                className="readme-heading__add-btn"
-                onClick={() =>
-                  setDeleteTarget({
-                    type: "header",
-                    headerId: header._id,
-                    id: header._id,
-                    name: header.name,
-                  })
-                }
-                aria-label="Delete header"
-                title="Delete header"
-                style={{ color: "#e74c3c" }}
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  width="14"
-                  height="14"
-                  fill="currentColor"
+                  ↑
+                </button>
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() => handleMoveHeaderDown(header._id)}
+                  disabled={idx === headers.length - 1}
+                  aria-label="Move header down"
+                  title="Move header down"
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
-                  />
-                </svg>
-              </button>
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => setAddTaskHeaderId(header._id)}
-                aria-label={`Add task to ${header.name}`}
-                title="Add task"
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  width="14"
-                  height="14"
-                  fill="currentColor"
+                  ↓
+                </button>
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() =>
+                    setHeaderModalState({
+                      mode: "edit",
+                      headerId: header._id,
+                      name: header.name,
+                    })
+                  }
+                  aria-label="Edit header"
+                  title="Edit header"
                 >
-                  <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z" />
-                </svg>
-              </button>
-            </div>
+                  <svg
+                    viewBox="0 0 16 16"
+                    width="14"
+                    height="14"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() =>
+                    setDeleteTarget({
+                      type: "header",
+                      headerId: header._id,
+                      id: header._id,
+                      name: header.name,
+                    })
+                  }
+                  aria-label="Delete header"
+                  title="Delete header"
+                  style={{ color: "#e74c3c" }}
+                >
+                  <svg
+                    viewBox="0 0 16 16"
+                    width="14"
+                    height="14"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() => setAddTaskHeaderId(header._id)}
+                  aria-label={`Add task to ${header.name}`}
+                  title="Add task"
+                >
+                  <svg
+                    viewBox="0 0 16 16"
+                    width="14"
+                    height="14"
+                    fill="currentColor"
+                  >
+                    <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z" />
+                  </svg>
+                </button>
+              </div>
 
-            {/* ── Task list ── */}
-            <div className="readme-tasks">
-              {header.tasks.map((task, taskIdx) => (
-                <TaskCard
-                  key={task._id}
-                  task={task}
-                  isFirst={taskIdx === 0}
-                  isLast={taskIdx === header.tasks.length - 1}
-                  prevTaskDone={
-                    taskIdx > 0 ? header.tasks[taskIdx - 1].done : undefined
-                  }
-                  nextTaskDone={
-                    taskIdx < header.tasks.length - 1
-                      ? header.tasks[taskIdx + 1].done
-                      : undefined
-                  }
-                  onToggleDone={handleToggleDone(header._id)}
-                  onEdit={handleEditTask(header._id)}
-                  onMoveUp={handleMoveTaskUp(header._id)}
-                  onMoveDown={handleMoveTaskDown(header._id)}
-                  onDelete={handleDeleteTask(header._id)}
-                />
-              ))}
-              {header.tasks.length === 0 && (
-                <p className="empty-message">No tasks yet — add one!</p>
-              )}
-            </div>
-          </section>
-        ))}
+              {/* ── Task list ── */}
+              <div className="readme-tasks">
+                {visibleTasks.map((task, taskIdx) => (
+                  <TaskCard
+                    key={task._id}
+                    task={task}
+                    isFirst={taskIdx === 0}
+                    isLast={taskIdx === visibleTasks.length - 1}
+                    prevTaskDone={
+                      taskIdx > 0 ? visibleTasks[taskIdx - 1].done : undefined
+                    }
+                    nextTaskDone={
+                      taskIdx < visibleTasks.length - 1
+                        ? visibleTasks[taskIdx + 1].done
+                        : undefined
+                    }
+                    onToggleDone={handleToggleDone(header._id)}
+                    onEdit={handleEditTask(header._id)}
+                    onMoveUp={handleMoveTaskUp(header._id)}
+                    onMoveDown={handleMoveTaskDown(header._id)}
+                    onDelete={handleDeleteTask(header._id)}
+                  />
+                ))}
+                {visibleTasks.length === 0 && (
+                  <p className="empty-message">No tasks yet — add one!</p>
+                )}
+              </div>
+            </section>
+          );
+        })}
 
         {headers.length === 0 && (
           <p className="empty-message">No headers yet — add one!</p>
         )}
+        {focusMode &&
+          headers.length > 0 &&
+          headers.every((h) => !h.tasks.some((t) => isTaskDueToday(t.ecd))) && (
+            <p className="empty-message">No tasks due today.</p>
+          )}
       </div>
 
       {/* Modals */}

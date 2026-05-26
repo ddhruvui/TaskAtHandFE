@@ -3,6 +3,43 @@ import type { ECD } from "../types";
 const DOW_VALUES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 type DayOfWeek = (typeof DOW_VALUES)[number];
 
+const DOW_BY_JS_INDEX: DayOfWeek[] = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+];
+
+/**
+ * Returns true if the task's ECD matches today's date, day of week,
+ * day of month, or day of year.
+ */
+export function isTaskDueToday(ecd: ECD | null): boolean {
+  if (!ecd) return false;
+  const now = new Date();
+  switch (ecd.type) {
+    case "date": {
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return ecd.value === `${y}-${m}-${d}`;
+    }
+    case "day_of_week":
+      return (ecd.value as string[]).includes(DOW_BY_JS_INDEX[now.getDay()]);
+    case "day_of_month":
+      return ecd.value.includes(now.getDate());
+    case "day_of_year": {
+      const todayDOY = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      return ecd.value === todayDOY;
+    }
+    default:
+      return false;
+  }
+}
+
 export function isValidYearDate(value: string): boolean {
   return /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value.trim());
 }
@@ -34,13 +71,21 @@ export function buildEcdFromInputs(params: {
     if (!dowVal.every((day) => DOW_VALUES.includes(day as DayOfWeek))) {
       return { ecd: null, error: "Weekdays must be Mon-Sun abbreviations." };
     }
-    return { ecd: { type: "day_of_week", value: dowVal as DayOfWeek[] }, error: null };
+    return {
+      ecd: { type: "day_of_week", value: dowVal as DayOfWeek[] },
+      error: null,
+    };
   }
 
   if (mode === "month") {
-    const hasInvalid = domVal.some((value) => !Number.isInteger(value) || value < 1 || value > 31);
+    const hasInvalid = domVal.some(
+      (value) => !Number.isInteger(value) || value < 1 || value > 31,
+    );
     if (domVal.length === 0 || hasInvalid) {
-      return { ecd: null, error: "Monthly dates must be numbers from 1 to 31." };
+      return {
+        ecd: null,
+        error: "Monthly dates must be numbers from 1 to 31.",
+      };
     }
     return { ecd: { type: "day_of_month", value: domVal }, error: null };
   }
