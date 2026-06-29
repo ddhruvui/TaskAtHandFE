@@ -144,11 +144,34 @@
   border-color: #c42e34 !important;
 }
 
+/* ─── By Date toggle button active state ─── */
+.bydate-toggle-btn--active {
+  background: #1a7f37 !important;
+  border-color: #1a7f37 !important;
+  color: #ffffff !important;
+}
+
+.bydate-toggle-btn--active:hover {
+  background: #137030 !important;
+  border-color: #137030 !important;
+}
+
 @media (prefers-color-scheme: dark) {
   .focus-toggle-btn--active {
     background: #1f6feb !important;
     border-color: #1f6feb !important;
     color: #ffffff !important;
+  }
+
+  .bydate-toggle-btn--active {
+    background: #238636 !important;
+    border-color: #238636 !important;
+    color: #ffffff !important;
+  }
+
+  .bydate-toggle-btn--active:hover {
+    background: #2ea043 !important;
+    border-color: #2ea043 !important;
   }
 
   .focus-toggle-btn--active:hover {
