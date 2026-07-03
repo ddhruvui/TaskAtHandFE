@@ -44,7 +44,75 @@ export interface Task {
   headerId: string; // Parent Header ObjectId (required, immutable)
   priority: number; // 0-based priority within the header; auto-managed
   done: boolean; // Completion status (default: false)
+  doneAt?: string | null; // ISO 8601 timestamp of completion (null if not done)
   ecd: ECD | null; // Expected Completion Date (optional)
   createdAt: string; // ISO 8601 timestamp
   updatedAt: string; // ISO 8601 timestamp
+}
+
+// ── Insights (archive stats + AI reports) ───────────────────────────────────
+
+export interface HabitStat {
+  taskName: string;
+  headerName: string | null;
+  scheduledDays: string[];
+  scheduled: number;
+  completed: number;
+  completionRate: number; // 0-100
+  currentStreak: number;
+  longestStreak: number;
+  missedByDow: Record<string, number>;
+  recentResults: { dueDate: string; completed: boolean }[];
+}
+
+export interface InsightStats {
+  periodDays: number;
+  eventCount: number;
+  habits: HabitStat[];
+  recurringTasks: {
+    taskName: string;
+    headerName: string | null;
+    ecdType: string;
+    scheduled: number;
+    completed: number;
+    completionRate: number;
+  }[];
+  oneTimeTasks: {
+    completedCount: number;
+    avgSlippageDays: number | null;
+    recent: {
+      taskName: string;
+      headerName: string | null;
+      plannedFor: string | null;
+      doneAt: string | null;
+      slippageDays: number | null;
+    }[];
+  };
+  reschedules: {
+    taskName: string;
+    headerName: string | null;
+    total: number;
+    pushedLater: number;
+  }[];
+  byHeader: Record<
+    string,
+    { completed: number; missed: number; reschedules: number }
+  >;
+}
+
+export interface InsightReport {
+  summary: string;
+  habitsOnTrack: string[];
+  habitsSlipping: string[];
+  taskInsights: string[];
+  procrastinationFlags: string[];
+  suggestions: string[];
+}
+
+export interface Insight {
+  _id: string;
+  generatedAt: string;
+  periodDays: number;
+  model?: string;
+  report: InsightReport;
 }

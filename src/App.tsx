@@ -3,6 +3,7 @@ import { TaskCard } from "./components/TaskCard";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { AddTaskModal } from "./components/AddTaskModal";
 import { HeaderModal } from "./components/HeaderModal";
+import { InsightsPanel } from "./components/InsightsPanel";
 import type { Header, Task } from "./types";
 import type { EditPayload } from "./components/TaskCard/TaskCard.types";
 import * as headersApi from "./api/headers";
@@ -27,6 +28,7 @@ function App() {
   const [focusMode, setFocusMode] = useState(false);
   const [pastMode, setPastMode] = useState(false);
   const [byDateMode, setByDateMode] = useState(false);
+  const [insightsMode, setInsightsMode] = useState(false);
 
   // Modal states
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -428,6 +430,29 @@ function App() {
             By Date
           </button>
           <button
+            className={`readme-heading__add-btn insights-toggle-btn${insightsMode ? " insights-toggle-btn--active" : ""}`}
+            onClick={() => setInsightsMode((prev) => !prev)}
+            aria-label={insightsMode ? "Hide insights" : "Show insights"}
+            aria-pressed={insightsMode}
+            title={
+              insightsMode
+                ? "Insights on — showing habit stats and AI coach"
+                : "Show habit stats and AI coach"
+            }
+            style={{
+              width: "auto",
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+              <path d="M1.5 1.75a.75.75 0 0 0-1.5 0v12.5c0 .414.336.75.75.75h14.5a.75.75 0 0 0 0-1.5H1.5V1.75zm14.28 2.53a.75.75 0 0 0-1.06-1.06L10 7.94 7.53 5.47a.75.75 0 0 0-1.06 0L3.22 8.72a.75.75 0 0 0 1.06 1.06L7 7.06l2.47 2.47a.75.75 0 0 0 1.06 0l5.25-5.25z" />
+            </svg>
+            Insights
+          </button>
+          <button
             className="readme-heading__add-btn"
             onClick={() => setHeaderModalState({ mode: "add" })}
             aria-label="Add header"
@@ -443,7 +468,10 @@ function App() {
           </button>
         </div>
 
-        {!byDateMode &&
+        {insightsMode && <InsightsPanel />}
+
+        {!insightsMode &&
+          !byDateMode &&
           headers.map((header, idx) => {
             const visibleTasks = header.tasks.filter(matchesFilter);
 
@@ -572,7 +600,7 @@ function App() {
             );
           })}
 
-        {!byDateMode && (
+        {!insightsMode && !byDateMode && (
           <>
             {headers.length === 0 && (
               <p className="empty-message">No headers yet — add one!</p>
@@ -605,7 +633,7 @@ function App() {
           </>
         )}
 
-        {byDateMode && (
+        {!insightsMode && byDateMode && (
           <>
             {byDateGroups.map((group) => (
               <section key={group.key} className="readme-section">
