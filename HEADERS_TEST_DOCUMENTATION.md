@@ -16,7 +16,7 @@ These tests verify that users can successfully create, view, edit, reorder, and 
 
 ## Test Categories
 
-### 1. Headers - Create (9 tests)
+### 1. Headers - Create (10 tests)
 
 These tests verify that users can successfully create new headers and that the creation interface works properly.
 
@@ -108,7 +108,7 @@ These tests verify that headers display correctly and show appropriate informati
 
 ---
 
-### 3. Headers - Update (7 tests)
+### 3. Headers - Update (6 tests)
 
 These tests verify that users can edit header names and change their order (priority).
 

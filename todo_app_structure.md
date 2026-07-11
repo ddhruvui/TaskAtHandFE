@@ -104,7 +104,8 @@
 ```
 
 - `value` is a date string in `D/M/YYYY` format
-- The year increments by 1 every Jan 1st
+- The year advances to the current year by the daily cron on the day the task
+  comes due (see cron step 2)
 
 ---
 
@@ -217,13 +218,15 @@ outcome is only knowable at the following midnight:
   - For each value in `ecd.value`, if the value exceeds the number of days in the month, clamp it to the last day of the month
   - If any value was changed, update `updatedAt`
 
-#### Step 2 — Clamp & increment `day_of_year` _(runs on Jan 1st only)_
+#### Step 2 — Clamp & advance `day_of_year` _(runs daily)_
 
-- For every task with `ecd.type === "day_of_year"`:
-  - Increment the year in `ecd.value` by 1 (e.g. `7/3/2006` → `7/3/2007`)
-  - If the resulting date is Feb 29 and the new year is not a leap year, clamp to Feb 28
-  - Set `done = false`, `doneAt = null`
-  - Update `updatedAt`
+- For every task with `ecd.type === "day_of_year"` whose stored year is in the past:
+  - If today's month/day matches the task's month/day: advance the year to the
+    current year (e.g. `7/3/2006` → `7/3/2026`), set `done = false`,
+    `doneAt = null`, and update `updatedAt`
+  - On Feb 28 of a non-leap year, tasks stored as Feb 29 of a past year are
+    clamped to Feb 28 of the current year and marked undone the same way
+- Tasks whose stored year is the current year or later are skipped
 
 #### Step 3 — Mark undone: `day_of_week`
 
@@ -510,7 +513,7 @@ Manually triggers the cron job. Accepts an optional `date` body override. Runs a
 
 0. Archive yesterday's habit/recurring outcomes (idempotent)
 1. Clamp `day_of_month` values _(if today is the 1st)_
-2. Clamp & increment `day_of_year` _(if today is Jan 1st)_
+2. Clamp & advance `day_of_year` to the current year _(daily, when the task comes due)_
 3. Mark undone: `day_of_week`
 4. Mark undone: `day_of_month`
 5. Archive + delete completed `date` tasks

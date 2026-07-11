@@ -42,6 +42,7 @@ src/
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
+│   ├── DatePicker/            # EcdCalendar — shared ECD date/recurrence picker
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
 │   └── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
 └── utils/ecd.ts               # ECD due-today/past/date-key helpers
@@ -59,11 +60,24 @@ Build: `npm run build` · Preview: `npm run preview`
 
 ## Testing
 
-Playwright end-to-end tests live in `e2e/` and are documented in
+Playwright end-to-end tests live in `e2e/`; Vitest unit tests live alongside
+the API modules in `src/api/*.test.ts`. Both are documented in
 `TEST_REFERENCE.md` and the `*_TEST_DOCUMENTATION.md` files.
 
 ```bash
-npx playwright test
+# Unit tests (Vitest)
+npm run test              # watch mode
+npm run test:ui           # Vitest UI
+npm run test:coverage     # with coverage
+
+# End-to-end tests (Playwright)
+npm run test:e2e          # same as: npx playwright test
+npm run test:list         # list reporter, single worker
+npm run test:e2e:ui       # Playwright UI mode
+npm run test:e2e:report   # open last HTML report
+
+# Lint
+npm run lint
 ```
 
 ## API

@@ -264,6 +264,7 @@ Returns all tasks for the specified header, sorted by `priority` ascending (undo
     "headerId": "...",
     "priority": 0,
     "done": false,
+    "doneAt": null,
     "ecd": { "type": "date", "value": "2026-04-01" },
     "createdAt": "2026-03-20T10:00:00.000Z",
     "updatedAt": "2026-03-20T10:00:00.000Z"
@@ -512,7 +513,7 @@ The cron job runs daily at UTC midnight (scheduled via `node-cron` in the `Etc/U
 | ---- | ------------------ | ------------------------------------------------------------------------------- |
 | 0    | Every day          | Archive **yesterday's** habit (`day_of_week`) and recurring (`day_of_month` / `day_of_year`) outcomes to TaskArchive (idempotent per dueDate) |
 | 1    | 1st of every month | Clamp `day_of_month` ECD values that exceed the month's maximum days            |
-| 2    | January 1st only   | Advance `day_of_year` ECDs by 1 year and mark those tasks undone                |
+| 2    | Every day          | When today matches a `day_of_year` task's month/day (and its stored year is in the past), advance the year to the current year and mark the task undone; on Feb 28 of a non-leap year, past Feb 29 values are clamped to Feb 28 |
 | 3    | Every day          | Mark tasks with a `day_of_week` ECD matching today as undone (`doneAt` cleared) |
 | 4    | Every day          | Mark tasks with a `day_of_month` ECD containing today's date as undone (`doneAt` cleared) |
 | 5    | Every day          | Archive then delete tasks that are **done** and have a `date` ECD or no ECD     |
