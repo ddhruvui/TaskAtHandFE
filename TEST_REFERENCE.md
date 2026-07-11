@@ -1,9 +1,8 @@
 # Frontend Test Reference
 
-This file tracks frontend test scenarios for the new API structure that includes only:
-
-- `headers`
-- `tasks`
+This file tracks frontend unit test scenarios for the API wrappers and shared
+utilities (`headers`, `tasks`, `events`, `insights`, ECD helpers). End-to-end
+tests are documented in the `*_TEST_DOCUMENTATION.md` files.
 
 ---
 
@@ -41,6 +40,42 @@ Validates frontend wrapper methods for the Tasks collection:
 | create calls POST `/tasks` with body | Task create payload is serialized and sent correctly |
 | update calls PUT `/tasks/:id` with partial body | Task update payload is passed as expected |
 | remove calls DELETE `/tasks/:id` | Delete request maps to correct endpoint and method |
+
+### `src/api/events.test.ts`
+
+Validates frontend wrapper methods for the Events collection (4 tests):
+
+| Test | What it checks |
+| --- | --- |
+| getAll calls GET `/events` | Wrapper maps to the correct endpoint and returns the event list |
+| create calls POST `/events` with body | `{ name, tasks }` payload is serialized and sent correctly |
+| update calls PUT `/events/:id` with partial body | Event update payload is passed as expected |
+| remove calls DELETE `/events/:id` | Delete request maps to correct endpoint and method |
+
+### `src/api/insights.test.ts`
+
+Validates frontend wrapper methods for the Insights endpoints (5 tests):
+
+| Test | What it checks |
+| --- | --- |
+| getStats calls GET `/insights/stats?days=28` by default | Default period is applied |
+| getStats passes an explicit days parameter | Query-string mapping is correct |
+| getLatest calls GET `/insights/latest` | Wrapper maps to the correct endpoint |
+| generate posts `{ days }` when given | POST body includes the period |
+| generate posts `{}` when days is omitted | POST body defaults to empty object |
+
+### `src/utils/ecd.test.ts`
+
+Validates the ECD utility functions with a fixed fake system time (35 tests):
+
+| Function | Coverage |
+| --- | --- |
+| `isTaskDueToday` | null ECD, date match/mismatch, day_of_week in/out, day_of_month in/out, day_of_year match/mismatch |
+| `isTaskPast` | null ECD, past/today/future dates, all recurring types return false |
+| `getEcdDateKey` | date pass-through, D/M/YYYY → YYYY-MM-DD zero-padding, weekly/monthly due-today vs null, null ECD |
+| `formatDateKey` | YYYY-MM-DD → "Fri, Jun 26, 2026" heading format |
+| `isValidYearDate` | valid D/M/YYYY, rejected formats, format-only (no range check) |
+| `buildEcdFromInputs` | all five modes incl. validation errors (bad date format, empty weekdays, out-of-range month days, bad yearly format) and trimming |
 
 ---
 

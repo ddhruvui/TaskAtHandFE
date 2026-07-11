@@ -65,6 +65,93 @@ export async function createTask(params: {
 }
 
 /**
+ * Clean all events from the database
+ */
+export async function cleanEvents() {
+  const events = await fetch(`${API_BASE}/events`).then((r) => r.json());
+  for (const event of events) {
+    await fetch(`${API_BASE}/events/${event._id}`, { method: "DELETE" });
+  }
+}
+
+/**
+ * Create an event via API
+ */
+export async function createEvent(name: string, tasks: string[]) {
+  const res = await fetch(`${API_BASE}/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, tasks }),
+  });
+  return res.json();
+}
+
+/**
+ * Local date key (YYYY-MM-DD) offset from today by the given number of days
+ */
+export function dateKey(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/**
+ * First day of the month `offsetMonths` after the current month
+ */
+export function monthAt(offsetMonths: number): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1);
+}
+
+/**
+ * EcdCalendar heading ("July 2026") for the month `offsetMonths` from now
+ */
+export function calendarMonthLabel(offsetMonths: number): string {
+  const d = monthAt(offsetMonths);
+  return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * TaskCard label for a date ECD on the given day of the month
+ * `offsetMonths` from now: "[ MM/DD ]", plus "/YY" when not the current year
+ */
+export function dateEcdLabel(offsetMonths: number, day: number): string {
+  const d = monthAt(offsetMonths);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  const yearSuffix =
+    d.getFullYear() === new Date().getFullYear()
+      ? ""
+      : `/${String(d.getFullYear()).slice(-2)}`;
+  return `[ ${mm}/${dd}${yearSuffix} ]`;
+}
+
+/**
+ * TaskCard label for a day_of_year ECD ("↻ D/M/YYYY") on the given day of
+ * the month `offsetMonths` from now
+ */
+export function yearlyEcdLabel(offsetMonths: number, day: number): string {
+  const d = monthAt(offsetMonths);
+  return `↻ ${day}/${d.getMonth() + 1}/${d.getFullYear()}`;
+}
+
+/**
  * Get all headers from API
  */
 export async function getHeaders() {

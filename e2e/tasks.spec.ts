@@ -13,6 +13,9 @@ import {
   toggleTaskDone,
   getTask,
   getTaskNamesInHeader,
+  calendarMonthLabel,
+  dateEcdLabel,
+  yearlyEcdLabel,
 } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -59,12 +62,14 @@ test.describe("Tasks - Create", () => {
     await page.getByPlaceholder("Task name…").fill("Write report");
 
     // Select "Date" mode
-    await page.getByRole("button", { name: "Date" }).click();
+    await page.getByRole("button", { name: "Date", exact: true }).click();
 
-    // Navigate calendar from April 2026 → June 2026
+    // Navigate calendar two months forward from the current month
     await page.getByLabel("Next month").click();
     await page.getByLabel("Next month").click();
-    await expect(page.locator(".ecd-calendar__month-label")).toHaveText("June 2026");
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      calendarMonthLabel(2),
+    );
 
     // Click day 15
     await page.locator(".ecd-calendar__day", { hasText: /^15$/ }).click();
@@ -72,7 +77,7 @@ test.describe("Tasks - Create", () => {
     await page.getByRole("button", { name: "Add task", exact: true }).click();
 
     const task = getTask(page, "Write report");
-    await expect(task.getByText("[ 06/15 ]")).toBeVisible();
+    await expect(task.getByText(dateEcdLabel(2, 15))).toBeVisible();
   });
 
   test("should create task with weekly ECD", async ({ page }) => {
@@ -134,11 +139,13 @@ test.describe("Tasks - Create", () => {
     // Select "Yearly" mode
     await page.getByRole("button", { name: "Yearly" }).click();
 
-    // Navigate calendar from April 2026 → December 2026
-    for (let i = 0; i < 8; i++) {
+    // Navigate calendar two months forward from the current month
+    for (let i = 0; i < 2; i++) {
       await page.getByLabel("Next month").click();
     }
-    await expect(page.locator(".ecd-calendar__month-label")).toHaveText("December 2026");
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      calendarMonthLabel(2),
+    );
 
     // Click day 25
     await page.locator(".ecd-calendar__day", { hasText: /^25$/ }).click();
@@ -146,7 +153,7 @@ test.describe("Tasks - Create", () => {
     await page.getByRole("button", { name: "Add task", exact: true }).click();
 
     const task = getTask(page, "Birthday");
-    await expect(task.getByText("↻ 25/12/2026")).toBeVisible();
+    await expect(task.getByText(yearlyEcdLabel(2, 25))).toBeVisible();
   });
 
   test("should focus task name input when modal opens", async ({ page }) => {

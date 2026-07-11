@@ -18,6 +18,8 @@ import {
   getTask,
   getTaskNamesInHeader,
   getHeaderNames,
+  calendarMonthLabel,
+  dateEcdLabel,
 } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -36,23 +38,23 @@ test.describe("Integration - Complete Workflows", () => {
     await workHeader.getByTitle("Add task").click();
     await page.getByPlaceholder("Task name…").fill("Complete project");
     await page.getByPlaceholder("Notes (optional)…").fill("Initial notes");
-    await page.getByRole("button", { name: "Date" }).click();
+    await page.getByRole("button", { name: "Date", exact: true }).click();
 
-    // Navigate calendar from April 2026 → December 2026
-    for (let i = 0; i < 8; i++) {
+    // Navigate calendar two months forward from the current month
+    for (let i = 0; i < 2; i++) {
       await page.getByLabel("Next month").click();
     }
     await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
-      "December 2026",
+      calendarMonthLabel(2),
     );
-    await page.locator(".ecd-calendar__day", { hasText: /^31$/ }).click();
+    await page.locator(".ecd-calendar__day", { hasText: /^28$/ }).click();
 
     await page.getByRole("button", { name: "Add task", exact: true }).click();
 
     // Verify task created
     const task = getTask(page, "Complete project");
     await expect(task.getByText("Initial notes")).toBeVisible();
-    await expect(task.getByText("[ 12/31 ]")).toBeVisible();
+    await expect(task.getByText(dateEcdLabel(2, 28))).toBeVisible();
 
     // Edit task
     await task.getByTitle("Edit notes").click();
