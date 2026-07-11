@@ -1,0 +1,126 @@
+.events-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Toolbar ── */
+.events-panel__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+/* Double class beats the 26px square base style in App.css regardless of
+   stylesheet order (App.css is bundled after component CSS) */
+.readme-heading__add-btn.events-panel__add-event-btn {
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+/* ── Notice (post-add confirmation) ── */
+.events-panel__notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: 1px solid #1a7f37;
+  border-radius: 6px;
+  color: #1a7f37;
+  background: rgba(26, 127, 55, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .events-panel__notice {
+    border-color: #3fb950;
+    color: #3fb950;
+    background: rgba(63, 185, 80, 0.1);
+  }
+}
+
+.events-panel__notice-dismiss {
+  padding: 0 4px;
+  font-size: 12px;
+  font-family: inherit;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* ── "Add to todo" heading button ── */
+.readme-heading__add-btn.events-panel__schedule-btn {
+  width: auto;
+  height: 26px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.events-panel__schedule-btn-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Event task list ──
+   Matches the .readme-tasks indentation so events line up with todo tasks */
+.events-panel__task-list {
+  list-style: none;
+  margin: 0 30px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.events-panel__task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
+}
+
+.events-panel__task-row:last-child {
+  border-bottom: none;
+}
+
+.events-panel__task-name {
+  font-size: 14px;
+  color: var(--rm-text, #1f2328);
+}
+
+.events-panel__task-add-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
+  font-family: inherit;
+  border: 1px solid var(--rm-border, #d0d7de);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--rm-text-muted, #656d76);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.events-panel__task-add-btn:hover {
+  background: var(--rm-border-muted, #eaeef2);
+  border-color: var(--rm-border, #d0d7de);
+  color: var(--rm-text, #1f2328);
+}

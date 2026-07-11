@@ -50,6 +50,14 @@ export interface Task {
   updatedAt: string; // ISO 8601 timestamp
 }
 
+export interface EventTemplate {
+  _id: string; // MongoDB ObjectId
+  name: string; // Event name (required), e.g. "Burger Night"
+  tasks: string[]; // Task names to add to the todo when the event is scheduled
+  createdAt: string; // ISO 8601 timestamp
+  updatedAt: string; // ISO 8601 timestamp
+}
+
 // ── Insights (archive stats + AI reports) ───────────────────────────────────
 
 export interface HabitStat {

@@ -156,7 +156,30 @@
   border-color: #137030 !important;
 }
 
+/* ─── Events toggle button active state ─── */
+.events-toggle-btn--active {
+  background: #8250df !important;
+  border-color: #8250df !important;
+  color: #ffffff !important;
+}
+
+.events-toggle-btn--active:hover {
+  background: #6e40c9 !important;
+  border-color: #6e40c9 !important;
+}
+
 @media (prefers-color-scheme: dark) {
+  .events-toggle-btn--active {
+    background: #8957e5 !important;
+    border-color: #8957e5 !important;
+    color: #ffffff !important;
+  }
+
+  .events-toggle-btn--active:hover {
+    background: #a371f7 !important;
+    border-color: #a371f7 !important;
+  }
+
   .focus-toggle-btn--active {
     background: #1f6feb !important;
     border-color: #1f6feb !important;

@@ -13,6 +13,14 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   - **Past** — only overdue one-time tasks
   - **By Date** — undone tasks grouped by calendar date, ascending
   - **Insights** — habit stats and the AI coach (see below)
+  - **Events** — manage reusable task bundles (see below)
+- **Events view** — reusable task bundles (e.g. "Burger Night" with its
+  shopping list). "Add to todo" opens a date picker plus a checklist of the
+  event's tasks (all selected by default, tap to unmark); confirming adds the
+  selected tasks, dated for the chosen day, under a header named after the
+  event (reused if it already exists, so later additions join it). Each task
+  row also has a per-task quick add. Templates are never consumed, so an
+  event can be scheduled again and again
 - **Insights view** — powered by the backend's archive and insights endpoints:
   - Habit cards: completion %, current/best streak, and a hit/miss dot row of
     recent scheduled days (habits = tasks scheduled by day of week)
@@ -30,10 +38,12 @@ src/
 ├── api/
 │   ├── client.ts              # fetch wrapper (VITE_API_BASE_URL)
 │   ├── headers.ts / tasks.ts  # CRUD calls
+│   ├── events.ts              # /events CRUD (reusable task bundles)
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
-│   └── InsightsPanel/         # Insights view (stats + AI report)
+│   ├── InsightsPanel/         # Insights view (stats + AI report)
+│   └── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
 └── utils/ecd.ts               # ECD due-today/past/date-key helpers
 ```
 
