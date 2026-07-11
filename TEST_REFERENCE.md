@@ -1,8 +1,8 @@
 # Frontend Test Reference
 
 This file tracks frontend unit test scenarios for the API wrappers and shared
-utilities (`headers`, `tasks`, `events`, `insights`, ECD helpers). End-to-end
-tests are documented in the `*_TEST_DOCUMENTATION.md` files.
+utilities (`headers`, `tasks`, `events`, `goals`, `insights`, ECD helpers).
+End-to-end tests are documented in the `*_TEST_DOCUMENTATION.md` files.
 
 ---
 
@@ -51,6 +51,17 @@ Validates frontend wrapper methods for the Events collection (4 tests):
 | create calls POST `/events` with body | `{ name, tasks }` payload is serialized and sent correctly |
 | update calls PUT `/events/:id` with partial body | Event update payload is passed as expected |
 | remove calls DELETE `/events/:id` | Delete request maps to correct endpoint and method |
+
+### `src/api/goals.test.ts`
+
+Validates frontend wrapper methods for the Goals collection (4 tests):
+
+| Test | What it checks |
+| --- | --- |
+| getAll calls GET `/goals` | Wrapper maps to the correct endpoint and returns the goal list |
+| create calls POST `/goals` with body | `{ name, steps }` payload is serialized and sent correctly |
+| update calls PUT `/goals/:id` with partial body | Steps-only update payload is passed as expected |
+| remove calls DELETE `/goals/:id` | Delete request maps to correct endpoint and method |
 
 ### `src/api/insights.test.ts`
 

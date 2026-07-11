@@ -14,6 +14,7 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   - **By Date** — undone tasks grouped by calendar date, ascending
   - **Insights** — habit stats and the AI coach (see below)
   - **Events** — manage reusable task bundles (see below)
+  - **Goals** — habit backlogs built one step at a time (see below)
 - **Events view** — reusable task bundles (e.g. "Burger Night" with its
   shopping list). "Add to todo" opens a date picker plus a checklist of the
   event's tasks (all selected by default, tap to unmark); confirming adds the
@@ -21,6 +22,18 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   event (reused if it already exists, so later additions join it). Each task
   row also has a per-task quick add. Templates are never consumed, so an
   event can be scheduled again and again
+- **Goals view** — long-term aims (e.g. "Improve Health") broken into small
+  steps/habits ("Wake up at 6", "Have 1 fruit a day"), listed in the order
+  you want to build them. A step is either paused (numbered) or **under
+  progress** (∞). **Start** puts it under progress: a daily recurring task
+  is created under a todo header named "One Step At A Time" (reused if it
+  already exists) and kept for life. **Pause** takes it out of progress:
+  the daily task is removed and the step returns to the backlog. The badge
+  (e.g. "1/4 under progress") rises on Start and falls on Pause. The two
+  views stay in sync both ways: deleting the daily task from the todo — or
+  the whole "One Step At A Time" header — pauses the matching step(s)
+  automatically. Editing a goal edits its name and step list (one step per
+  line; steps that keep their name keep their status)
 - **Insights view** — powered by the backend's archive and insights endpoints:
   - Habit cards: completion %, current/best streak, and a hit/miss dot row of
     recent scheduled days (habits = tasks scheduled by day of week)
@@ -39,12 +52,14 @@ src/
 │   ├── client.ts              # fetch wrapper (VITE_API_BASE_URL)
 │   ├── headers.ts / tasks.ts  # CRUD calls
 │   ├── events.ts              # /events CRUD (reusable task bundles)
+│   ├── goals.ts               # /goals CRUD (habit backlogs)
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
 │   ├── DatePicker/            # EcdCalendar — shared ECD date/recurrence picker
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
-│   └── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
+│   ├── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
+│   └── GoalsPanel/  GoalModal/                          # Goals view
 └── utils/ecd.ts               # ECD due-today/past/date-key helpers
 ```
 

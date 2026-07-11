@@ -58,6 +58,26 @@ export interface EventTemplate {
   updatedAt: string; // ISO 8601 timestamp
 }
 
+// ── Goals (habit backlogs built one step at a time) ─────────────────────────
+
+// Legacy values ("active", "achieved") may still come back from old data;
+// clients treat anything non-pending as under progress and the backend
+// normalizes them to "under_progress" on the next write.
+export type GoalStepStatus = "pending" | "under_progress";
+
+export interface GoalStep {
+  name: string; // Step/habit name (required), e.g. "Wake up at 6"
+  status: GoalStepStatus; // pending = backlog/paused, under_progress = daily habit in play (lifelong)
+}
+
+export interface Goal {
+  _id: string; // MongoDB ObjectId
+  name: string; // Goal name (required), e.g. "Improve Health"
+  steps: GoalStep[]; // Ordered habit backlog (may be empty)
+  createdAt: string; // ISO 8601 timestamp
+  updatedAt: string; // ISO 8601 timestamp
+}
+
 // ── Insights (archive stats + AI reports) ───────────────────────────────────
 
 export interface HabitStat {

@@ -5,6 +5,7 @@ import { AddTaskModal } from "./components/AddTaskModal";
 import { HeaderModal } from "./components/HeaderModal";
 import { InsightsPanel } from "./components/InsightsPanel";
 import { EventsPanel } from "./components/EventsPanel";
+import { GoalsPanel } from "./components/GoalsPanel";
 import type { Header, Task } from "./types";
 import type { EditPayload } from "./components/TaskCard/TaskCard.types";
 import * as headersApi from "./api/headers";
@@ -15,6 +16,11 @@ import {
   getEcdDateKey,
   formatDateKey,
 } from "./utils/ecd";
+import {
+  isOneStepHeaderName,
+  pauseStepsMatchingTask,
+  pauseAllStartedSteps,
+} from "./utils/goalSync";
 import "./App.css";
 
 interface HeaderWithTasks extends Header {
@@ -31,6 +37,7 @@ function App() {
   const [byDateMode, setByDateMode] = useState(false);
   const [insightsMode, setInsightsMode] = useState(false);
   const [eventsMode, setEventsMode] = useState(false);
+  const [goalsMode, setGoalsMode] = useState(false);
 
   // Modal states
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -118,6 +125,11 @@ function App() {
     try {
       await headersApi.remove(deleteTarget.id);
       setHeaders((prev) => prev.filter((h) => h._id !== deleteTarget.id));
+      // Deleting "One Step At A Time" takes every daily habit task with it,
+      // so the started goal steps move back to paused/pending too
+      if (isOneStepHeaderName(deleteTarget.name)) {
+        await pauseAllStartedSteps();
+      }
       setDeleteTarget(null);
       setActionError(null);
     } catch (err) {
@@ -247,8 +259,13 @@ function App() {
   const confirmDeleteTask = async () => {
     if (!deleteTarget || deleteTarget.type !== "task") return;
     try {
+      const header = headers.find((h) => h._id === deleteTarget.headerId);
       await tasksApi.remove(deleteTarget.id);
       await reloadHeaderTasks(deleteTarget.headerId);
+      // A daily habit task deleted from "One Step At A Time" pauses its step
+      if (header && isOneStepHeaderName(header.name)) {
+        await pauseStepsMatchingTask(deleteTarget.name);
+      }
       setDeleteTarget(null);
       setActionError(null);
     } catch (err) {
@@ -478,6 +495,29 @@ function App() {
             Events
           </button>
           <button
+            className={`readme-heading__add-btn goals-toggle-btn${goalsMode ? " goals-toggle-btn--active" : ""}`}
+            onClick={() => setGoalsMode((prev) => !prev)}
+            aria-label={goalsMode ? "Hide goals" : "Show goals"}
+            aria-pressed={goalsMode}
+            title={
+              goalsMode
+                ? "Goals on — build habits one step at a time"
+                : "Manage goals (habits built one step at a time)"
+            }
+            style={{
+              width: "auto",
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+              <path d="M1 14.5V11h4.5V6.5H10V2h5v12.5H1z" />
+            </svg>
+            Goals
+          </button>
+          <button
             className="readme-heading__add-btn"
             onClick={() => setHeaderModalState({ mode: "add" })}
             aria-label="Add header"
@@ -497,8 +537,13 @@ function App() {
 
         {!insightsMode && eventsMode && <EventsPanel onTasksAdded={loadAll} />}
 
+        {!insightsMode && !eventsMode && goalsMode && (
+          <GoalsPanel onTasksChanged={loadAll} />
+        )}
+
         {!insightsMode &&
           !eventsMode &&
+          !goalsMode &&
           !byDateMode &&
           headers.map((header, idx) => {
             const visibleTasks = header.tasks.filter(matchesFilter);
@@ -628,7 +673,7 @@ function App() {
             );
           })}
 
-        {!insightsMode && !eventsMode && !byDateMode && (
+        {!insightsMode && !eventsMode && !goalsMode && !byDateMode && (
           <>
             {headers.length === 0 && (
               <p className="empty-message">No headers yet — add one!</p>
@@ -661,7 +706,7 @@ function App() {
           </>
         )}
 
-        {!insightsMode && !eventsMode && byDateMode && (
+        {!insightsMode && !eventsMode && !goalsMode && byDateMode && (
           <>
             {byDateGroups.map((group) => (
               <section key={group.key} className="readme-section">

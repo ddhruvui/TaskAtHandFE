@@ -168,7 +168,30 @@
   border-color: #6e40c9 !important;
 }
 
+/* ─── Goals toggle button active state ─── */
+.goals-toggle-btn--active {
+  background: #bc4c00 !important;
+  border-color: #bc4c00 !important;
+  color: #ffffff !important;
+}
+
+.goals-toggle-btn--active:hover {
+  background: #a04100 !important;
+  border-color: #a04100 !important;
+}
+
 @media (prefers-color-scheme: dark) {
+  .goals-toggle-btn--active {
+    background: #db6d28 !important;
+    border-color: #db6d28 !important;
+    color: #ffffff !important;
+  }
+
+  .goals-toggle-btn--active:hover {
+    background: #e8824a !important;
+    border-color: #e8824a !important;
+  }
+
   .events-toggle-btn--active {
     background: #8957e5 !important;
     border-color: #8957e5 !important;

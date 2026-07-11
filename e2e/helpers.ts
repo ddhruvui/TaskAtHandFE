@@ -5,7 +5,9 @@
 import { expect, type Page } from "@playwright/test";
 import type { ECD } from "../src/types";
 
-const API_BASE = "http://localhost:3002";
+// Override with E2E_API_BASE_URL to run against a backend on another port
+// (e.g. a USE_TEST_DB instance) without touching the default dev backend.
+const API_BASE = process.env.E2E_API_BASE_URL || "http://localhost:3002";
 
 /**
  * Clean all headers and tasks from the database
@@ -82,6 +84,34 @@ export async function createEvent(name: string, tasks: string[]) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, tasks }),
+  });
+  return res.json();
+}
+
+/**
+ * Clean all goals from the database
+ */
+export async function cleanGoals() {
+  const goals = await fetch(`${API_BASE}/goals`).then((r) => r.json());
+  for (const goal of goals) {
+    await fetch(`${API_BASE}/goals/${goal._id}`, { method: "DELETE" });
+  }
+}
+
+/**
+ * Create a goal via API
+ */
+export async function createGoal(
+  name: string,
+  steps: {
+    name: string;
+    status?: "pending" | "active" | "under_progress";
+  }[] = [],
+) {
+  const res = await fetch(`${API_BASE}/goals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, steps }),
   });
   return res.json();
 }
