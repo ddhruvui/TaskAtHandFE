@@ -1,73 +1,67 @@
-# React + TypeScript + Vite
+# TaskAtHand Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite web app for TaskAtHand. Talks to the TaskAtHandBE
+REST API (base URL from `VITE_API_BASE_URL` in `.env`).
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Headers & Tasks** — create, rename, reorder, and delete headers; add tasks
+  with notes and an optional ECD (one-time date, or recurring by day of week /
+  month / year); toggle done, edit, reorder, delete
+- **View modes** (toolbar toggles, combinable):
+  - **Focus** — only tasks due today
+  - **Past** — only overdue one-time tasks
+  - **By Date** — undone tasks grouped by calendar date, ascending
+  - **Insights** — habit stats and the AI coach (see below)
+- **Insights view** — powered by the backend's archive and insights endpoints:
+  - Habit cards: completion %, current/best streak, and a hit/miss dot row of
+    recent scheduled days (habits = tasks scheduled by day of week)
+  - Task stats: one-time tasks completed, average slip past the planned date,
+    most-rescheduled tasks (procrastination signal)
+  - Coach: the latest AI report (summary, habits on track/slipping, task
+    insights, procrastination flags, suggestions) with a "Generate now" button
 
-## React Compiler
+## Project Structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── App.tsx                    # Main app: header/task views + mode toggles
+├── types.ts                   # Shared types (Task, Header, ECD, Insight*, HabitStat)
+├── api/
+│   ├── client.ts              # fetch wrapper (VITE_API_BASE_URL)
+│   ├── headers.ts / tasks.ts  # CRUD calls
+│   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
+├── components/
+│   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
+│   └── InsightsPanel/         # Insights view (stats + AI report)
+└── utils/ecd.ts               # ECD due-today/past/date-key helpers
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Setup & Run
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env   # set VITE_API_BASE_URL (e.g. http://localhost:3002)
+npm run dev
 ```
+
+Build: `npm run build` · Preview: `npm run preview`
+
+## Testing
+
+Playwright end-to-end tests live in `e2e/` and are documented in
+`TEST_REFERENCE.md` and the `*_TEST_DOCUMENTATION.md` files.
+
+```bash
+npx playwright test
+```
+
+## API
+
+Full endpoint documentation: [API_REFERENCE.md](API_REFERENCE.md). Data model
+and cron behavior: [todo_app_structure.md](todo_app_structure.md).
+
+Note: the Insights view requires the backend to be deployed with the
+`/archive` and `/insights` endpoints and an `ANTHROPIC_API_KEY` configured
+(for report generation). Stats and habit cards work without the key; only
+"Generate now" needs it.
