@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { EditPayload } from "../TaskCard/TaskCard.types";
 import type { ECD } from "../../types";
-import { buildEcdFromInputs } from "../../utils/ecd";
+import { buildEcdFromInputs, todayDateKey } from "../../utils/ecd";
 import { EcdCalendar } from "../DatePicker";
 import "./EditNotesModal.css";
 
@@ -51,7 +51,7 @@ function detectInitialState(ecd: ECD | null): {
   if (!ecd) {
     return {
       mode: "none",
-      dateVal: new Date().toISOString().slice(0, 10),
+      dateVal: todayDateKey(),
       dowVal: ["Mon"],
       domVal: [1],
       yearVal: `${new Date().getDate()}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`,

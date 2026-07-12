@@ -14,9 +14,11 @@ const DOW_BY_JS_INDEX: DayOfWeek[] = [
 ];
 
 /**
- * Returns today's date as a YYYY-MM-DD key.
+ * Returns today's date as a YYYY-MM-DD key. Built from local date
+ * components — `toISOString()` would yield the UTC date, which is a
+ * different calendar day near midnight.
  */
-function todayDateKey(): string {
+export function todayDateKey(): string {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");

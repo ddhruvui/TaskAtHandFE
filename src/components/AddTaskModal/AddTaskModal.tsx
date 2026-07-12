@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { ECD } from "../../types";
-import { buildEcdFromInputs } from "../../utils/ecd";
+import { buildEcdFromInputs, todayDateKey } from "../../utils/ecd";
 import { EcdCalendar } from "../DatePicker";
 import "./AddTaskModal.css";
 
@@ -12,10 +12,6 @@ function getOrdinal(n: number): string {
   const v = n % 100;
   const suffix = ["th", "st", "nd", "rd"];
   return n + (suffix[(v - 20) % 10] ?? suffix[v] ?? suffix[0]);
-}
-
-function todayInputVal(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function todayDMY(): string {
@@ -44,7 +40,7 @@ export default function AddTaskModal({
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
   const [mode, setMode] = useState<EcdMode>("none");
-  const [dateVal, setDateVal] = useState(todayInputVal);
+  const [dateVal, setDateVal] = useState(todayDateKey);
   const [dowVal, setDowVal] = useState<(typeof DOW_LABELS)[number][]>(["Mon"]);
   const [domVal, setDomVal] = useState<number[]>([1]);
   const [yearVal, setYearVal] = useState(todayDMY());

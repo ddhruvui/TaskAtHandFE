@@ -6,6 +6,7 @@ import {
   isTaskDueToday,
   isTaskPast,
   isValidYearDate,
+  todayDateKey,
 } from "./ecd";
 
 // Fixed system time: Wednesday, June 17, 2026 at noon local time.
@@ -19,6 +20,18 @@ describe("ecd utils", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  describe("todayDateKey", () => {
+    it("returns the local calendar date as YYYY-MM-DD", () => {
+      expect(todayDateKey()).toBe("2026-06-17");
+    });
+
+    it("uses the local date even when the UTC date has rolled over", () => {
+      // 11 PM local in a UTC-5 zone is already the next day in UTC.
+      vi.setSystemTime(new Date(2026, 5, 17, 23, 0, 0));
+      expect(todayDateKey()).toBe("2026-06-17");
+    });
   });
 
   describe("isTaskDueToday", () => {

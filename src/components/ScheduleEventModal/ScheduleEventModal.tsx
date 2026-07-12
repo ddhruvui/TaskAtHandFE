@@ -1,11 +1,8 @@
 import { useState } from "react";
 import type { EventTemplate } from "../../types";
+import { todayDateKey } from "../../utils/ecd";
 import { EcdCalendar } from "../DatePicker";
 import "./ScheduleEventModal.css";
-
-function todayInputVal(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 interface ScheduleEventModalProps {
   event: EventTemplate;
@@ -21,7 +18,7 @@ export default function ScheduleEventModal({
   onConfirm,
   onCancel,
 }: ScheduleEventModalProps) {
-  const [date, setDate] = useState(todayInputVal);
+  const [date, setDate] = useState(todayDateKey);
   const [selected, setSelected] = useState<Set<number>>(() => {
     if (!initialSelected) return new Set(event.tasks.map((_, i) => i));
     return new Set(
