@@ -117,6 +117,32 @@ export async function createGoal(
 }
 
 /**
+ * Clean all affirmations from the database
+ */
+export async function cleanAffirmations() {
+  const affirmations = await fetch(`${API_BASE}/affirmations`).then((r) =>
+    r.json(),
+  );
+  for (const affirmation of affirmations) {
+    await fetch(`${API_BASE}/affirmations/${affirmation._id}`, {
+      method: "DELETE",
+    });
+  }
+}
+
+/**
+ * Create an affirmation via API
+ */
+export async function createAffirmation(name: string) {
+  const res = await fetch(`${API_BASE}/affirmations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return res.json();
+}
+
+/**
  * Local date key (YYYY-MM-DD) offset from today by the given number of days
  */
 export function dateKey(offsetDays = 0): string {

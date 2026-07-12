@@ -180,7 +180,30 @@
   border-color: #a04100 !important;
 }
 
+/* ─── Affirmations toggle button active state ─── */
+.affirmations-toggle-btn--active {
+  background: #bf3989 !important;
+  border-color: #bf3989 !important;
+  color: #ffffff !important;
+}
+
+.affirmations-toggle-btn--active:hover {
+  background: #99286e !important;
+  border-color: #99286e !important;
+}
+
 @media (prefers-color-scheme: dark) {
+  .affirmations-toggle-btn--active {
+    background: #db61a2 !important;
+    border-color: #db61a2 !important;
+    color: #ffffff !important;
+  }
+
+  .affirmations-toggle-btn--active:hover {
+    background: #e77bb3 !important;
+    border-color: #e77bb3 !important;
+  }
+
   .goals-toggle-btn--active {
     background: #db6d28 !important;
     border-color: #db6d28 !important;

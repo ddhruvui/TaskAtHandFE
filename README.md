@@ -15,6 +15,7 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   - **Insights** — habit stats and the AI coach (see below)
   - **Events** — manage reusable task bundles (see below)
   - **Goals** — habit backlogs built one step at a time (see below)
+  - **Affirmations** — short lines to read daily (see below)
 - **Events view** — reusable task bundles (e.g. "Burger Night" with its
   shopping list). "Add to todo" opens a date picker plus a checklist of the
   event's tasks (all selected by default, tap to unmark); confirming adds the
@@ -34,6 +35,9 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   the whole "One Step At A Time" header — pauses the matching step(s)
   automatically. Editing a goal edits its name and step list (one step per
   line; steps that keep their name keep their status)
+- **Affirmations view** — a flat list of short lines the user reads daily
+  (e.g. "Thank you blessing"), sorted by creation time. Add, edit, and delete
+  (with confirmation) — nothing to do with headers or tasks
 - **Insights view** — powered by the backend's archive and insights endpoints:
   - Habit cards: completion %, current/best streak, and a hit/miss dot row of
     recent scheduled days (habits = tasks scheduled by day of week)
@@ -53,13 +57,15 @@ src/
 │   ├── headers.ts / tasks.ts  # CRUD calls
 │   ├── events.ts              # /events CRUD (reusable task bundles)
 │   ├── goals.ts               # /goals CRUD (habit backlogs)
+│   ├── affirmations.ts        # /affirmations CRUD (short daily lines)
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
 │   ├── DatePicker/            # EcdCalendar — shared ECD date/recurrence picker
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
 │   ├── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
-│   └── GoalsPanel/  GoalModal/                          # Goals view
+│   ├── GoalsPanel/  GoalModal/                          # Goals view
+│   └── AffirmationsPanel/  AffirmationModal/            # Affirmations view
 └── utils/ecd.ts               # ECD due-today/past/date-key helpers
 ```
 
@@ -77,7 +83,7 @@ Build: `npm run build` · Preview: `npm run preview`
 
 Playwright end-to-end tests live in `e2e/`; Vitest unit tests live alongside
 the API modules in `src/api/*.test.ts`. Both are documented in
-`TEST_REFERENCE.md` and the `*_TEST_DOCUMENTATION.md` files.
+`test_doc/` (`TEST_REFERENCE.md` and the `*_TEST_DOCUMENTATION.md` files).
 
 ```bash
 # Unit tests (Vitest)

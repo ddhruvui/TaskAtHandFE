@@ -16,7 +16,7 @@ Config: `VITE_API_BASE_URL` in `.env` (template in `.env.example`), read at impo
 ## Architecture rules
 
 - **Data flow**: `loadAll()` in App.tsx fetches all headers then each header's tasks; **no optimistic updates** — every mutation calls the API then refetches (`reloadHeaderTasks(headerId)` or full reload). Keep this pattern.
-- **API layer** (`src/api/`): everything goes through `apiFetch<T>` in `client.ts` (JSON headers, throws `Error` from `{ error }` body or `!res.ok`). One module per resource (headers, tasks, events, goals, insights), re-exported from `index.ts`.
+- **API layer** (`src/api/`): everything goes through `apiFetch<T>` in `client.ts` (JSON headers, throws `Error` from `{ error }` body or `!res.ok`). One module per resource (headers, tasks, events, goals, affirmations, insights), re-exported from `index.ts`.
 - **Component pattern**: folder-per-component under `src/components/` with `Component.tsx`, `Component.css`, `index.ts` (and optional `Component.types.ts`). Plain CSS, BEM classes (`task-card__ecd--recurring`), CSS variables + dark mode in `src/index.css`.
 - **Modals**: overlay div closes on click (stopPropagation inside), focus via ref on open, `onConfirm(draft)`/`onCancel` callbacks. Match existing modals when adding one.
 - **Types** live in `src/types.ts` (Header, Task, EventTemplate, Insight, the four ECD variants) and are partially mirrored in `src/api/tasks.ts` — keep both in sync with the backend contract.
@@ -26,7 +26,7 @@ Config: `VITE_API_BASE_URL` in `.env` (template in `.env.example`), read at impo
 - **ECD types** (must match backend exactly): `date` = `"YYYY-MM-DD"`; `day_of_week` = non-empty array of `"Sun".."Sat"`; `day_of_month` = non-empty array of 1–31; `day_of_year` = `"D/M/YYYY"` (no zero-padding); or `null`. All ECD construction goes through `buildEcdFromInputs` in `src/utils/ecd.ts` — don't build ECD objects ad hoc.
 - **Timezone safety**: date strings are parsed manually into components (never `new Date("YYYY-MM-DD")`, which shifts across timezones) — see `TaskCard.resolveEcd`, `EcdCalendar.parseInitial`, `formatDateKey`. Preserve this in any new date code.
 - **Done/undone barrier**: undone tasks always sort above done tasks; TaskCard disables moves that would cross the barrier. The backend enforces the ordering — the UI must not offer illegal moves.
-- **View modes** (App.tsx state): default, Focus (due today), Past (overdue `date`-type only — recurring is never "past"), Focus+Past = union, By Date (groups by `getEcdDateKey`; done tasks excluded; recurring surfaces under today when due; "No date" section last), Insights, Events, Goals.
+- **View modes** (App.tsx state): default, Focus (due today), Past (overdue `date`-type only — recurring is never "past"), Focus+Past = union, By Date (groups by `getEcdDateKey`; done tasks excluded; recurring surfaces under today when due; "No date" section last), Insights, Events, Goals, Affirmations.
 - **Event scheduling** (EventsPanel): reuses an existing header by case-insensitive name match or creates one; creates tasks **sequentially** to preserve template order. No rollback on mid-stream failure.
 - **Goal↔todo sync** (`src/utils/goalSync.ts`): a goal step is `under_progress` exactly while its daily task lives under the "One Step At A Time" header. Start creates the task, Pause removes it, and the todo delete flows in App.tsx call `pauseStepsMatchingTask`/`pauseAllStartedSteps` when a task/the header is deleted there — keep any new delete path calling them.
 - **`headerId` is immutable** on a task; there is no UI to change it.
@@ -53,6 +53,7 @@ Where tests live, by change type:
 | ECD pickers/display                  | `e2e/ecd.spec.ts`                                      |
 | Events panel/scheduling              | `e2e/events.spec.ts`                                   |
 | Goals panel/step lifecycle           | `e2e/goals.spec.ts`                                    |
+| Affirmations panel/flows             | `e2e/affirmations.spec.ts`                             |
 | Insights panel                       | `e2e/insights.spec.ts`                                 |
 | Focus/Past/By-Date modes             | `e2e/viewmodes.spec.ts`                                |
 | Multi-step flows, modals, persistence| `e2e/integration.spec.ts`                              |
@@ -64,16 +65,17 @@ Any code change MUST include, in the same task: (1) updated/new tests per the ta
 | If you change...                  | Update ALL of...                                                        |
 | --------------------------------- | ----------------------------------------------------------------------- |
 | Features, components, commands    | `README.md` (Features, Project Structure, Setup/Testing sections)       |
-| Unit tests (`src/**/*.test.ts`)   | `TEST_REFERENCE.md` — unit-test index ONLY; per-file "Test \| What it checks" tables |
-| `e2e/ecd.spec.ts`                 | `ECD_TEST_DOCUMENTATION.md`                                              |
-| `e2e/headers.spec.ts`             | `HEADERS_TEST_DOCUMENTATION.md`                                          |
-| `e2e/tasks.spec.ts`               | `TASKS_TEST_DOCUMENTATION.md`                                            |
-| `e2e/integration.spec.ts`         | `INTEGRATION_TEST_DOCUMENTATION.md`                                      |
-| `e2e/goals.spec.ts`               | `GOALS_TEST_DOCUMENTATION.md`                                            |
-| `e2e/events.spec.ts`, `e2e/viewmodes.spec.ts`, `e2e/insights.spec.ts` | **currently undocumented** — when touching one, create its `*_TEST_DOCUMENTATION.md` in the same format as the existing four |
+| Unit tests (`src/**/*.test.ts`)   | `test_doc/TEST_REFERENCE.md` — unit-test index ONLY; per-file "Test \| What it checks" tables |
+| `e2e/ecd.spec.ts`                 | `test_doc/ECD_TEST_DOCUMENTATION.md`                                     |
+| `e2e/headers.spec.ts`             | `test_doc/HEADERS_TEST_DOCUMENTATION.md`                                 |
+| `e2e/tasks.spec.ts`               | `test_doc/TASKS_TEST_DOCUMENTATION.md`                                   |
+| `e2e/integration.spec.ts`         | `test_doc/INTEGRATION_TEST_DOCUMENTATION.md`                             |
+| `e2e/goals.spec.ts`               | `test_doc/GOALS_TEST_DOCUMENTATION.md`                                   |
+| `e2e/affirmations.spec.ts`        | `test_doc/AFFIRMATIONS_TEST_DOCUMENTATION.md`                            |
+| `e2e/events.spec.ts`, `e2e/viewmodes.spec.ts`, `e2e/insights.spec.ts` | **currently undocumented** — when touching one, create its `*_TEST_DOCUMENTATION.md` in `test_doc/` in the same format as the existing ones |
 | Anything about the backend API contract | `API_REFERENCE.md` + `todo_app_structure.md` — these mirror the copies in the TaskAtHandBE repo; a backend contract change means updating all four files across both repos |
 
-`*_TEST_DOCUMENTATION.md` format: per-category `### N. Name (X tests)` sections, each test as `#### Test: "name"` with Description/Steps/Expected Output, plus a Summary with the total count. **Keep the per-category counts and the Summary total consistent with the spec file** — they have drifted before.
+All test docs live in `test_doc/` — never create test `.md` files at the repo root. `*_TEST_DOCUMENTATION.md` format: per-category `### N. Name (X tests)` sections, each test as `#### Test: "name"` with Description/Steps/Expected Output, plus a Summary with the total count. **Keep the per-category counts and the Summary total consistent with the spec file** — they have drifted before.
 
 Note: `API_REFERENCE.md` and `todo_app_structure.md` describe TaskAtHandBE (models, cron, endpoints), kept here for integration reference. They are not frontend docs — don't document FE behavior in them.
 

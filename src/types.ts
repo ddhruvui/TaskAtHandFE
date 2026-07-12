@@ -78,6 +78,15 @@ export interface Goal {
   updatedAt: string; // ISO 8601 timestamp
 }
 
+// ── Affirmations (short daily lines) ────────────────────────────────────────
+
+export interface Affirmation {
+  _id: string; // MongoDB ObjectId
+  name: string; // Affirmation text (required), e.g. "Thank you blessing"
+  createdAt: string; // ISO 8601 timestamp
+  updatedAt: string; // ISO 8601 timestamp
+}
+
 // ── Insights (archive stats + AI reports) ───────────────────────────────────
 
 export interface HabitStat {

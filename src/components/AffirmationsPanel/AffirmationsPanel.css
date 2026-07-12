@@ -1,0 +1,56 @@
+.affirmations-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Toolbar ── */
+.affirmations-panel__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+/* Double class beats the 26px square base style in App.css regardless of
+   stylesheet order (App.css is bundled after component CSS) */
+.readme-heading__add-btn.affirmations-panel__add-btn {
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+/* ── Affirmation list ── */
+.affirmations-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.affirmations-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
+}
+
+.affirmations-panel__row:last-child {
+  border-bottom: none;
+}
+
+.affirmations-panel__name {
+  font-size: 15px;
+  color: var(--rm-text, #1f2328);
+}
+
+/* ── Row action buttons ── */
+.affirmations-panel__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
