@@ -18,6 +18,7 @@ const emptyStats = {
   oneTimeTasks: { completedCount: 0, avgSlippageDays: null, recent: [] },
   reschedules: [],
   byHeader: {},
+  calls: [],
 };
 
 const richStats = {
@@ -46,6 +47,7 @@ const richStats = {
     { taskName: "File taxes", headerName: "Admin", total: 3, pushedLater: 2 },
   ],
   byHeader: {},
+  calls: [],
 };
 
 const sampleInsight = {
@@ -60,6 +62,19 @@ const sampleInsight = {
     taskInsights: ["One-time tasks slip by about 1.5 days"],
     procrastinationFlags: ["File taxes has moved 3 times"],
     suggestions: ["Block a weekend morning for taxes"],
+  },
+};
+
+// A report generated after the Calls feature — includes callReminders
+const insightWithCalls = {
+  ...sampleInsight,
+  _id: "insight2",
+  report: {
+    ...sampleInsight.report,
+    callReminders: [
+      "Grandma hasn't been called this period — it resets on the 15th",
+      "Uncle Raj has been missed two months running",
+    ],
   },
 };
 
@@ -229,6 +244,40 @@ test.describe("Insights - Coach report", () => {
     await expect(
       page.getByText("Block a weekend morning for taxes"),
     ).toBeVisible();
+  });
+
+  test("should render call reminders when the report includes them", async ({
+    page,
+  }) => {
+    await mockInsights(page, { stats: richStats, latest: insightWithCalls });
+    await openInsightsView(page);
+
+    await expect(
+      page.getByRole("heading", { name: "Calls to make" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Grandma hasn't been called this period — it resets on the 15th",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Uncle Raj has been missed two months running"),
+    ).toBeVisible();
+  });
+
+  test("should hide the calls section for reports without callReminders", async ({
+    page,
+  }) => {
+    // Reports stored before the Calls feature have no callReminders field
+    await mockInsights(page, { stats: richStats, latest: sampleInsight });
+    await openInsightsView(page);
+
+    await expect(
+      page.getByText("You are mostly on track this month."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Calls to make" }),
+    ).not.toBeVisible();
   });
 
   test("should generate a fresh report on demand", async ({ page }) => {

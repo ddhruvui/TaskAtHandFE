@@ -192,7 +192,30 @@
   border-color: #99286e !important;
 }
 
+/* ─── Calls toggle button active state ─── */
+.calls-toggle-btn--active {
+  background: #0c8599 !important;
+  border-color: #0c8599 !important;
+  color: #ffffff !important;
+}
+
+.calls-toggle-btn--active:hover {
+  background: #0b7285 !important;
+  border-color: #0b7285 !important;
+}
+
 @media (prefers-color-scheme: dark) {
+  .calls-toggle-btn--active {
+    background: #22b8cf !important;
+    border-color: #22b8cf !important;
+    color: #ffffff !important;
+  }
+
+  .calls-toggle-btn--active:hover {
+    background: #3bc9db !important;
+    border-color: #3bc9db !important;
+  }
+
   .affirmations-toggle-btn--active {
     background: #db61a2 !important;
     border-color: #db61a2 !important;

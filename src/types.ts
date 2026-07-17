@@ -87,6 +87,20 @@ export interface Affirmation {
   updatedAt: string; // ISO 8601 timestamp
 }
 
+// ── Calls (people to call biweekly or monthly) ──────────────────────────────
+
+export type CallFrequency = "biweekly" | "monthly";
+
+export interface Call {
+  _id: string; // MongoDB ObjectId
+  name: string; // Person to call (required), e.g. "Grandma"
+  frequency: CallFrequency; // biweekly = call twice a month, monthly = once
+  done: boolean; // Called this cycle (reset by the backend cron)
+  doneAt: string | null; // ISO 8601 timestamp of the call (null if not called)
+  createdAt: string; // ISO 8601 timestamp
+  updatedAt: string; // ISO 8601 timestamp
+}
+
 // ── Insights (archive stats + AI reports) ───────────────────────────────────
 
 export interface HabitStat {
@@ -135,6 +149,17 @@ export interface InsightStats {
     string,
     { completed: number; missed: number; reschedules: number }
   >;
+  calls: CallStat[];
+}
+
+export interface CallStat {
+  callName: string;
+  frequency: CallFrequency;
+  scheduled: number;
+  completed: number;
+  completionRate: number; // 0-100
+  currentMissStreak: number;
+  recentResults: { dueDate: string; completed: boolean }[];
 }
 
 export interface InsightReport {
@@ -143,6 +168,8 @@ export interface InsightReport {
   habitsSlipping: string[];
   taskInsights: string[];
   procrastinationFlags: string[];
+  // Absent from reports generated before the Calls feature
+  callReminders?: string[];
   suggestions: string[];
 }
 

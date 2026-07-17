@@ -72,8 +72,11 @@ Any code change MUST include, in the same task: (1) updated/new tests per the ta
 | `e2e/integration.spec.ts`         | `test_doc/INTEGRATION_TEST_DOCUMENTATION.md`                             |
 | `e2e/goals.spec.ts`               | `test_doc/GOALS_TEST_DOCUMENTATION.md`                                   |
 | `e2e/affirmations.spec.ts`        | `test_doc/AFFIRMATIONS_TEST_DOCUMENTATION.md`                            |
-| `e2e/events.spec.ts`, `e2e/viewmodes.spec.ts`, `e2e/insights.spec.ts` | **currently undocumented** — when touching one, create its `*_TEST_DOCUMENTATION.md` in `test_doc/` in the same format as the existing ones |
+| `e2e/insights.spec.ts`            | `test_doc/INSIGHTS_TEST_DOCUMENTATION.md`                                |
+| `e2e/events.spec.ts`, `e2e/viewmodes.spec.ts` | **currently undocumented** — when touching one, create its `*_TEST_DOCUMENTATION.md` in `test_doc/` in the same format as the existing ones |
 | Anything about the backend API contract | `API_REFERENCE.md` + `todo_app_structure.md` — these mirror the copies in the TaskAtHandBE repo; a backend contract change means updating all four files across both repos |
+
+**Shleeji parity (MANDATORY):** this web FE and the Shleeji Expo app (`../Shleeji`) are two clients of the same backend and must stay at feature parity. Any user-facing feature or behavior change here (new views/panels, API resources, ECD logic, task flows) MUST be replicated in Shleeji in the same task — FE view modes map to Shleeji bottom tabs (Affirmations view ↔ Affirmations tab, Calls view ↔ Calls tab), and Shleeji's `api/` and `utils/ecd.js` mirror this repo's `src/api/` and `src/utils/ecd.ts`. Purely web-specific changes (CSS polish, e2e/test infra, Vite config) are exempt, but state the exemption explicitly in your summary. See `../Shleeji/CLAUDE.md` for that app's conventions and manual-verification policy.
 
 All test docs live in `test_doc/` — never create test `.md` files at the repo root. `*_TEST_DOCUMENTATION.md` format: per-category `### N. Name (X tests)` sections, each test as `#### Test: "name"` with Description/Steps/Expected Output, plus a Summary with the total count. **Keep the per-category counts and the Summary total consistent with the spec file** — they have drifted before.
 

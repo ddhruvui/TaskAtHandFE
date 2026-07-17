@@ -143,6 +143,31 @@ export async function createAffirmation(name: string) {
 }
 
 /**
+ * Clean all calls from the database
+ */
+export async function cleanCalls() {
+  const calls = await fetch(`${API_BASE}/calls`).then((r) => r.json());
+  for (const call of calls) {
+    await fetch(`${API_BASE}/calls/${call._id}`, { method: "DELETE" });
+  }
+}
+
+/**
+ * Create a call via API
+ */
+export async function createCall(
+  name: string,
+  frequency: "biweekly" | "monthly",
+) {
+  const res = await fetch(`${API_BASE}/calls`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, frequency }),
+  });
+  return res.json();
+}
+
+/**
  * Local date key (YYYY-MM-DD) offset from today by the given number of days
  */
 export function dateKey(offsetDays = 0): string {

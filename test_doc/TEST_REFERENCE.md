@@ -1,8 +1,8 @@
 # Frontend Test Reference
 
 This file tracks frontend unit test scenarios for the API wrappers and shared
-utilities (`headers`, `tasks`, `events`, `goals`, `affirmations`, `insights`,
-ECD helpers).
+utilities (`headers`, `tasks`, `events`, `goals`, `affirmations`, `calls`,
+`insights`, ECD helpers).
 End-to-end tests are documented in the `*_TEST_DOCUMENTATION.md` files.
 
 ---
@@ -74,6 +74,18 @@ Validates frontend wrapper methods for the Affirmations collection (4 tests):
 | create calls POST `/affirmations` with body | `{ name }` payload is serialized and sent correctly |
 | update calls PUT `/affirmations/:id` with body | `{ name }` update payload is passed as expected |
 | remove calls DELETE `/affirmations/:id` | Delete request maps to correct endpoint and method |
+
+### `src/api/calls.test.ts`
+
+Validates frontend wrapper methods for the Calls collection (5 tests):
+
+| Test | What it checks |
+| --- | --- |
+| getAll calls GET `/calls` and returns the call list | Wrapper maps to the correct endpoint and returns the call list |
+| create calls POST `/calls` with body | `{ name, frequency }` payload is serialized and sent correctly |
+| update calls PUT `/calls/:id` with partial body | Name + frequency update payload is passed as expected |
+| update calls PUT `/calls/:id` with a done-only body | `{ done }` toggle payload is passed as expected |
+| remove calls DELETE `/calls/:id` | Delete request maps to correct endpoint and method |
 
 ### `src/api/insights.test.ts`
 

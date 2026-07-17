@@ -16,6 +16,7 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   - **Events** — manage reusable task bundles (see below)
   - **Goals** — habit backlogs built one step at a time (see below)
   - **Affirmations** — short lines to read daily (see below)
+  - **Calls** — people to call biweekly or monthly (see below)
 - **Events view** — reusable task bundles (e.g. "Burger Night" with its
   shopping list). "Add to todo" opens a date picker plus a checklist of the
   event's tasks (all selected by default, tap to unmark); confirming adds the
@@ -38,13 +39,22 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
 - **Affirmations view** — a flat list of short lines the user reads daily
   (e.g. "Thank you blessing"), sorted by creation time. Add, edit, and delete
   (with confirmation) — nothing to do with headers or tasks
+- **Calls view** — people the user must call **biweekly** (twice a month) or
+  **monthly**, split into a Biweekly and a Monthly section. Each person has a
+  checkbox to mark them called (strikethrough when done), plus edit (name and
+  frequency — changing frequency moves them to the other section) and delete
+  (with confirmation). Nothing to do with headers or tasks — call people never
+  appear in the task views. The backend cron resets the called state for
+  biweekly calls on the 15th and for all calls on the last day of the month
 - **Insights view** — powered by the backend's archive and insights endpoints:
   - Habit cards: completion %, current/best streak, and a hit/miss dot row of
     recent scheduled days (habits = tasks scheduled by day of week)
   - Task stats: one-time tasks completed, average slip past the planned date,
     most-rescheduled tasks (procrastination signal)
   - Coach: the latest AI report (summary, habits on track/slipping, task
-    insights, procrastination flags, suggestions) with a "Generate now" button
+    insights, procrastination flags, calls to make, suggestions) with a
+    "Generate now" button — the "Calls to make" section appears only for
+    reports generated after the Calls feature
 
 ## Project Structure
 
@@ -58,6 +68,7 @@ src/
 │   ├── events.ts              # /events CRUD (reusable task bundles)
 │   ├── goals.ts               # /goals CRUD (habit backlogs)
 │   ├── affirmations.ts        # /affirmations CRUD (short daily lines)
+│   ├── calls.ts               # /calls CRUD (people to call biweekly/monthly)
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
@@ -65,7 +76,8 @@ src/
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
 │   ├── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
 │   ├── GoalsPanel/  GoalModal/                          # Goals view
-│   └── AffirmationsPanel/  AffirmationModal/            # Affirmations view
+│   ├── AffirmationsPanel/  AffirmationModal/            # Affirmations view
+│   └── CallsPanel/  CallModal/                          # Calls view
 └── utils/ecd.ts               # ECD due-today/past/date-key helpers
 ```
 

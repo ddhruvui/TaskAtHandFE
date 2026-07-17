@@ -187,6 +187,9 @@ export function InsightsPanel() {
                 tone="bad"
               />
             )}
+            {report.callReminders && report.callReminders.length > 0 && (
+              <ReportList title="Calls to make" items={report.callReminders} />
+            )}
             {report.suggestions.length > 0 && (
               <ReportList title="Suggestions" items={report.suggestions} tone="good" />
             )}
