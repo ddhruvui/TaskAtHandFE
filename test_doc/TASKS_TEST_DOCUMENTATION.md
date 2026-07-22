@@ -325,7 +325,7 @@ These tests verify manual reordering of tasks.
 
 ---
 
-### 6. Tasks - Delete (7 tests)
+### 6. Tasks - Delete (9 tests)
 
 These tests verify safe deletion of tasks.
 
@@ -345,6 +345,27 @@ These tests verify safe deletion of tasks.
 - **Description**: Prevents accidental deletions
 - **Steps**: Click delete button on a task
 - **Expected Output**: Confirmation popup asks 'Delete task "Write report"?'
+
+#### Test: "should require a reason when deleting an undone task"
+
+- **Description**: Deleting an unfinished task captures **why**, so the AI insights can analyze abandoned tasks
+- **Steps**:
+  1. Create an undone task "Abandon me"
+  2. Click delete button
+  3. Observe the required reason field and disabled Delete button
+  4. Type a reason ("no longer needed") and confirm
+- **Expected Output**:
+  - Reason textarea is visible; Delete button is disabled until a reason is typed, then enabled
+  - Task disappears
+  - Backend logs a `task_deleted` archive event whose `reason` matches the entered text
+
+#### Test: "should not ask for a reason when deleting a done task"
+
+- **Description**: Completed tasks were accomplished, so no reason is requested
+- **Steps**:
+  1. Create a done task "Finished"
+  2. Click delete button
+- **Expected Output**: No reason field is shown; the Delete button is immediately enabled
 
 #### Test: "should cancel delete on cancel button"
 
@@ -527,7 +548,7 @@ These tests verify task isolation between different headers.
 
 ## Summary
 
-These 54 tests comprehensively verify that:
+These 56 tests comprehensively verify that:
 
 1. ✅ Tasks can be created with various ECD types (date, weekly, monthly, yearly, none)
 2. ✅ Tasks display correctly with all their information
@@ -535,7 +556,7 @@ These 54 tests comprehensively verify that:
 4. ✅ Task information can be edited (name, notes, ECD), including done tasks
 5. ✅ Tasks can be manually reordered within their priority group
 6. ✅ Done tasks can be reordered within the done section
-7. ✅ Tasks can be safely deleted with confirmation, including done tasks
+7. ✅ Tasks can be safely deleted with confirmation, including done tasks; deleting an undone task requires a reason that is archived for AI insights
 8. ✅ Tasks remain isolated within their respective headers
 9. ✅ The UI provides appropriate keyboard shortcuts and focus management
 10. ✅ Done and undone tasks maintain proper separation

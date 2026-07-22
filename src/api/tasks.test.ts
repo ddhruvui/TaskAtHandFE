@@ -63,13 +63,24 @@ describe("tasksApi", () => {
     });
   });
 
-  it("remove calls DELETE /tasks/:id", async () => {
+  it("remove calls DELETE /tasks/:id without a body when no reason is given", async () => {
     apiFetchMock.mockResolvedValue({ deleted: "t1" });
 
     await tasksApi.remove("t1");
 
     expect(apiFetchMock).toHaveBeenCalledWith("/tasks/t1", {
       method: "DELETE",
+    });
+  });
+
+  it("remove sends the reason in the body when deleting an undone task", async () => {
+    apiFetchMock.mockResolvedValue({ deleted: "t1" });
+
+    await tasksApi.remove("t1", "no longer needed");
+
+    expect(apiFetchMock).toHaveBeenCalledWith("/tasks/t1", {
+      method: "DELETE",
+      body: JSON.stringify({ reason: "no longer needed" }),
     });
   });
 });

@@ -7,7 +7,9 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
 
 - **Headers & Tasks** — create, rename, reorder, and delete headers; add tasks
   with notes and an optional ECD (one-time date, or recurring by day of week /
-  month / year); toggle done, edit, reorder, delete
+  month / year); toggle done, edit, reorder, delete. Deleting an **undone**
+  task asks for a reason (required) which is archived and fed to the AI coach
+  as an abandonment signal; deleting a done task doesn't ask
 - **View modes** (toolbar toggles, combinable):
   - **Focus** — only tasks due today
   - **Past** — only overdue one-time tasks

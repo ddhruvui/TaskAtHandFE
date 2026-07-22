@@ -49,6 +49,7 @@ function App() {
     headerId: string;
     id: string;
     name: string;
+    done?: boolean; // task only — undone tasks require a deletion reason
   } | null>(null);
   const [addTaskHeaderId, setAddTaskHeaderId] = useState<string | null>(null);
   const [headerModalState, setHeaderModalState] = useState<{
@@ -257,14 +258,15 @@ function App() {
       headerId,
       id: taskId,
       name: task.name,
+      done: task.done,
     });
   };
 
-  const confirmDeleteTask = async () => {
+  const confirmDeleteTask = async (reason?: string) => {
     if (!deleteTarget || deleteTarget.type !== "task") return;
     try {
       const header = headers.find((h) => h._id === deleteTarget.headerId);
-      await tasksApi.remove(deleteTarget.id);
+      await tasksApi.remove(deleteTarget.id, reason);
       await reloadHeaderTasks(deleteTarget.headerId);
       // A daily habit task deleted from "One Step At A Time" pauses its step
       if (header && isOneStepHeaderName(header.name)) {
@@ -821,6 +823,9 @@ function App() {
             deleteTarget.type === "header"
               ? `Delete header "${deleteTarget.name}" and all its tasks?`
               : `Delete task "${deleteTarget.name}"?`
+          }
+          requireReason={
+            deleteTarget.type === "task" && deleteTarget.done === false
           }
           onConfirm={
             deleteTarget.type === "header"

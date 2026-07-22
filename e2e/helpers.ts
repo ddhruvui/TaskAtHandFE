@@ -67,6 +67,16 @@ export async function createTask(params: {
 }
 
 /**
+ * Fetch raw TaskArchive events, optionally filtered by type (e.g. "task_deleted").
+ */
+export async function getArchiveEvents(type?: string) {
+  const url = type
+    ? `${API_BASE}/archive?type=${type}`
+    : `${API_BASE}/archive`;
+  return fetch(url).then((r) => r.json());
+}
+
+/**
  * Clean all events from the database
  */
 export async function cleanEvents() {
@@ -298,11 +308,21 @@ export async function deleteHeaderViaUI(page: Page, headerName: string) {
 }
 
 /**
- * Delete a task via UI
+ * Delete a task via UI. Undone tasks require a deletion reason (the confirm
+ * modal shows a required textarea), so fill it whenever the field is present.
  */
-export async function deleteTaskViaUI(page: Page, taskName: string) {
+export async function deleteTaskViaUI(
+  page: Page,
+  taskName: string,
+  reason = "e2e cleanup",
+) {
   const task = page.locator(".task-card", { hasText: taskName });
   await task.getByTitle("Delete").click();
+  await page.locator(".confirm-modal").waitFor({ state: "visible" });
+  const reasonInput = page.locator(".confirm-modal__reason-input");
+  if (await reasonInput.count()) {
+    await reasonInput.fill(reason);
+  }
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   // Wait for the task to be removed from the DOM
   await task.waitFor({ state: "detached" });

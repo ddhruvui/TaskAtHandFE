@@ -173,7 +173,8 @@ These tests verify complex modal interaction patterns.
 - **Description**: Multiple delete operations with different choices
 - **Steps**:
   1. Try to delete Task 1, but cancel
-  2. Actually delete Task 2
+  2. Actually delete Task 2 — Task 2 is undone, so the confirm modal requires a
+     deletion reason; fill it before confirming (Delete stays disabled otherwise)
 - **Expected Output**:
   - Task 1 still exists (was canceled)
   - Task 2 is deleted (was confirmed)

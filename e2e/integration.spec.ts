@@ -463,8 +463,11 @@ test.describe("Integration - Modal Interactions", () => {
     // Task 1 should still exist
     await expect(getTask(page, "Task 1")).toBeVisible();
 
-    // Now actually delete Task 2
+    // Now actually delete Task 2. Undone tasks require a deletion reason, so
+    // the confirm modal's Delete button stays disabled until it is filled.
     await getTask(page, "Task 2").getByTitle("Delete").click();
+    await page.locator(".confirm-modal").waitFor({ state: "visible" });
+    await page.locator(".confirm-modal__reason-input").fill("no longer needed");
     await page.getByRole("button", { name: "Delete", exact: true }).click();
 
     // Task 2 should be gone

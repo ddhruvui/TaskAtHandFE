@@ -40,7 +40,8 @@ Validates frontend wrapper methods for the Tasks collection:
 | getAll calls GET `/tasks?headerId=:id` | Query-string mapping is correct |
 | create calls POST `/tasks` with body | Task create payload is serialized and sent correctly |
 | update calls PUT `/tasks/:id` with partial body | Task update payload is passed as expected |
-| remove calls DELETE `/tasks/:id` | Delete request maps to correct endpoint and method |
+| remove calls DELETE `/tasks/:id` without a body when no reason is given | Delete request maps to correct endpoint/method with no body |
+| remove sends the reason in the body when deleting an undone task | `remove(id, reason)` serializes `{ reason }` as the DELETE body |
 
 ### `src/api/events.test.ts`
 

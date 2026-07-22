@@ -13,6 +13,7 @@ import {
   toggleTaskDone,
   getTask,
   getTaskNamesInHeader,
+  getArchiveEvents,
   calendarMonthLabel,
   dateEcdLabel,
   yearlyEcdLabel,
@@ -708,6 +709,57 @@ test.describe("Tasks - Delete", () => {
     await task.getByTitle("Delete").click();
 
     await expect(page.getByText('Delete task "Write report"?')).toBeVisible();
+  });
+
+  test("should require a reason when deleting an undone task", async ({
+    page,
+  }) => {
+    const header = await createHeader("Work");
+    await createTask({ name: "Abandon me", headerId: header._id });
+
+    await page.reload();
+    await waitForPageLoad(page);
+
+    const task = getTask(page, "Abandon me");
+    await task.getByTitle("Delete").click();
+
+    const reasonInput = page.locator(".confirm-modal__reason-input");
+    await expect(reasonInput).toBeVisible();
+
+    // Delete stays disabled until a reason is entered
+    const deleteBtn = page.getByRole("button", { name: "Delete", exact: true });
+    await expect(deleteBtn).toBeDisabled();
+
+    await reasonInput.fill("no longer needed");
+    await expect(deleteBtn).toBeEnabled();
+    await deleteBtn.click();
+
+    await expect(task).not.toBeVisible();
+
+    // The reason is archived as a task_deleted event for the AI insights
+    const events = await getArchiveEvents("task_deleted");
+    const deleted = events.find((e: { taskName: string }) => e.taskName === "Abandon me");
+    expect(deleted).toBeTruthy();
+    expect(deleted.reason).toBe("no longer needed");
+  });
+
+  test("should not ask for a reason when deleting a done task", async ({
+    page,
+  }) => {
+    const header = await createHeader("Work");
+    await createTask({ name: "Finished", headerId: header._id, done: true });
+
+    await page.reload();
+    await waitForPageLoad(page);
+
+    const task = getTask(page, "Finished");
+    await task.getByTitle("Delete").click();
+
+    await expect(page.locator(".confirm-modal__reason-input")).toHaveCount(0);
+    // Delete is immediately actionable for a done task
+    await expect(
+      page.getByRole("button", { name: "Delete", exact: true }),
+    ).toBeEnabled();
   });
 
   test("should cancel delete on cancel button", async ({ page }) => {

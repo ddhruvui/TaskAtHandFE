@@ -293,8 +293,12 @@ test.describe("Goals - One Step At A Time", () => {
     expect(oneStepHeaders).toHaveLength(1);
 
     await page.locator(".goals-toggle-btn").click();
-    const names = await getTaskNamesInHeader(page, ONE_STEP_HEADER);
-    expect(names).toEqual(["Wake up at 6", "Have 1 fruit a day"]);
+    // Starting a step triggers a background refetch of the todo; wait for it to
+    // land rather than reading the header once and racing the reload.
+    await expect(async () => {
+      const names = await getTaskNamesInHeader(page, ONE_STEP_HEADER);
+      expect(names).toEqual(["Wake up at 6", "Have 1 fruit a day"]);
+    }).toPass({ timeout: 5000 });
   });
 
   test("should pause the step when its daily task is deleted from the todo", async ({
