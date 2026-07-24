@@ -211,6 +211,7 @@ function App() {
           name: payload.name,
           notes: payload.notes,
           ecd: payload.ecd,
+          ...(payload.reason ? { reason: payload.reason } : {}),
         });
         await reloadHeaderTasks(headerId);
         setActionError(null);

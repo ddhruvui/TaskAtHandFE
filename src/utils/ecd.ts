@@ -50,6 +50,21 @@ export function isTaskDueToday(ecd: ECD | null): boolean {
 }
 
 /**
+ * True when an ECD change moves a one-time date further into the future — the
+ * "postpone" the backend flags as a procrastination signal. Mirrors the
+ * backend's `isPushedLater` (Task.js): only `date` → `date` where the new value
+ * is strictly later. YYYY-MM-DD strings compare lexicographically.
+ */
+export function isPushedLater(
+  fromEcd: ECD | null,
+  toEcd: ECD | null,
+): boolean {
+  if (!fromEcd || !toEcd) return false;
+  if (fromEcd.type !== "date" || toEcd.type !== "date") return false;
+  return toEcd.value > fromEcd.value;
+}
+
+/**
  * Returns true if the task's ECD is in the past and not a yearly event.
  * This includes past dates, but excludes day_of_week, day_of_month, and day_of_year.
  */

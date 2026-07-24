@@ -134,6 +134,37 @@
   box-shadow: 0 0 0 3px rgba(26, 127, 55, 0.12);
 }
 
+/* ─── Postpone reason ─── */
+.edit-modal__postpone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.edit-modal__reason-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--m-text);
+  background: var(--m-bg);
+  resize: vertical;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.edit-modal__reason-input:focus {
+  border-color: var(--m-accent);
+  box-shadow: 0 0 0 3px rgba(26, 127, 55, 0.12);
+}
+
 /* ─── ECD section ─── */
 .edit-modal__ecd {
   margin-bottom: 16px;

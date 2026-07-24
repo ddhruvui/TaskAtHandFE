@@ -144,6 +144,9 @@ export interface InsightStats {
     headerName: string | null;
     total: number;
     pushedLater: number;
+    pushedLaterWithReason: number;
+    pushedLaterNoReason: number;
+    reasons: string[];
   }[];
   byHeader: Record<
     string,

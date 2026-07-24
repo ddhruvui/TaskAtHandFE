@@ -185,7 +185,7 @@ These tests verify the completion status toggle functionality.
 
 ---
 
-### 4. Tasks - Update Edit (6 tests)
+### 4. Tasks - Update Edit (8 tests)
 
 These tests verify editing task details.
 
@@ -207,6 +207,29 @@ These tests verify editing task details.
   2. Switch to "Weekly" mode
   3. Select Mon
 - **Expected Output**: Task now shows "↻ Mon" instead of date
+
+#### Test: "should capture a reason when postponing a dated task"
+
+- **Description**: Pushing a dated task to a later date is a postpone; the edit modal reveals an optional reason field, and the reason is archived on the reschedule event for the AI coach
+- **Steps**:
+  1. Create a task with date ECD `2026-06-15` and open its edit modal
+  2. Confirm the reason field is hidden initially
+  3. Navigate the calendar forward to September 2026 and pick the 20th (a later date)
+  4. Confirm the reason field appears; type "blocked on the vendor's reply" and Save
+- **Expected Output**:
+  - Task shows `[ 09/20 ]`
+  - Backend logs a `task_rescheduled` event with `pushedLater: true` and `reason` matching the entered text
+
+#### Test: "should archive a reason-less postpone with reason=null"
+
+- **Description**: The postpone reason is optional; skipping it records the postpone as unexcused (procrastination)
+- **Steps**:
+  1. Create a task with date ECD `2026-06-15` and open its edit modal
+  2. Navigate the calendar forward to September 2026 and pick the 20th
+  3. Leave the (visible) reason field blank and Save
+- **Expected Output**:
+  - Task shows `[ 09/20 ]`
+  - Backend logs a `task_rescheduled` event with `pushedLater: true` and `reason: null`
 
 #### Test: "should clear ECD by selecting None"
 
@@ -548,12 +571,12 @@ These tests verify task isolation between different headers.
 
 ## Summary
 
-These 56 tests comprehensively verify that:
+These 58 tests comprehensively verify that:
 
 1. ✅ Tasks can be created with various ECD types (date, weekly, monthly, yearly, none)
 2. ✅ Tasks display correctly with all their information
 3. ✅ Tasks can be toggled between done and undone states
-4. ✅ Task information can be edited (name, notes, ECD), including done tasks
+4. ✅ Task information can be edited (name, notes, ECD), including done tasks; postponing a dated task offers an optional reason that is archived on the reschedule event (a reason-less postpone records `reason: null`)
 5. ✅ Tasks can be manually reordered within their priority group
 6. ✅ Done tasks can be reordered within the done section
 7. ✅ Tasks can be safely deleted with confirmation, including done tasks; deleting an undone task requires a reason that is archived for AI insights

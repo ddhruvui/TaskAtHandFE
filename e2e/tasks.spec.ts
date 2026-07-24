@@ -423,6 +423,90 @@ test.describe("Tasks - Update Edit", () => {
     await expect(task.getByText("↻ Mon")).toBeVisible();
   });
 
+  test("should capture a reason when postponing a dated task", async ({
+    page,
+  }) => {
+    const header = await createHeader("Work");
+    await createTask({
+      name: "Postpone me",
+      headerId: header._id,
+      ecd: { type: "date", value: "2026-06-15" },
+    });
+
+    await page.reload();
+    await waitForPageLoad(page);
+
+    const task = getTask(page, "Postpone me");
+    await task.getByTitle("Edit notes").click();
+
+    // The reason field only appears once the selected date is pushed later.
+    const reasonInput = page.locator(".edit-modal__reason-input");
+    await expect(reasonInput).toBeHidden();
+
+    // Navigate the calendar forward and pick a later day — a postpone.
+    for (let i = 0; i < 3; i++) {
+      await page.getByLabel("Next month").click();
+    }
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      "September 2026",
+    );
+    await page.locator(".ecd-calendar__day", { hasText: /^20$/ }).click();
+
+    await expect(reasonInput).toBeVisible();
+    await reasonInput.fill("blocked on the vendor's reply");
+    await page.getByRole("button", { name: "Save" }).click();
+
+    await expect(task.getByText("[ 09/20 ]")).toBeVisible();
+
+    // The reason rides along on the task_rescheduled event for the AI insights.
+    const events = await getArchiveEvents("task_rescheduled");
+    const rescheduled = events.find(
+      (e: { taskName: string }) => e.taskName === "Postpone me",
+    );
+    expect(rescheduled).toBeTruthy();
+    expect(rescheduled.pushedLater).toBe(true);
+    expect(rescheduled.reason).toBe("blocked on the vendor's reply");
+  });
+
+  test("should archive a reason-less postpone with reason=null", async ({
+    page,
+  }) => {
+    const header = await createHeader("Work");
+    await createTask({
+      name: "Silent postpone",
+      headerId: header._id,
+      ecd: { type: "date", value: "2026-06-15" },
+    });
+
+    await page.reload();
+    await waitForPageLoad(page);
+
+    const task = getTask(page, "Silent postpone");
+    await task.getByTitle("Edit notes").click();
+
+    // Push the date later but leave the (optional) reason blank.
+    for (let i = 0; i < 3; i++) {
+      await page.getByLabel("Next month").click();
+    }
+    await expect(page.locator(".ecd-calendar__month-label")).toHaveText(
+      "September 2026",
+    );
+    await page.locator(".ecd-calendar__day", { hasText: /^20$/ }).click();
+    await expect(page.locator(".edit-modal__reason-input")).toBeVisible();
+
+    await page.getByRole("button", { name: "Save" }).click();
+    await expect(task.getByText("[ 09/20 ]")).toBeVisible();
+
+    // No reason → the AI treats this postpone as procrastination.
+    const events = await getArchiveEvents("task_rescheduled");
+    const rescheduled = events.find(
+      (e: { taskName: string }) => e.taskName === "Silent postpone",
+    );
+    expect(rescheduled).toBeTruthy();
+    expect(rescheduled.pushedLater).toBe(true);
+    expect(rescheduled.reason).toBeNull();
+  });
+
   test("should clear ECD by selecting None", async ({ page }) => {
     const header = await createHeader("Work");
     await createTask({

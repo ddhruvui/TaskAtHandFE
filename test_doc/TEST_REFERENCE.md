@@ -102,13 +102,14 @@ Validates frontend wrapper methods for the Insights endpoints (5 tests):
 
 ### `src/utils/ecd.test.ts`
 
-Validates the ECD utility functions with a fixed fake system time (37 tests):
+Validates the ECD utility functions with a fixed fake system time (41 tests):
 
 | Function | Coverage |
 | --- | --- |
 | `todayDateKey` | local YYYY-MM-DD key; stays on the local calendar day late at night (no UTC rollover) |
 | `isTaskDueToday` | null ECD, date match/mismatch, day_of_week in/out, day_of_month in/out, day_of_year match/mismatch |
 | `isTaskPast` | null ECD, past/today/future dates, all recurring types return false |
+| `isPushedLater` | date pushed later (a postpone) → true; earlier/unchanged, null on either side, and non-date types → false |
 | `getEcdDateKey` | date pass-through, D/M/YYYY → YYYY-MM-DD zero-padding, weekly/monthly due-today vs null, null ECD |
 | `formatDateKey` | YYYY-MM-DD → "Fri, Jun 26, 2026" heading format |
 | `isValidYearDate` | valid D/M/YYYY, rejected formats, format-only (no range check) |

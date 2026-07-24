@@ -69,6 +69,9 @@ export interface UpdateTaskBody {
   ecd?: ECD | null; // Optional; null clears it
   done?: boolean; // Optional, triggers automatic priority reorder
   priority?: number; // Optional, manual reorder within header; 0-based
+  reason?: string; // Optional postpone reason; archived on the task_rescheduled
+  // event when the ecd change pushes a one-time date later. Ignored otherwise
+  // and never stored on the task. Absence/blank is treated as procrastination.
 }
 
 export interface DeleteTaskResponse {

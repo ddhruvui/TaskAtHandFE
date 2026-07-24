@@ -4,6 +4,8 @@ export interface EditPayload {
   name: string;
   notes: string;
   ecd: ECD | null;
+  /** Optional postpone reason, set only when the ecd change pushes a date later. */
+  reason?: string;
 }
 
 export interface TaskCardProps {

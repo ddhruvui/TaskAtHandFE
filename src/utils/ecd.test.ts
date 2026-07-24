@@ -3,6 +3,7 @@ import {
   buildEcdFromInputs,
   formatDateKey,
   getEcdDateKey,
+  isPushedLater,
   isTaskDueToday,
   isTaskPast,
   isValidYearDate,
@@ -109,6 +110,56 @@ describe("ecd utils", () => {
       expect(isTaskPast({ type: "day_of_year", value: "1/1/2020" })).toBe(
         false,
       );
+    });
+  });
+
+  describe("isPushedLater", () => {
+    it("returns true when a one-time date moves later", () => {
+      expect(
+        isPushedLater(
+          { type: "date", value: "2026-07-20" },
+          { type: "date", value: "2026-07-25" },
+        ),
+      ).toBe(true);
+    });
+
+    it("returns false when a date moves earlier or is unchanged", () => {
+      expect(
+        isPushedLater(
+          { type: "date", value: "2026-07-20" },
+          { type: "date", value: "2026-07-15" },
+        ),
+      ).toBe(false);
+      expect(
+        isPushedLater(
+          { type: "date", value: "2026-07-20" },
+          { type: "date", value: "2026-07-20" },
+        ),
+      ).toBe(false);
+    });
+
+    it("returns false when either side is null", () => {
+      expect(isPushedLater(null, { type: "date", value: "2026-07-25" })).toBe(
+        false,
+      );
+      expect(isPushedLater({ type: "date", value: "2026-07-20" }, null)).toBe(
+        false,
+      );
+    });
+
+    it("returns false when either side is not a one-time date", () => {
+      expect(
+        isPushedLater(
+          { type: "day_of_week", value: ["Mon"] },
+          { type: "date", value: "2026-07-25" },
+        ),
+      ).toBe(false);
+      expect(
+        isPushedLater(
+          { type: "date", value: "2026-07-20" },
+          { type: "day_of_week", value: ["Mon"] },
+        ),
+      ).toBe(false);
     });
   });
 

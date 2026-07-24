@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { EditPayload } from "../TaskCard/TaskCard.types";
 import type { ECD } from "../../types";
-import { buildEcdFromInputs, todayDateKey } from "../../utils/ecd";
+import { buildEcdFromInputs, isPushedLater, todayDateKey } from "../../utils/ecd";
 import { EcdCalendar } from "../DatePicker";
 import "./EditNotesModal.css";
 
@@ -125,12 +125,24 @@ export default function EditNotesModal({
   );
   const [domVal, setDomVal] = useState<number[]>(initial.domVal);
   const [yearVal, setYearVal] = useState(initial.yearVal);
+  const [reason, setReason] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
+
+  // A postpone: the currently-selected date pushes the original one-time date
+  // later. Detected live so the optional reason field can appear inline.
+  const { ecd: previewEcd } = buildEcdFromInputs({
+    mode,
+    dateVal,
+    dowVal: [...dowVal],
+    domVal: [...domVal],
+    yearVal,
+  });
+  const isPostpone = isPushedLater(ecd, previewEcd);
 
   function handleSave() {
     const trimmedName = nameDraft.trim();
@@ -152,7 +164,16 @@ export default function EditNotesModal({
     }
     setFormError(null);
 
-    onConfirm({ name: trimmedName, notes: draft, ecd: newEcd });
+    // Attach the reason only for an actual postpone with a non-blank reason;
+    // the backend treats a reason-less postpone as procrastination.
+    const trimmedReason = reason.trim();
+    const includeReason = isPushedLater(ecd, newEcd) && trimmedReason !== "";
+    onConfirm({
+      name: trimmedName,
+      notes: draft,
+      ecd: newEcd,
+      ...(includeReason ? { reason: trimmedReason } : {}),
+    });
   }
 
   return (
@@ -273,6 +294,30 @@ export default function EditNotesModal({
             </p>
           )}
         </div>
+
+        {/* ── Postpone reason (only when pushing a one-time date later) ── */}
+        {isPostpone && (
+          <div className="edit-modal__postpone">
+            <label
+              className="edit-modal__ecd-label"
+              htmlFor="edit-modal-reason"
+            >
+              Why postpone? (optional)
+            </label>
+            <textarea
+              id="edit-modal-reason"
+              className="edit-modal__reason-input"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. blocked on a dependency, sick, real emergency…"
+              rows={2}
+            />
+            <p className="edit-modal__ecd-hint">
+              No reason is logged as procrastination; a valid one counts as a
+              legitimate deferral.
+            </p>
+          </div>
+        )}
 
         <textarea
           ref={textareaRef}
