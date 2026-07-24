@@ -6,6 +6,7 @@ import { HeaderModal } from "./components/HeaderModal";
 import { InsightsPanel } from "./components/InsightsPanel";
 import { EventsPanel } from "./components/EventsPanel";
 import { GoalsPanel } from "./components/GoalsPanel";
+import { ProjectsPanel } from "./components/ProjectsPanel";
 import { AffirmationsPanel } from "./components/AffirmationsPanel";
 import { CallsPanel } from "./components/CallsPanel";
 import type { Header, Task } from "./types";
@@ -23,6 +24,12 @@ import {
   pauseStepsMatchingTask,
   pauseAllStartedSteps,
 } from "./utils/goalSync";
+import {
+  syncProjectTasksForTodoDone,
+  syncProjectTasksForTodoEdit,
+  syncProjectTaskOrderForTodo,
+  unlinkProjectTasksForTodoTasks,
+} from "./utils/projectSync";
 import "./App.css";
 
 interface HeaderWithTasks extends Header {
@@ -40,6 +47,7 @@ function App() {
   const [insightsMode, setInsightsMode] = useState(false);
   const [eventsMode, setEventsMode] = useState(false);
   const [goalsMode, setGoalsMode] = useState(false);
+  const [projectsMode, setProjectsMode] = useState(false);
   const [affirmationsMode, setAffirmationsMode] = useState(false);
   const [callsMode, setCallsMode] = useState(false);
 
@@ -128,6 +136,8 @@ function App() {
   const handleDeleteHeader = async () => {
     if (!deleteTarget || deleteTarget.type !== "header") return;
     try {
+      const header = headers.find((h) => h._id === deleteTarget.id);
+      const cascadedTaskIds = header?.tasks.map((t) => t._id) ?? [];
       await headersApi.remove(deleteTarget.id);
       setHeaders((prev) => prev.filter((h) => h._id !== deleteTarget.id));
       // Deleting "One Step At A Time" takes every daily habit task with it,
@@ -135,6 +145,8 @@ function App() {
       if (isOneStepHeaderName(deleteTarget.name)) {
         await pauseAllStartedSteps();
       }
+      // Cascade-deleted tasks may back dated project tasks — unlink them
+      await unlinkProjectTasksForTodoTasks(cascadedTaskIds);
       setDeleteTarget(null);
       setActionError(null);
     } catch (err) {
@@ -198,6 +210,8 @@ function App() {
     try {
       await tasksApi.update(taskId, { done: !task.done });
       await reloadHeaderTasks(headerId);
+      // A task linked from a long-term project mirrors its done state there
+      await syncProjectTasksForTodoDone(taskId, !task.done);
       setActionError(null);
     } catch (err) {
       setActionError((err as Error).message);
@@ -214,6 +228,9 @@ function App() {
           ...(payload.reason ? { reason: payload.reason } : {}),
         });
         await reloadHeaderTasks(headerId);
+        // A task linked from a long-term project mirrors its name and date
+        // there (a cleared/recurring ECD clears the project date)
+        await syncProjectTasksForTodoEdit(taskId, payload.name, payload.ecd);
         setActionError(null);
       } catch (err) {
         setActionError((err as Error).message);
@@ -227,7 +244,12 @@ function App() {
     const newPriority = task.priority - 1;
     try {
       await tasksApi.update(taskId, { priority: newPriority });
-      await reloadHeaderTasks(headerId);
+      const fresh = await tasksApi.getAll(headerId);
+      setHeaders((prev) =>
+        prev.map((h) => (h._id === headerId ? { ...h, tasks: fresh } : h)),
+      );
+      // Tasks linked from a long-term project keep the project's order in step
+      await syncProjectTaskOrderForTodo(fresh.map((t) => t._id));
       setActionError(null);
     } catch (err) {
       setActionError((err as Error).message);
@@ -242,7 +264,12 @@ function App() {
     const newPriority = task.priority + 1;
     try {
       await tasksApi.update(taskId, { priority: newPriority });
-      await reloadHeaderTasks(headerId);
+      const fresh = await tasksApi.getAll(headerId);
+      setHeaders((prev) =>
+        prev.map((h) => (h._id === headerId ? { ...h, tasks: fresh } : h)),
+      );
+      // Tasks linked from a long-term project keep the project's order in step
+      await syncProjectTaskOrderForTodo(fresh.map((t) => t._id));
       setActionError(null);
     } catch (err) {
       setActionError((err as Error).message);
@@ -273,6 +300,8 @@ function App() {
       if (header && isOneStepHeaderName(header.name)) {
         await pauseStepsMatchingTask(deleteTarget.name);
       }
+      // A task backing a dated project task unlinks it there
+      await unlinkProjectTasksForTodoTasks([deleteTarget.id]);
       setDeleteTarget(null);
       setActionError(null);
     } catch (err) {
@@ -525,6 +554,29 @@ function App() {
             Goals
           </button>
           <button
+            className={`readme-heading__add-btn projects-toggle-btn${projectsMode ? " projects-toggle-btn--active" : ""}`}
+            onClick={() => setProjectsMode((prev) => !prev)}
+            aria-label={projectsMode ? "Hide projects" : "Show projects"}
+            aria-pressed={projectsMode}
+            title={
+              projectsMode
+                ? "Projects on — long term projects built step by step"
+                : "Manage long term projects (multi-step efforts)"
+            }
+            style={{
+              width: "auto",
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+              <path d="M1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25V1.75C0 .784.784 0 1.75 0zM1.5 1.75v12.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25zM11.75 3a.75.75 0 0 1 .75.75v7.5a.75.75 0 0 1-1.5 0v-7.5a.75.75 0 0 1 .75-.75zm-8.25.75a.75.75 0 0 1 1.5 0v5.5a.75.75 0 0 1-1.5 0v-5.5zM8 3a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 3z" />
+            </svg>
+            Projects
+          </button>
+          <button
             className={`readme-heading__add-btn affirmations-toggle-btn${affirmationsMode ? " affirmations-toggle-btn--active" : ""}`}
             onClick={() => setAffirmationsMode((prev) => !prev)}
             aria-label={
@@ -596,19 +648,27 @@ function App() {
           <GoalsPanel onTasksChanged={loadAll} />
         )}
 
-        {!insightsMode && !eventsMode && !goalsMode && affirmationsMode && (
-          <AffirmationsPanel />
+        {!insightsMode && !eventsMode && !goalsMode && projectsMode && (
+          <ProjectsPanel onTasksChanged={loadAll} />
         )}
 
         {!insightsMode &&
           !eventsMode &&
           !goalsMode &&
+          !projectsMode &&
+          affirmationsMode && <AffirmationsPanel />}
+
+        {!insightsMode &&
+          !eventsMode &&
+          !goalsMode &&
+          !projectsMode &&
           !affirmationsMode &&
           callsMode && <CallsPanel />}
 
         {!insightsMode &&
           !eventsMode &&
           !goalsMode &&
+          !projectsMode &&
           !affirmationsMode &&
           !callsMode &&
           !byDateMode &&
@@ -743,6 +803,7 @@ function App() {
         {!insightsMode &&
           !eventsMode &&
           !goalsMode &&
+          !projectsMode &&
           !affirmationsMode &&
           !callsMode &&
           !byDateMode && (
@@ -781,6 +842,7 @@ function App() {
         {!insightsMode &&
           !eventsMode &&
           !goalsMode &&
+          !projectsMode &&
           !affirmationsMode &&
           !callsMode &&
           byDateMode && (

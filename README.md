@@ -20,6 +20,7 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   - **Insights** — habit stats and the AI coach (see below)
   - **Events** — manage reusable task bundles (see below)
   - **Goals** — habit backlogs built one step at a time (see below)
+  - **Projects** — long term projects built step by step (see below)
   - **Affirmations** — short lines to read daily (see below)
   - **Calls** — people to call biweekly or monthly (see below)
 - **Events view** — reusable task bundles (e.g. "Burger Night" with its
@@ -41,6 +42,25 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   the whole "One Step At A Time" header — pauses the matching step(s)
   automatically. Editing a goal edits its name and step list (one step per
   line; steps that keep their name keep their status)
+- **Projects view** — long term projects (e.g. "Automated Stock Market")
+  broken into ordered tasks/steps ("get data from EODHD", "get data from
+  Nasdaq", "deploy to cpu"). Projects are ordered with move up/down arrows
+  (header-style priority) and each project's tasks are added, edited,
+  reordered, completed and deleted with the same interactions as the todo —
+  done tasks always drop to the bottom, and moves never cross the
+  done/undone barrier. Giving a task a **date** mirrors it into the todo as
+  a one-time date task under a header named after the project (reused
+  case-insensitively if it already exists); the badge (e.g. "1/3 done")
+  tracks completion. The two views stay in sync both ways: toggling done on
+  either side flips the other, editing the todo task's name or date updates
+  the project task (clearing the date sets it to none there), reordering on
+  either side mirrors the relative order of linked tasks on the other,
+  deleting the todo task (or its header) unlinks the project task (clearing
+  its date), removing a task's date removes its todo entry, and renaming
+  the project renames its todo header.
+  When the todo task is done and the backend's nightly cron deletes it, the
+  project task is marked done and **retained in the project** as a
+  completed step (its date is kept for the record)
 - **Affirmations view** — a flat list of short lines the user reads daily
   (e.g. "Thank you blessing"), sorted by creation time. Add, edit, and delete
   (with confirmation) — nothing to do with headers or tasks
@@ -72,6 +92,7 @@ src/
 │   ├── headers.ts / tasks.ts  # CRUD calls
 │   ├── events.ts              # /events CRUD (reusable task bundles)
 │   ├── goals.ts               # /goals CRUD (habit backlogs)
+│   ├── projects.ts            # /projects CRUD (long term projects)
 │   ├── affirmations.ts        # /affirmations CRUD (short daily lines)
 │   ├── calls.ts               # /calls CRUD (people to call biweekly/monthly)
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
@@ -81,9 +102,12 @@ src/
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
 │   ├── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
 │   ├── GoalsPanel/  GoalModal/                          # Goals view
+│   ├── ProjectsPanel/  ProjectModal/  ProjectTaskModal/ # Projects view
 │   ├── AffirmationsPanel/  AffirmationModal/            # Affirmations view
 │   └── CallsPanel/  CallModal/                          # Calls view
-└── utils/ecd.ts               # ECD due-today/past/date-key helpers
+├── utils/ecd.ts               # ECD due-today/past/date-key helpers
+├── utils/goalSync.ts          # goal step ↔ todo sync helpers
+└── utils/projectSync.ts       # project task ↔ todo sync helpers
 ```
 
 ## Setup & Run

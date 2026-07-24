@@ -26,9 +26,10 @@ Config: `VITE_API_BASE_URL` in `.env` (template in `.env.example`), read at impo
 - **ECD types** (must match backend exactly): `date` = `"YYYY-MM-DD"`; `day_of_week` = non-empty array of `"Sun".."Sat"`; `day_of_month` = non-empty array of 1–31; `day_of_year` = `"D/M/YYYY"` (no zero-padding); or `null`. All ECD construction goes through `buildEcdFromInputs` in `src/utils/ecd.ts` — don't build ECD objects ad hoc.
 - **Timezone safety**: date strings are parsed manually into components (never `new Date("YYYY-MM-DD")`, which shifts across timezones) — see `TaskCard.resolveEcd`, `EcdCalendar.parseInitial`, `formatDateKey`. Preserve this in any new date code.
 - **Done/undone barrier**: undone tasks always sort above done tasks; TaskCard disables moves that would cross the barrier. The backend enforces the ordering — the UI must not offer illegal moves.
-- **View modes** (App.tsx state): default, Focus (due today), Past (overdue `date`-type only — recurring is never "past"), Focus+Past = union, By Date (groups by `getEcdDateKey`; done tasks excluded; recurring surfaces under today when due; "No date" section last), Insights, Events, Goals, Affirmations.
+- **View modes** (App.tsx state): default, Focus (due today), Past (overdue `date`-type only — recurring is never "past"), Focus+Past = union, By Date (groups by `getEcdDateKey`; done tasks excluded; recurring surfaces under today when due; "No date" section last), Insights, Events, Goals, Projects, Affirmations.
 - **Event scheduling** (EventsPanel): reuses an existing header by case-insensitive name match or creates one; creates tasks **sequentially** to preserve template order. No rollback on mid-stream failure.
 - **Goal↔todo sync** (`src/utils/goalSync.ts`): a goal step is `under_progress` exactly while its daily task lives under the "One Step At A Time" header. Start creates the task, Pause removes it, and the todo delete flows in App.tsx call `pauseStepsMatchingTask`/`pauseAllStartedSteps` when a task/the header is deleted there — keep any new delete path calling them.
+- **Project↔todo sync** (`src/utils/projectSync.ts` + ProjectsPanel): a project task with a `date` is mirrored as a one-time date task in the todo under a header named after the project (find-or-create, case-insensitive), linked via `todoTaskId`. App.tsx's toggle-done calls `syncProjectTasksForTodoDone`, its edit flow calls `syncProjectTasksForTodoEdit` (name/date mirror; cleared or recurring ECD → project date `null`, link kept), its task move flows call `syncProjectTaskOrderForTodo` (linked tasks keep the todo's relative order), and its task/header delete flows call `unlinkProjectTasksForTodoTasks` — keep any new toggle/edit/move/delete path calling them. ProjectsPanel mirrors project-side moves back into todo priorities. The backend cron completes linked tasks when it deletes the done todo task; done project tasks always sort to the bottom (server-enforced).
 - **`headerId` is immutable** on a task; there is no UI to change it.
 - **ECD display format** (`TaskCard.resolveEcd`): `date` shows `MM/DD` (adds `/YY` only when not the current year); recurring types show a `↻ ` prefix (`↻ Mon, Wed`, `↻ 1st, 15th` sorted with ordinals, `↻ D/M/YYYY`); no ECD shows "No date". **E2e label helpers (`dateEcdLabel`, `yearlyEcdLabel`) compute these exact strings** — changing the display format breaks e2e assertions.
 - **Error conventions**: mutation failures set `actionError`, rendered as "Action failed: {message}"; initial-load failure renders "Failed to load: {error}. Is the backend running at {VITE_API_BASE_URL}?". No retry logic anywhere — follow these patterns rather than adding alerts or toasts.
@@ -53,6 +54,7 @@ Where tests live, by change type:
 | ECD pickers/display                  | `e2e/ecd.spec.ts`                                      |
 | Events panel/scheduling              | `e2e/events.spec.ts`                                   |
 | Goals panel/step lifecycle           | `e2e/goals.spec.ts`                                    |
+| Projects panel/todo sync             | `e2e/projects.spec.ts`                                 |
 | Affirmations panel/flows             | `e2e/affirmations.spec.ts`                             |
 | Insights panel                       | `e2e/insights.spec.ts`                                 |
 | Focus/Past/By-Date modes             | `e2e/viewmodes.spec.ts`                                |
@@ -71,6 +73,7 @@ Any code change MUST include, in the same task: (1) updated/new tests per the ta
 | `e2e/tasks.spec.ts`               | `test_doc/TASKS_TEST_DOCUMENTATION.md`                                   |
 | `e2e/integration.spec.ts`         | `test_doc/INTEGRATION_TEST_DOCUMENTATION.md`                             |
 | `e2e/goals.spec.ts`               | `test_doc/GOALS_TEST_DOCUMENTATION.md`                                   |
+| `e2e/projects.spec.ts`            | `test_doc/PROJECTS_TEST_DOCUMENTATION.md`                                |
 | `e2e/affirmations.spec.ts`        | `test_doc/AFFIRMATIONS_TEST_DOCUMENTATION.md`                            |
 | `e2e/insights.spec.ts`            | `test_doc/INSIGHTS_TEST_DOCUMENTATION.md`                                |
 | `e2e/events.spec.ts`, `e2e/viewmodes.spec.ts` | **currently undocumented** — when touching one, create its `*_TEST_DOCUMENTATION.md` in `test_doc/` in the same format as the existing ones |

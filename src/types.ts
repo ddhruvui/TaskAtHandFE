@@ -78,6 +78,24 @@ export interface Goal {
   updatedAt: string; // ISO 8601 timestamp
 }
 
+// ── Projects (long-term projects, built step by step) ───────────────────────
+
+export interface ProjectTask {
+  name: string; // Task/step name (required), e.g. "get data from EODHD"
+  date: string | null; // "YYYY-MM-DD" target date or null; a date mirrors the task into the todo
+  done: boolean; // Completion status; done tasks always sort to the bottom
+  todoTaskId: string | null; // _id of the linked todo Task while one exists
+}
+
+export interface Project {
+  _id: string; // MongoDB ObjectId
+  name: string; // Project name (required), e.g. "Automated Stock Market"
+  priority: number; // 0-based global priority (0 = highest); auto-managed
+  tasks: ProjectTask[]; // Ordered task list (may be empty); undone before done
+  createdAt: string; // ISO 8601 timestamp
+  updatedAt: string; // ISO 8601 timestamp
+}
+
 // ── Affirmations (short daily lines) ────────────────────────────────────────
 
 export interface Affirmation {

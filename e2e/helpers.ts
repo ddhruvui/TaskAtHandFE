@@ -127,6 +127,55 @@ export async function createGoal(
 }
 
 /**
+ * Clean all projects from the database
+ */
+export async function cleanProjects() {
+  const projects = await fetch(`${API_BASE}/projects`).then((r) => r.json());
+  for (const project of projects) {
+    await fetch(`${API_BASE}/projects/${project._id}`, { method: "DELETE" });
+  }
+}
+
+/**
+ * Create a project via API
+ */
+export async function createProject(
+  name: string,
+  tasks: {
+    name: string;
+    date?: string | null;
+    done?: boolean;
+    todoTaskId?: string | null;
+  }[] = [],
+) {
+  const res = await fetch(`${API_BASE}/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, tasks }),
+  });
+  return res.json();
+}
+
+/**
+ * Fetch all projects via API (sorted by priority)
+ */
+export async function getProjects() {
+  return fetch(`${API_BASE}/projects`).then((r) => r.json());
+}
+
+/**
+ * Trigger the backend cron manually (all steps, today's UTC date)
+ */
+export async function runCron() {
+  const res = await fetch(`${API_BASE}/cron/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  return res.json();
+}
+
+/**
  * Clean all affirmations from the database
  */
 export async function cleanAffirmations() {

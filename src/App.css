@@ -180,6 +180,18 @@
   border-color: #a04100 !important;
 }
 
+/* ─── Projects toggle button active state ─── */
+.projects-toggle-btn--active {
+  background: #57606a !important;
+  border-color: #57606a !important;
+  color: #ffffff !important;
+}
+
+.projects-toggle-btn--active:hover {
+  background: #424a53 !important;
+  border-color: #424a53 !important;
+}
+
 /* ─── Affirmations toggle button active state ─── */
 .affirmations-toggle-btn--active {
   background: #bf3989 !important;
@@ -214,6 +226,17 @@
   .calls-toggle-btn--active:hover {
     background: #3bc9db !important;
     border-color: #3bc9db !important;
+  }
+
+  .projects-toggle-btn--active {
+    background: #768390 !important;
+    border-color: #768390 !important;
+    color: #ffffff !important;
+  }
+
+  .projects-toggle-btn--active:hover {
+    background: #8b949e !important;
+    border-color: #8b949e !important;
   }
 
   .affirmations-toggle-btn--active {

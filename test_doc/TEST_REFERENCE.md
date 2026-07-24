@@ -65,6 +65,18 @@ Validates frontend wrapper methods for the Goals collection (4 tests):
 | update calls PUT `/goals/:id` with partial body | Steps-only update payload is passed as expected |
 | remove calls DELETE `/goals/:id` | Delete request maps to correct endpoint and method |
 
+### `src/api/projects.test.ts`
+
+Validates frontend wrapper methods for the Projects collection (5 tests):
+
+| Test | What it checks |
+| --- | --- |
+| getAll calls GET `/projects` and returns the project list | Wrapper maps to the correct endpoint and returns the project list |
+| create calls POST `/projects` with body | `{ name, tasks }` payload is serialized and sent correctly |
+| update calls PUT `/projects/:id` with partial body | Tasks-only wholesale update payload is passed as expected |
+| update calls PUT `/projects/:id` with a priority move | `{ priority }` reorder payload is passed as expected |
+| remove calls DELETE `/projects/:id` | Delete request maps to correct endpoint and method |
+
 ### `src/api/affirmations.test.ts`
 
 Validates frontend wrapper methods for the Affirmations collection (4 tests):

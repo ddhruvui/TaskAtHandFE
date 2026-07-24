@@ -12,6 +12,7 @@
 export * as headersApi from "./headers";
 export * as tasksApi from "./tasks";
 export * as goalsApi from "./goals";
+export * as projectsApi from "./projects";
 export * as affirmationsApi from "./affirmations";
 export * as callsApi from "./calls";
 export { apiFetch } from "./client";

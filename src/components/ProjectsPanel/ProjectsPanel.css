@@ -1,0 +1,146 @@
+.projects-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Toolbar ── */
+.projects-panel__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+/* Double class beats the 26px square base style in App.css regardless of
+   stylesheet order (App.css is bundled after component CSS) */
+.readme-heading__add-btn.projects-panel__add-project-btn {
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+/* ── Progress badge in project heading ── */
+.projects-panel__progress {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 10px;
+  border: 1px solid var(--rm-border, #d0d7de);
+  border-radius: 999px;
+  color: var(--rm-text-muted, #656d76);
+  white-space: nowrap;
+}
+
+/* ── Task list ──
+   Matches the .readme-tasks indentation so tasks line up with todo tasks */
+.projects-panel__task-list {
+  margin: 0 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+.projects-panel__task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
+}
+
+.projects-panel__task-row:last-child {
+  border-bottom: none;
+}
+
+/* Round done-toggle at the start of each task row (todo-style checkbox) */
+.projects-panel__task-check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid var(--rm-border, #d0d7de);
+  border-radius: 50%;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.projects-panel__task-check:hover:not(:disabled) {
+  border-color: #1a7f37;
+  color: rgba(26, 127, 55, 0.5);
+}
+
+.projects-panel__task-check--done {
+  border-color: #1a7f37;
+  background: #1a7f37;
+  color: #ffffff;
+}
+
+.projects-panel__task-check:disabled {
+  cursor: wait;
+}
+
+@media (prefers-color-scheme: dark) {
+  .projects-panel__task-check:hover:not(:disabled) {
+    border-color: #3fb950;
+    color: rgba(63, 185, 80, 0.5);
+  }
+
+  .projects-panel__task-check--done {
+    border-color: #3fb950;
+    background: #3fb950;
+    color: #0d1117;
+  }
+}
+
+.projects-panel__task-name {
+  font-size: 14px;
+  color: var(--rm-text, #1f2328);
+}
+
+.projects-panel__task-row--done .projects-panel__task-name {
+  text-decoration: line-through;
+  color: var(--rm-text-muted, #656d76);
+}
+
+/* Date chip — mirrors the todo's ECD chip look */
+.projects-panel__task-date {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border: 1px solid var(--rm-border, #d0d7de);
+  border-radius: 999px;
+  color: var(--rm-text-muted, #656d76);
+  white-space: nowrap;
+}
+
+.projects-panel__task-row--done .projects-panel__task-date {
+  opacity: 0.6;
+}
+
+/* ── Task action buttons ── */
+.projects-panel__task-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+/* Empty state under a project heading */
+.projects-panel__no-tasks {
+  margin: 0 30px;
+  padding: 6px 4px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--rm-text-muted, #656d76);
+}
