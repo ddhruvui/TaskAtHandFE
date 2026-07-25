@@ -165,6 +165,42 @@
   font-style: italic;
 }
 
+/* ── Notes section ── */
+.project-task-modal__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-task-modal__notes-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--m-text);
+  background: var(--m-bg);
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.project-task-modal__notes-input:focus {
+  border-color: var(--m-accent);
+  box-shadow: 0 0 0 3px rgba(26, 127, 55, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  .project-task-modal__notes-input:focus {
+    box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.12);
+  }
+}
+
 /* ── Actions ── */
 .project-task-modal__actions {
   display: flex;

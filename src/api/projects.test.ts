@@ -78,6 +78,23 @@ describe("projectsApi", () => {
     expect(result).toEqual(created);
   });
 
+  it("create serializes task notes in the body", async () => {
+    apiFetchMock.mockResolvedValue({ _id: "p1" });
+
+    await projectsApi.create({
+      name: "Automated Stock Market",
+      tasks: [{ name: "get data from EODHD", notes: "use the v2 API key" }],
+    });
+
+    expect(apiFetchMock).toHaveBeenCalledWith("/projects", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Automated Stock Market",
+        tasks: [{ name: "get data from EODHD", notes: "use the v2 API key" }],
+      }),
+    });
+  });
+
   it("update calls PUT /projects/:id with partial body", async () => {
     const updated = {
       _id: "p1",

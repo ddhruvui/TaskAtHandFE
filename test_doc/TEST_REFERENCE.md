@@ -2,7 +2,7 @@
 
 This file tracks frontend unit test scenarios for the API wrappers and shared
 utilities (`headers`, `tasks`, `events`, `goals`, `affirmations`, `calls`,
-`insights`, ECD helpers).
+`insights`, ECD helpers, project→todo header order sync).
 End-to-end tests are documented in the `*_TEST_DOCUMENTATION.md` files.
 
 ---
@@ -67,12 +67,13 @@ Validates frontend wrapper methods for the Goals collection (4 tests):
 
 ### `src/api/projects.test.ts`
 
-Validates frontend wrapper methods for the Projects collection (5 tests):
+Validates frontend wrapper methods for the Projects collection (6 tests):
 
 | Test | What it checks |
 | --- | --- |
 | getAll calls GET `/projects` and returns the project list | Wrapper maps to the correct endpoint and returns the project list |
 | create calls POST `/projects` with body | `{ name, tasks }` payload is serialized and sent correctly |
+| create serializes task notes in the body | A task's `notes` field is included in the serialized create payload |
 | update calls PUT `/projects/:id` with partial body | Tasks-only wholesale update payload is passed as expected |
 | update calls PUT `/projects/:id` with a priority move | `{ priority }` reorder payload is passed as expected |
 | remove calls DELETE `/projects/:id` | Delete request maps to correct endpoint and method |
@@ -126,6 +127,18 @@ Validates the ECD utility functions with a fixed fake system time (41 tests):
 | `formatDateKey` | YYYY-MM-DD → "Fri, Jun 26, 2026" heading format |
 | `isValidYearDate` | valid D/M/YYYY, rejected formats, format-only (no range check) |
 | `buildEcdFromInputs` | all five modes incl. validation errors (bad date format, empty weekdays, out-of-range month days, bad yearly format) and trimming |
+
+### `src/utils/projectSync.test.ts`
+
+Validates `syncProjectHeaderOrder`, which orders the todo's project-derived headers to follow the projects' priority (mocks `projectsApi.getAll` / `headersApi.getAll` / `headersApi.update`, then replays the issued updates to assert the resulting header order):
+
+| Test | What it checks |
+| --- | --- |
+| keeps the top non-project header at 0 and places project headers below it in project order | With other headers present, the project block starts at priority 1 (topmost non-project header stays at 0) and follows project priority |
+| starts the project block at priority 0 when there are no non-project headers | Empty-of-manual-headers case: first project header takes priority 0 |
+| matches project priority order case-insensitively | Header↔project name matching ignores case |
+| does nothing when the headers are already in order | No `update` calls when the order is already canonical |
+| does nothing when no header matches a project | Early return (no `update` calls) when the todo has no project header |
 
 ---
 

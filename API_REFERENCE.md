@@ -118,6 +118,7 @@ created headers or tasks.
 ```typescript
 interface ProjectTask {
   name: string; // Task/step name (required), e.g. "get data from EODHD"
+  notes: string; // Free-text notes (default: ""); the client mirrors these onto the linked todo task
   date: string | null; // "YYYY-MM-DD" target date or null (default: null)
   done: boolean; // Completion status (default: false)
   todoTaskId: string | null; // _id of the linked todo Task, or null (default: null)
@@ -743,11 +744,12 @@ Returns all projects sorted by `priority` ascending.
     "tasks": [
       {
         "name": "get data from EODHD",
+        "notes": "use the v2 API key",
         "date": "2026-08-01",
         "done": false,
         "todoTaskId": "..."
       },
-      { "name": "get data from Nasdaq", "date": null, "done": false, "todoTaskId": null }
+      { "name": "get data from Nasdaq", "notes": "", "date": null, "done": false, "todoTaskId": null }
     ],
     "createdAt": "2026-07-24T00:00:00.000Z",
     "updatedAt": "2026-07-24T00:00:00.000Z"
@@ -767,7 +769,7 @@ Creates a new project. Priority is auto-assigned (appended at the end).
 {
   "name": "Automated Stock Market",
   "tasks": [
-    { "name": "get data from EODHD", "date": "2026-08-01" },
+    { "name": "get data from EODHD", "notes": "use the v2 API key", "date": "2026-08-01" },
     { "name": "get data from Nasdaq" }
   ]
 }
@@ -776,7 +778,7 @@ Creates a new project. Priority is auto-assigned (appended at the end).
 | Field   | Required | Type          | Notes                                                                            |
 | ------- | -------- | ------------- | -------------------------------------------------------------------------------- |
 | `name`  | Yes      | string        | Non-empty; trimmed                                                                |
-| `tasks` | No       | ProjectTask[] | Defaults to `[]`. Each task needs a non-empty `name` (trimmed); `date` optional (`"YYYY-MM-DD"` or `null`, default `null`); `done` optional boolean (default `false`); `todoTaskId` optional string/`null` (default `null`). The list is re-sorted so undone tasks come before done tasks |
+| `tasks` | No       | ProjectTask[] | Defaults to `[]`. Each task needs a non-empty `name` (trimmed); `notes` optional string (default `""`, mirrored onto the linked todo task); `date` optional (`"YYYY-MM-DD"` or `null`, default `null`); `done` optional boolean (default `false`); `todoTaskId` optional string/`null` (default `null`). The list is re-sorted so undone tasks come before done tasks |
 
 **Response `201`:** the created project.
 

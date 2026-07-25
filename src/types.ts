@@ -82,6 +82,7 @@ export interface Goal {
 
 export interface ProjectTask {
   name: string; // Task/step name (required), e.g. "get data from EODHD"
+  notes: string; // Free-text notes (default ""); mirrored onto the linked todo task
   date: string | null; // "YYYY-MM-DD" target date or null; a date mirrors the task into the todo
   done: boolean; // Completion status; done tasks always sort to the bottom
   todoTaskId: string | null; // _id of the linked todo Task while one exists

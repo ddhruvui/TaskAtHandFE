@@ -197,10 +197,10 @@
   the end (`count`), moves shift the affected neighbors, deletes close the
   gap — always contiguous `0..n-1`
 - `tasks` is an ordered array (may be empty; defaults to `[]` on create) of
-  objects with a non-empty `name` (trimmed), an optional `date`
-  (`"YYYY-MM-DD"` or `null`, default `null`), an optional `done` boolean
-  (default `false`) and an optional `todoTaskId` (string or `null`, default
-  `null`)
+  objects with a non-empty `name` (trimmed), an optional `notes` string
+  (default `""`), an optional `date` (`"YYYY-MM-DD"` or `null`, default
+  `null`), an optional `done` boolean (default `false`) and an optional
+  `todoTaskId` (string or `null`, default `null`)
 - `tasks` is replaced wholesale on update — clients send the full list to
   add, rename, reorder, remove or change tasks. On **every** write the
   server re-sorts the list so undone tasks come before done tasks (stable) —
@@ -210,9 +210,12 @@
   `date`-ECD Task in the todo under a Header named after the project (reused
   case-insensitively, created when missing) and stores its `_id` in
   `todoTaskId`. Clients keep both sides in sync: toggling done on either
-  side flips the other, removing the date deletes the todo task, editing
-  the todo task's name/date updates the project task (a cleared or
-  recurring ECD sets the project date to `null`, keeping the link),
+  side flips the other, removing the date deletes the todo task, a project
+  task's `notes` are mirrored onto the linked todo task when it is created
+  or edited (an empty note falls back to a `Step towards "<project>"`
+  default; notes flow project→todo only), editing the todo task's name/date
+  updates the project task (a cleared or recurring ECD sets the project
+  date to `null`, keeping the link),
   reordering on either side mirrors the relative order of linked tasks on
   the other, deleting the todo task (or its header) clears `todoTaskId`
   **and** `date` on the project task, and renaming the project renames the
@@ -777,12 +780,14 @@ Returns all projects sorted by `priority` ascending.
     "tasks": [
       {
         "name": "get data from EODHD",
+        "notes": "use the v2 API key",
         "date": "2026-08-01",
         "done": false,
         "todoTaskId": "uuid"
       },
       {
         "name": "get data from Nasdaq",
+        "notes": "",
         "date": null,
         "done": false,
         "todoTaskId": null

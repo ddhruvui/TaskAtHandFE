@@ -31,6 +31,7 @@ export type { Project, ProjectTask };
 
 export interface CreateProjectTaskBody {
   name: string; // Required, non-empty string
+  notes?: string; // Optional free-text notes; defaults to ""
   date?: string | null; // Optional "YYYY-MM-DD"; defaults to null
   done?: boolean; // Optional; defaults to false
   todoTaskId?: string | null; // Optional; defaults to null

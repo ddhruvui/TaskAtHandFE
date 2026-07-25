@@ -37,6 +37,7 @@ async function addProjectTaskViaUI(
   projectName: string,
   taskName: string,
   withDate?: number, // day of the current month to click
+  notes?: string,
 ) {
   await page
     .getByRole("button", { name: `Add task to ${projectName}` })
@@ -51,6 +52,9 @@ async function addProjectTaskViaUI(
         hasText: new RegExp(`^${withDate}$`),
       })
       .click();
+  }
+  if (notes !== undefined) {
+    await page.getByPlaceholder("Add notes…").fill(notes);
   }
   await page.getByRole("button", { name: "Add task", exact: true }).click();
 }
@@ -211,6 +215,105 @@ test.describe("Projects - Tasks", () => {
       hasText: "Automated Stock Market",
     });
     await expect(todoSection.getByText("get data from EODHD")).toBeVisible();
+  });
+
+  test("should add a task with notes shown in the panel", async ({ page }) => {
+    await createProject("Automated Stock Market");
+    await openProjectsView(page);
+
+    await addProjectTaskViaUI(
+      page,
+      "Automated Stock Market",
+      "deploy to cpu",
+      undefined,
+      "use the v2 API key",
+    );
+
+    await expect(
+      taskRow(page, "deploy to cpu").locator(".projects-panel__task-notes"),
+    ).toHaveText("use the v2 API key");
+    // Persisted on the project task
+    const projects = await getProjects();
+    expect(projects[0].tasks[0].notes).toBe("use the v2 API key");
+  });
+
+  test("should mirror project task notes onto the linked todo task", async ({
+    page,
+  }) => {
+    await createProject("Automated Stock Market");
+    await openProjectsView(page);
+
+    const day = new Date().getDate();
+    await addProjectTaskViaUI(
+      page,
+      "Automated Stock Market",
+      "get data from EODHD",
+      day,
+      "use the v2 API key",
+    );
+    await expect(taskRow(page, "get data from EODHD")).toBeVisible();
+
+    const headers = await getHeaders();
+    const tasks = await getTasks(headers[0]._id);
+    expect(tasks[0].notes).toBe("use the v2 API key");
+  });
+
+  test('should give the linked todo task a "Step towards" note when the project task has none', async ({
+    page,
+  }) => {
+    await createProject("Automated Stock Market");
+    await openProjectsView(page);
+
+    const day = new Date().getDate();
+    await addProjectTaskViaUI(
+      page,
+      "Automated Stock Market",
+      "get data from EODHD",
+      day,
+    );
+    await expect(taskRow(page, "get data from EODHD")).toBeVisible();
+
+    const headers = await getHeaders();
+    const tasks = await getTasks(headers[0]._id);
+    expect(tasks[0].notes).toBe('Step towards "Automated Stock Market"');
+  });
+
+  test("should edit a task's notes and keep the linked todo task in step", async ({
+    page,
+  }) => {
+    const header = await createHeader("Automated Stock Market");
+    const todoTask = await createTask({
+      name: "get data from EODHD",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(1) },
+    });
+    await createProject("Automated Stock Market", [
+      { name: "get data from EODHD", date: dateKey(1), todoTaskId: todoTask._id },
+    ]);
+    await page.reload();
+    await waitForPageLoad(page);
+    await openProjectsView(page);
+
+    await page
+      .getByRole("button", { name: "Edit task get data from EODHD" })
+      .click();
+    await page.getByPlaceholder("Add notes…").fill("prefer the REST feed");
+    await page.getByRole("button", { name: "Save" }).click();
+
+    // Panel shows the note
+    await expect(
+      taskRow(page, "get data from EODHD").locator(
+        ".projects-panel__task-notes",
+      ),
+    ).toHaveText("prefer the REST feed");
+
+    // Linked todo task is kept in step
+    await expect
+      .poll(async () => {
+        const tasks = await getTasks(header._id);
+        return tasks[0].notes;
+      })
+      .toBe("prefer the REST feed");
   });
 
   test("should reuse an existing header (case-insensitive) for dated tasks", async ({
@@ -553,6 +656,114 @@ test.describe("Projects - Todo edit & order sync", () => {
         (await getProjects())[0].tasks.map((t: { name: string }) => t.name),
       )
       .toEqual(["get data from Nasdaq", "get data from EODHD"]);
+  });
+});
+
+test.describe("Projects - Header order sync", () => {
+  test("places a new project header below the top header (priority 1), in project order", async ({
+    page,
+  }) => {
+    // A pre-existing non-project header holds the top slot
+    await createHeader("Groceries");
+    await createProject("Home Improvement"); // higher priority (0)
+    await createProject("Automated Stock Market"); // lower priority (1)
+    await openProjectsView(page);
+
+    const day = new Date().getDate();
+    await addProjectTaskViaUI(page, "Home Improvement", "paint the fence", day);
+    await expect(taskRow(page, "paint the fence")).toBeVisible();
+    await addProjectTaskViaUI(
+      page,
+      "Automated Stock Market",
+      "get data from EODHD",
+      day,
+    );
+    await expect(taskRow(page, "get data from EODHD")).toBeVisible();
+
+    // Groceries keeps slot 0; the two project headers follow in project order
+    await expect
+      .poll(async () =>
+        (await getHeaders()).map((h: { name: string }) => h.name),
+      )
+      .toEqual([
+        "Groceries",
+        "Home Improvement",
+        "Automated Stock Market",
+      ]);
+  });
+
+  test("orders project headers by project priority (starts at 0 with no other headers)", async ({
+    page,
+  }) => {
+    await createProject("Home Improvement"); // higher priority (0)
+    await createProject("Automated Stock Market"); // lower priority (1)
+    await openProjectsView(page);
+
+    // Add the lower-priority project's task first to prove ordering follows
+    // the project priority, not the order tasks were added
+    const day = new Date().getDate();
+    await addProjectTaskViaUI(
+      page,
+      "Automated Stock Market",
+      "get data from EODHD",
+      day,
+    );
+    await expect(taskRow(page, "get data from EODHD")).toBeVisible();
+    await addProjectTaskViaUI(page, "Home Improvement", "paint the fence", day);
+    await expect(taskRow(page, "paint the fence")).toBeVisible();
+
+    await expect
+      .poll(async () =>
+        (await getHeaders()).map((h: { name: string }) => h.name),
+      )
+      .toEqual(["Home Improvement", "Automated Stock Market"]);
+  });
+
+  test("reorders the todo header when the project is moved", async ({
+    page,
+  }) => {
+    const hiHeader = await createHeader("Home Improvement");
+    const asmHeader = await createHeader("Automated Stock Market");
+    const hiTask = await createTask({
+      name: "paint the fence",
+      headerId: hiHeader._id,
+      ecd: { type: "date", value: dateKey(1) },
+    });
+    const asmTask = await createTask({
+      name: "get data from EODHD",
+      headerId: asmHeader._id,
+      ecd: { type: "date", value: dateKey(1) },
+    });
+    await createProject("Home Improvement", [
+      { name: "paint the fence", date: dateKey(1), todoTaskId: hiTask._id },
+    ]);
+    await createProject("Automated Stock Market", [
+      {
+        name: "get data from EODHD",
+        date: dateKey(1),
+        todoTaskId: asmTask._id,
+      },
+    ]);
+    await page.reload();
+    await waitForPageLoad(page);
+    await openProjectsView(page);
+
+    // Initially Home Improvement is the higher-priority project → header first
+    await expect(
+      page.locator(".projects-panel .readme-heading__text"),
+    ).toHaveText(["Home Improvement", "Automated Stock Market"]);
+
+    // Promote Automated Stock Market above Home Improvement
+    await page
+      .getByRole("button", { name: "Move project Automated Stock Market up" })
+      .click();
+
+    // The todo headers follow the new project order
+    await expect
+      .poll(async () =>
+        (await getHeaders()).map((h: { name: string }) => h.name),
+      )
+      .toEqual(["Automated Stock Market", "Home Improvement"]);
   });
 });
 

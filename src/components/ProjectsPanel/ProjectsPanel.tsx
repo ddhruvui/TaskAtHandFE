@@ -6,6 +6,7 @@ import * as tasksApi from "../../api/tasks";
 import { ProjectModal } from "../ProjectModal";
 import { ProjectTaskModal } from "../ProjectTaskModal";
 import { ConfirmModal } from "../ConfirmModal";
+import { syncProjectHeaderOrder } from "../../utils/projectSync";
 import "./ProjectsPanel.css";
 
 interface ProjectsPanelProps {
@@ -72,11 +73,19 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
     );
   };
 
+  /**
+   * The note the linked todo task carries: the project task's own notes when
+   * it has any, else the "Step towards …" default that flags the origin.
+   */
+  const todoNoteFor = (projectName: string, notes: string): string =>
+    notes.trim() ? notes : `Step towards "${projectName}"`;
+
   /** Create the linked todo task for a dated project task; returns its _id. */
   const createTodoTask = async (
     projectName: string,
     taskName: string,
     date: string,
+    notes: string,
   ): Promise<string> => {
     const header =
       (await findProjectHeader(projectName)) ??
@@ -84,9 +93,12 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
     const created = await tasksApi.create({
       name: taskName,
       headerId: header._id,
-      notes: `Step towards "${projectName}"`,
+      notes: todoNoteFor(projectName, notes),
       ecd: { type: "date", value: date },
     });
+    // Place the project header in the todo per the projects' priority order
+    // (a freshly created header would otherwise sit at the bottom).
+    await syncProjectHeaderOrder();
     return created._id;
   };
 
@@ -134,7 +146,10 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
       await projectsApi.update(project._id, {
         priority: project.priority + delta,
       });
+      // Mirror the new project order onto the todo's project headers
+      await syncProjectHeaderOrder();
       await loadProjects();
+      onTasksChanged();
       setError(null);
     } catch (err) {
       setError((err as Error).message);
@@ -149,7 +164,11 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
     await loadProjects();
   };
 
-  const handleSaveTask = async (draft: { name: string; date: string | null }) => {
+  const handleSaveTask = async (draft: {
+    name: string;
+    notes: string;
+    date: string | null;
+  }) => {
     if (!taskModalState) return;
     const { project, taskIndex } = taskModalState;
     setBusy(true);
@@ -160,25 +179,38 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
         // Add: a dated task is mirrored into the todo immediately
         let todoTaskId: string | null = null;
         if (draft.date) {
-          todoTaskId = await createTodoTask(project.name, draft.name, draft.date);
+          todoTaskId = await createTodoTask(
+            project.name,
+            draft.name,
+            draft.date,
+            draft.notes,
+          );
           todoTouched = true;
         }
         await replaceTasks(project, [
           ...project.tasks,
-          { name: draft.name, date: draft.date, done: false, todoTaskId },
+          {
+            name: draft.name,
+            notes: draft.notes,
+            date: draft.date,
+            done: false,
+            todoTaskId,
+          },
         ]);
       } else {
-        // Edit: keep the linked todo task in step with name/date changes
+        // Edit: keep the linked todo task in step with name/date/notes changes
         const current = project.tasks[taskIndex];
         let todoTaskId = current.todoTaskId;
         if (draft.date) {
           if (todoTaskId) {
             if (
               current.name !== draft.name ||
-              current.date !== draft.date
+              current.date !== draft.date ||
+              current.notes !== draft.notes
             ) {
               await tasksApi.update(todoTaskId, {
                 name: draft.name,
+                notes: todoNoteFor(project.name, draft.notes),
                 ecd: { type: "date", value: draft.date },
               });
               todoTouched = true;
@@ -188,6 +220,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
               project.name,
               draft.name,
               draft.date,
+              draft.notes,
             );
             todoTouched = true;
           }
@@ -201,7 +234,13 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
           project,
           project.tasks.map((t, i) =>
             i === taskIndex
-              ? { ...t, name: draft.name, date: draft.date, todoTaskId }
+              ? {
+                  ...t,
+                  name: draft.name,
+                  notes: draft.notes,
+                  date: draft.date,
+                  todoTaskId,
+                }
               : t,
           ),
         );
@@ -236,7 +275,12 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
       } else if (!done && task.date) {
         // Undoing after the cron consumed the link: the dated task returns
         // to the todo
-        todoTaskId = await createTodoTask(project.name, task.name, task.date);
+        todoTaskId = await createTodoTask(
+          project.name,
+          task.name,
+          task.date,
+          task.notes,
+        );
         todoTouched = true;
       }
       await replaceTasks(
@@ -446,9 +490,16 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
                     >
                       {task.done ? "✓" : ""}
                     </button>
-                    <span className="projects-panel__task-name">
-                      {task.name}
-                    </span>
+                    <div className="projects-panel__task-main">
+                      <span className="projects-panel__task-name">
+                        {task.name}
+                      </span>
+                      {task.notes && (
+                        <span className="projects-panel__task-notes">
+                          {task.notes}
+                        </span>
+                      )}
+                    </div>
                     {task.date && (
                       <span
                         className="projects-panel__task-date"
@@ -558,6 +609,9 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
               ? {
                   name: taskModalState.project.tasks[taskModalState.taskIndex]
                     .name,
+                  notes:
+                    taskModalState.project.tasks[taskModalState.taskIndex]
+                      .notes,
                   date: taskModalState.project.tasks[taskModalState.taskIndex]
                     .date,
                 }

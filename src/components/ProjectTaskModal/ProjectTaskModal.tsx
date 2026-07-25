@@ -8,8 +8,12 @@ type DateMode = "none" | "date";
 interface ProjectTaskModalProps {
   projectName: string;
   /** When provided, we're editing; otherwise adding. */
-  task?: { name: string; date: string | null };
-  onConfirm: (draft: { name: string; date: string | null }) => void;
+  task?: { name: string; notes: string; date: string | null };
+  onConfirm: (draft: {
+    name: string;
+    notes: string;
+    date: string | null;
+  }) => void;
   onCancel: () => void;
 }
 
@@ -26,6 +30,7 @@ export default function ProjectTaskModal({
   onCancel,
 }: ProjectTaskModalProps) {
   const [name, setName] = useState(task?.name ?? "");
+  const [notes, setNotes] = useState(task?.notes ?? "");
   const [mode, setMode] = useState<DateMode>(task?.date ? "date" : "none");
   const [dateVal, setDateVal] = useState(task?.date ?? todayDateKey());
   const nameRef = useRef<HTMLInputElement>(null);
@@ -41,7 +46,11 @@ export default function ProjectTaskModal({
   function handleSubmit() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    onConfirm({ name: trimmed, date: mode === "date" ? dateVal : null });
+    onConfirm({
+      name: trimmed,
+      notes,
+      date: mode === "date" ? dateVal : null,
+    });
   }
 
   return (
@@ -93,6 +102,18 @@ export default function ProjectTaskModal({
               Will appear in the todo under "{projectName}"
             </p>
           )}
+        </div>
+
+        {/* Notes — mirrored onto the linked todo task */}
+        <div className="project-task-modal__notes">
+          <span className="project-task-modal__ecd-label">Notes</span>
+          <textarea
+            className="project-task-modal__notes-input"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add notes…"
+            rows={3}
+          />
         </div>
 
         <div className="project-task-modal__actions">

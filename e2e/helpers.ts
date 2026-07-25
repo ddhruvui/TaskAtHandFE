@@ -143,6 +143,7 @@ export async function createProject(
   name: string,
   tasks: {
     name: string;
+    notes?: string;
     date?: string | null;
     done?: boolean;
     todoTaskId?: string | null;

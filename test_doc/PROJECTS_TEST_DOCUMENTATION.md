@@ -56,9 +56,9 @@ These tests verify project creation, priority ordering and deletion.
 - **Steps**: Create a header + linked todo task + project via API; delete the project via UI and confirm
 - **Expected Output**: The confirm message notes "Tasks already added to the todo stay."; the panel returns to the empty state; the todo task still exists
 
-### 3. Projects - Tasks (9 tests)
+### 3. Projects - Tasks (13 tests)
 
-These tests verify project task CRUD, the done/undone barrier, and the two-way todo sync.
+These tests verify project task CRUD, the done/undone barrier, the notes field, and the two-way todo sync.
 
 #### Test: "should add an undated task (panel only, no todo entry)"
 
@@ -75,6 +75,30 @@ These tests verify project task CRUD, the done/undone barrier, and the two-way t
   - A todo header named after the project is created holding one task with a `date` ECD of today
   - The project task's `todoTaskId` links to the created todo task
   - The main todo view shows the task under the project header
+
+#### Test: "should add a task with notes shown in the panel"
+
+- **Description**: A project task carries free-text notes, like a todo task
+- **Steps**: Add an undated task "deploy to cpu" via the panel with notes "use the v2 API key"
+- **Expected Output**: The row shows the notes text under the task name and the project task's `notes` field is persisted
+
+#### Test: "should mirror project task notes onto the linked todo task"
+
+- **Description**: A dated task's notes flow onto the todo task it creates
+- **Steps**: Add a dated task "get data from EODHD" with notes "use the v2 API key"
+- **Expected Output**: The linked todo task's `notes` equals "use the v2 API key"
+
+#### Test: 'should give the linked todo task a "Step towards" note when the project task has none'
+
+- **Description**: An empty note falls back to the origin-flagging default on the todo side
+- **Steps**: Add a dated task "get data from EODHD" with no notes
+- **Expected Output**: The linked todo task's `notes` is `Step towards "Automated Stock Market"`
+
+#### Test: "should edit a task's notes and keep the linked todo task in step"
+
+- **Description**: Editing a project task's notes updates the linked todo task too (project→todo)
+- **Steps**: With a linked dated task, open Edit task, set notes to "prefer the REST feed", Save
+- **Expected Output**: The panel row shows the new note and the linked todo task's `notes` updates to match
 
 #### Test: "should reuse an existing header (case-insensitive) for dated tasks"
 
@@ -146,7 +170,27 @@ These tests verify that todo-side edits and reorders flow back into the project,
 - **Steps**: Same setup; in the todo view move the second task up with the task card's arrow
 - **Expected Output**: `GET /projects` returns the project tasks in the swapped order
 
-### 5. Projects - Cron completion (1 test)
+### 5. Projects - Header order sync (3 tests)
+
+#### Test: "places a new project header below the top header (priority 1), in project order"
+
+- **Description**: When a project task creates its todo header and other headers already exist, the topmost existing header keeps priority 0 and the project headers form a contiguous block below it, ordered by project priority
+- **Steps**: Create a non-project header "Groceries" via API; create two projects, "Home Improvement" (higher priority) then "Automated Stock Market"; in the Projects panel add a dated task to each so each gets a todo header
+- **Expected Output**: `GET /headers` returns `["Groceries", "Home Improvement", "Automated Stock Market"]` (Groceries at 0, the project headers at 1 and 2 in project order)
+
+#### Test: "orders project headers by project priority (starts at 0 with no other headers)"
+
+- **Description**: With no non-project headers, the project headers block starts at priority 0 and follows project priority regardless of the order the tasks were added
+- **Steps**: Create projects "Home Improvement" (higher priority) then "Automated Stock Market"; in the Projects panel add a dated task to the **lower**-priority project first, then to the higher-priority one
+- **Expected Output**: `GET /headers` returns `["Home Improvement", "Automated Stock Market"]` (project order, not add order)
+
+#### Test: "reorders the todo header when the project is moved"
+
+- **Description**: Moving a project up/down re-sorts its todo header to match the new project order
+- **Steps**: Seed two headers, two dated linked todo tasks and two matching projects via API (Home Improvement above Automated Stock Market); reload and open the Projects panel; click "Move project Automated Stock Market up"
+- **Expected Output**: `GET /headers` flips to `["Automated Stock Market", "Home Improvement"]`, mirroring the new project order
+
+### 6. Projects - Cron completion (1 test)
 
 #### Test: "done dated task leaves the todo but is retained as done in the project"
 
@@ -162,4 +206,4 @@ These tests verify that todo-side edits and reorders flow back into the project,
 
 ## Summary
 
-Total: **19 tests** across 5 categories, covering the Projects panel toggle, project CRUD and priority ordering, task CRUD with the done/undone barrier, the two-way todo sync for dated tasks (done state, date edits and reordering), and the cron completion flow.
+Total: **26 tests** across 6 categories, covering the Projects panel toggle, project CRUD and priority ordering, task CRUD with the done/undone barrier, project task notes (shown in the panel and mirrored onto the linked todo task), the two-way todo sync for dated tasks (done state, date edits and reordering), the project→todo header order sync, and the cron completion flow.
