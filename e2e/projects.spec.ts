@@ -217,6 +217,52 @@ test.describe("Projects - Tasks", () => {
     await expect(todoSection.getByText("get data from EODHD")).toBeVisible();
   });
 
+  test("does not create a duplicate todo task when the confirm button is clicked repeatedly during a save", async ({
+    page,
+  }) => {
+    await createProject("Automated Stock Market");
+    await openProjectsView(page);
+
+    // Hold the todo-task creation open so the save stays in flight — the
+    // window a fast double-click would exploit to spawn a duplicate.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    await page.route("**/tasks", async (route) => {
+      if (route.request().method() === "POST") await gate;
+      await route.continue();
+    });
+
+    const day = new Date().getDate();
+    await page
+      .getByRole("button", { name: "Add task to Automated Stock Market" })
+      .click();
+    await page.getByPlaceholder("Task name…").fill("get data from EODHD");
+    await page.getByRole("button", { name: "Date", exact: true }).click();
+    await page
+      .locator(".ecd-calendar__day", { hasText: new RegExp(`^${day}$`) })
+      .click();
+
+    const confirm = page.getByRole("button", { name: "Add task", exact: true });
+    await confirm.click();
+
+    // While the save is in flight the button is disabled, so a second click
+    // (forced past the disabled state) cannot queue another save.
+    await expect(confirm).toBeDisabled();
+    await confirm.click({ force: true });
+
+    // Let the create finish and the modal close.
+    release();
+    await expect(page.getByPlaceholder("Task name…")).not.toBeVisible();
+
+    // Exactly one header, one todo task, and one project task — no duplicate.
+    const headers = await getHeaders();
+    expect(headers).toHaveLength(1);
+    const tasks = await getTasks(headers[0]._id);
+    expect(tasks).toHaveLength(1);
+    const projects = await getProjects();
+    expect(projects[0].tasks).toHaveLength(1);
+  });
+
   test("should add a task with notes shown in the panel", async ({ page }) => {
     await createProject("Automated Stock Market");
     await openProjectsView(page);

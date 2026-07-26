@@ -56,7 +56,7 @@ These tests verify project creation, priority ordering and deletion.
 - **Steps**: Create a header + linked todo task + project via API; delete the project via UI and confirm
 - **Expected Output**: The confirm message notes "Tasks already added to the todo stay."; the panel returns to the empty state; the todo task still exists
 
-### 3. Projects - Tasks (13 tests)
+### 3. Projects - Tasks (14 tests)
 
 These tests verify project task CRUD, the done/undone barrier, the notes field, and the two-way todo sync.
 
@@ -75,6 +75,12 @@ These tests verify project task CRUD, the done/undone barrier, the notes field, 
   - A todo header named after the project is created holding one task with a `date` ECD of today
   - The project task's `todoTaskId` links to the created todo task
   - The main todo view shows the task under the project header
+
+#### Test: "does not create a duplicate todo task when the confirm button is clicked repeatedly during a save"
+
+- **Description**: Guards against the re-entrancy race where clicking "Add task" again while the first save is still in flight spawned a second linked todo task (the project task ended up linked to only the last one, orphaning the earlier duplicate in the todo)
+- **Steps**: Create a project via API and open the panel; install a route that holds the `POST /tasks` create open (a promise gate); open the add-task modal, fill a name and pick today's date, click "Add task"; assert the confirm button is disabled while the save is in flight and force a second click; release the gate and wait for the modal to close
+- **Expected Output**: Exactly one todo header, one todo task under it, and one project task — the repeated clicks produce no duplicate
 
 #### Test: "should add a task with notes shown in the panel"
 
@@ -206,4 +212,4 @@ These tests verify that todo-side edits and reorders flow back into the project,
 
 ## Summary
 
-Total: **26 tests** across 6 categories, covering the Projects panel toggle, project CRUD and priority ordering, task CRUD with the done/undone barrier, project task notes (shown in the panel and mirrored onto the linked todo task), the two-way todo sync for dated tasks (done state, date edits and reordering), the project→todo header order sync, and the cron completion flow.
+Total: **27 tests** across 6 categories, covering the Projects panel toggle, project CRUD and priority ordering, task CRUD with the done/undone barrier (including guarding a repeated-save against duplicate todo tasks), project task notes (shown in the panel and mirrored onto the linked todo task), the two-way todo sync for dated tasks (done state, date edits and reordering), the project→todo header order sync, and the cron completion flow.

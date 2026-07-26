@@ -9,6 +9,8 @@ interface ProjectTaskModalProps {
   projectName: string;
   /** When provided, we're editing; otherwise adding. */
   task?: { name: string; notes: string; date: string | null };
+  /** True while the parent's save is in flight — blocks a duplicate submit. */
+  busy?: boolean;
   onConfirm: (draft: {
     name: string;
     notes: string;
@@ -26,6 +28,7 @@ interface ProjectTaskModalProps {
 export default function ProjectTaskModal({
   projectName,
   task,
+  busy = false,
   onConfirm,
   onCancel,
 }: ProjectTaskModalProps) {
@@ -44,6 +47,7 @@ export default function ProjectTaskModal({
   }, [task]);
 
   function handleSubmit() {
+    if (busy) return;
     const trimmed = name.trim();
     if (!trimmed) return;
     onConfirm({
@@ -126,7 +130,7 @@ export default function ProjectTaskModal({
           <button
             className="project-task-modal__btn project-task-modal__btn--confirm"
             onClick={handleSubmit}
-            disabled={!name.trim()}
+            disabled={!name.trim() || busy}
           >
             {task ? "Save" : "Add task"}
           </button>

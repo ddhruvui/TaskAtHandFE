@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { Project, ProjectTask } from "../../types";
 import * as projectsApi from "../../api/projects";
 import * as headersApi from "../../api/headers";
@@ -28,6 +28,11 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Synchronous re-entrancy guard for the task save flow: `busy` (state) only
+  // disables the modal button after a re-render, which leaves a window where a
+  // fast second click re-enters handleSaveTask and creates a duplicate linked
+  // todo task. A ref flips before the first await, so the re-entry is dropped.
+  const savingTaskRef = useRef(false);
 
   // Modal states
   const [projectModalState, setProjectModalState] = useState<{
@@ -169,7 +174,8 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
     notes: string;
     date: string | null;
   }) => {
-    if (!taskModalState) return;
+    if (!taskModalState || savingTaskRef.current) return;
+    savingTaskRef.current = true;
     const { project, taskIndex } = taskModalState;
     setBusy(true);
     try {
@@ -253,6 +259,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
       setError((err as Error).message);
     } finally {
       setBusy(false);
+      savingTaskRef.current = false;
     }
   };
 
@@ -603,6 +610,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
 
       {taskModalState && (
         <ProjectTaskModal
+          busy={busy}
           projectName={taskModalState.project.name}
           task={
             taskModalState.taskIndex !== undefined
