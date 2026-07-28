@@ -82,6 +82,26 @@ describe("goalsApi", () => {
     expect(result).toEqual(updated);
   });
 
+  it("update sends priority on its own when reordering a goal", async () => {
+    const moved = {
+      _id: "g1",
+      name: "Improve Health",
+      steps: [],
+      priority: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-02T00:00:00.000Z",
+    };
+    apiFetchMock.mockResolvedValue(moved);
+
+    const result = await goalsApi.update("g1", { priority: 0 });
+
+    expect(apiFetchMock).toHaveBeenCalledWith("/goals/g1", {
+      method: "PUT",
+      body: JSON.stringify({ priority: 0 }),
+    });
+    expect(result).toEqual(moved);
+  });
+
   it("remove calls DELETE /goals/:id", async () => {
     apiFetchMock.mockResolvedValue({ deleted: "g1" });
 

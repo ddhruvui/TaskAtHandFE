@@ -34,132 +34,22 @@
   white-space: nowrap;
 }
 
-/* ── Task list ──
-   Matches the .readme-tasks indentation so tasks line up with todo tasks */
-.projects-panel__task-list {
-  margin: 0 30px;
-  display: flex;
-  flex-direction: column;
-}
+/* ── Task rows ──
+   Layout, borders, hover and typography all come from the todo's .task-card
+   rules (TaskCard.css, imported by ProjectsPanel.tsx) so the two lists stay
+   in lockstep. Only the project-specific bits live here. */
 
-.projects-panel__task-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 4px;
-  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
-}
-
-.projects-panel__task-row:last-child {
-  border-bottom: none;
-}
-
-/* Round done-toggle at the start of each task row (todo-style checkbox) */
-.projects-panel__task-check {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  font-weight: 600;
-  font-family: inherit;
-  border: 1px solid var(--rm-border, #d0d7de);
-  border-radius: 50%;
-  background: transparent;
-  color: transparent;
-  cursor: pointer;
-  transition:
-    background 0.12s,
-    border-color 0.12s,
-    color 0.12s;
-}
-
-.projects-panel__task-check:hover:not(:disabled) {
-  border-color: #1a7f37;
-  color: rgba(26, 127, 55, 0.5);
-}
-
-.projects-panel__task-check--done {
-  border-color: #1a7f37;
-  background: #1a7f37;
-  color: #ffffff;
-}
-
-.projects-panel__task-check:disabled {
+/* The done toggle is mid-flight: the todo checkbox has no busy state because
+   its mutations are instant, but a project toggle syncs the linked todo task
+   through several API calls. */
+.projects-panel__task-row .task-card__checkbox:disabled {
+  opacity: 0.5;
   cursor: wait;
-}
-
-@media (prefers-color-scheme: dark) {
-  .projects-panel__task-check:hover:not(:disabled) {
-    border-color: #3fb950;
-    color: rgba(63, 185, 80, 0.5);
-  }
-
-  .projects-panel__task-check--done {
-    border-color: #3fb950;
-    background: #3fb950;
-    color: #0d1117;
-  }
-}
-
-/* Name + notes stack, taking the free row width */
-.projects-panel__task-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.projects-panel__task-name {
-  font-size: 14px;
-  color: var(--rm-text, #1f2328);
-}
-
-.projects-panel__task-row--done .projects-panel__task-name {
-  text-decoration: line-through;
-  color: var(--rm-text-muted, #656d76);
-}
-
-/* Notes preview under the task name */
-.projects-panel__task-notes {
-  font-size: 12px;
-  color: var(--rm-text-muted, #656d76);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.projects-panel__task-row--done .projects-panel__task-notes {
-  opacity: 0.7;
-}
-
-/* Date chip — mirrors the todo's ECD chip look */
-.projects-panel__task-date {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 1px 8px;
-  border: 1px solid var(--rm-border, #d0d7de);
-  border-radius: 999px;
-  color: var(--rm-text-muted, #656d76);
-  white-space: nowrap;
-}
-
-.projects-panel__task-row--done .projects-panel__task-date {
-  opacity: 0.6;
-}
-
-/* ── Task action buttons ── */
-.projects-panel__task-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 4px;
 }
 
 /* Empty state under a project heading */
 .projects-panel__no-tasks {
-  margin: 0 30px;
+  margin: 0;
   padding: 6px 4px;
   font-size: 13px;
   font-style: italic;

@@ -35,6 +35,7 @@ export interface Header {
   _id: string; // MongoDB ObjectId
   name: string; // Header name (required)
   priority: number; // 0-based global priority (0 = highest); auto-managed
+  projectId: string | null; // Project this header mirrors; server keeps these ordered
 }
 
 export interface Task {
@@ -74,6 +75,7 @@ export interface Goal {
   _id: string; // MongoDB ObjectId
   name: string; // Goal name (required), e.g. "Improve Health"
   steps: GoalStep[]; // Ordered habit backlog (may be empty)
+  priority: number; // Display order, contiguous 0..n-1 (new goals append at end)
   createdAt: string; // ISO 8601 timestamp
   updatedAt: string; // ISO 8601 timestamp
 }

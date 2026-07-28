@@ -6,7 +6,10 @@ import * as tasksApi from "../../api/tasks";
 import { ProjectModal } from "../ProjectModal";
 import { ProjectTaskModal } from "../ProjectTaskModal";
 import { ConfirmModal } from "../ConfirmModal";
-import { syncProjectHeaderOrder } from "../../utils/projectSync";
+// Task rows reuse the todo's row styling (.task-card*) so the two lists stay
+// visually identical from one source. Imported explicitly rather than relying
+// on TaskCard being mounted elsewhere in the tree.
+import "../TaskCard/TaskCard.css";
 import "./ProjectsPanel.css";
 
 interface ProjectsPanelProps {
@@ -67,14 +70,21 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
 
   /* ── Todo link helpers ──
    * A project task with a date lives in the todo as a one-time date task
-   * under a header named after the project (reused case-insensitively when
-   * one exists, created otherwise — same find-or-create pattern as event
-   * scheduling and goal steps). */
+   * under the project's own header. The header is identified by `projectId`;
+   * creating it is the backend's job (see createTodoTask), including where it
+   * sits in the header list. */
 
-  const findProjectHeader = async (projectName: string) => {
+  const findProjectHeader = async (project: Project) => {
     const all = await headersApi.getAll();
-    return all.find(
-      (h) => h.name.trim().toLowerCase() === projectName.trim().toLowerCase(),
+    return (
+      all.find((h) => h.projectId === project._id) ??
+      // Header created before projectId existed — matched by name until the
+      // server adopts it on the next project header create/cron run.
+      all.find(
+        (h) =>
+          h.projectId == null &&
+          h.name.trim().toLowerCase() === project.name.trim().toLowerCase(),
+      )
     );
   };
 
@@ -85,25 +95,31 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
   const todoNoteFor = (projectName: string, notes: string): string =>
     notes.trim() ? notes : `Step towards "${projectName}"`;
 
-  /** Create the linked todo task for a dated project task; returns its _id. */
+  /**
+   * Create the linked todo task for a dated project task; returns its _id.
+   *
+   * The header comes straight from `POST /headers { name, projectId }`: that
+   * call is idempotent per project (it returns the existing header, adopting
+   * a legacy name-matched one if needed) and the server places it in the
+   * projects' priority order, so there is nothing to find-or-create or
+   * re-order here.
+   */
   const createTodoTask = async (
-    projectName: string,
+    project: Project,
     taskName: string,
     date: string,
     notes: string,
   ): Promise<string> => {
-    const header =
-      (await findProjectHeader(projectName)) ??
-      (await headersApi.create({ name: projectName }));
+    const header = await headersApi.create({
+      name: project.name,
+      projectId: project._id,
+    });
     const created = await tasksApi.create({
       name: taskName,
       headerId: header._id,
-      notes: todoNoteFor(projectName, notes),
+      notes: todoNoteFor(project.name, notes),
       ecd: { type: "date", value: date },
     });
-    // Place the project header in the todo per the projects' priority order
-    // (a freshly created header would otherwise sit at the bottom).
-    await syncProjectHeaderOrder();
     return created._id;
   };
 
@@ -117,13 +133,10 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
       } else {
         const project = projectModalState.project!;
         await projectsApi.update(project._id, { name });
-        // Keep the todo header in sync with the project name
+        // The server renames the linked todo header as part of the update;
+        // just reload the todo so it shows the new name.
         if (name.trim().toLowerCase() !== project.name.trim().toLowerCase()) {
-          const header = await findProjectHeader(project.name);
-          if (header) {
-            await headersApi.update(header._id, { name });
-            onTasksChanged();
-          }
+          onTasksChanged();
         }
       }
       await loadProjects();
@@ -141,6 +154,9 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
       await loadProjects();
       setDeleteProjectTarget(null);
       setError(null);
+      // The server unlinked the project's header and closed the block, so the
+      // todo's header order changed even though no task did.
+      onTasksChanged();
     } catch (err) {
       setError((err as Error).message);
     }
@@ -148,11 +164,11 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
 
   const handleMoveProject = async (project: Project, delta: -1 | 1) => {
     try {
+      // The server mirrors the new project order onto the todo's project
+      // headers as part of this update.
       await projectsApi.update(project._id, {
         priority: project.priority + delta,
       });
-      // Mirror the new project order onto the todo's project headers
-      await syncProjectHeaderOrder();
       await loadProjects();
       onTasksChanged();
       setError(null);
@@ -186,7 +202,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
         let todoTaskId: string | null = null;
         if (draft.date) {
           todoTaskId = await createTodoTask(
-            project.name,
+            project,
             draft.name,
             draft.date,
             draft.notes,
@@ -223,7 +239,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
             }
           } else if (!current.done) {
             todoTaskId = await createTodoTask(
-              project.name,
+              project,
               draft.name,
               draft.date,
               draft.notes,
@@ -283,7 +299,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
         // Undoing after the cron consumed the link: the dated task returns
         // to the todo
         todoTaskId = await createTodoTask(
-          project.name,
+          project,
           task.name,
           task.date,
           task.notes,
@@ -320,7 +336,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
       const moved = project.tasks[taskIndex];
       const other = project.tasks[target];
       if (moved.todoTaskId && other.todoTaskId) {
-        const header = await findProjectHeader(project.name);
+        const header = await findProjectHeader(project);
         if (header) {
           const todoTasks = await tasksApi.getAll(header._id);
           const movedTodo = todoTasks.find((t) => t._id === moved.todoTaskId);
@@ -474,7 +490,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
               </button>
             </div>
 
-            <div className="projects-panel__task-list">
+            <div className="readme-tasks">
               {project.tasks.map((task, taskIdx) => {
                 const prev = project.tasks[taskIdx - 1];
                 const next = project.tasks[taskIdx + 1];
@@ -486,91 +502,137 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
                 return (
                   <div
                     key={`${task.name}-${taskIdx}`}
-                    className={`projects-panel__task-row${task.done ? " projects-panel__task-row--done" : ""}`}
+                    className={`task-card projects-panel__task-row${task.done ? " task-card--done projects-panel__task-row--done" : ""}`}
                   >
-                    <button
-                      className={`projects-panel__task-check${task.done ? " projects-panel__task-check--done" : ""}`}
-                      onClick={() => handleToggleTaskDone(project, taskIdx)}
-                      disabled={busy}
-                      aria-label={`Toggle task ${task.name}`}
-                      title={task.done ? "Mark not done" : "Mark done"}
-                    >
-                      {task.done ? "✓" : ""}
-                    </button>
-                    <div className="projects-panel__task-main">
-                      <span className="projects-panel__task-name">
-                        {task.name}
-                      </span>
-                      {task.notes && (
-                        <span className="projects-panel__task-notes">
-                          {task.notes}
+                    <div className="task-card__header">
+                      <button
+                        className={`task-card__checkbox${task.done ? " task-card__checkbox--checked" : ""}`}
+                        onClick={() => handleToggleTaskDone(project, taskIdx)}
+                        disabled={busy}
+                        aria-label={`Toggle task ${task.name}`}
+                        title={task.done ? "Mark not done" : "Mark done"}
+                      >
+                        {task.done && (
+                          <svg
+                            viewBox="0 0 16 16"
+                            className="task-card__check-icon"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
+                            />
+                          </svg>
+                        )}
+                      </button>
+
+                      <span className="task-card__body">
+                        <span className="task-card__label">
+                          <span
+                            className={`task-card__name projects-panel__task-name${task.done ? " task-card__name--done" : ""}`}
+                          >
+                            {task.name}
+                          </span>
+                          {/* Same slot the todo uses for the ECD badge; only a
+                              dated task carries the panel's date hook. */}
+                          {task.date ? (
+                            <span
+                              className="task-card__ecd projects-panel__task-date"
+                              title={
+                                task.done
+                                  ? `Was due ${task.date}`
+                                  : `In the todo under "${project.name}" — due ${task.date}`
+                              }
+                            >
+                              [ {formatTaskDate(task.date)} ]
+                            </span>
+                          ) : (
+                            <span className="task-card__ecd">[ No date ]</span>
+                          )}
+                          {task.notes && (
+                            <span className="task-card__arrow">=&gt;</span>
+                          )}
                         </span>
-                      )}
-                    </div>
-                    {task.date && (
-                      <span
-                        className="projects-panel__task-date"
-                        title={
-                          task.done
-                            ? `Was due ${task.date}`
-                            : `In the todo under "${project.name}" — due ${task.date}`
-                        }
-                      >
-                        {formatTaskDate(task.date)}
+                        {task.notes && (
+                          <span className="task-card__notes-text projects-panel__task-notes">
+                            {task.notes}
+                          </span>
+                        )}
                       </span>
-                    )}
-                    <div className="projects-panel__task-actions">
-                      <button
-                        className="readme-heading__add-btn"
-                        onClick={() => handleMoveTask(project, taskIdx, -1)}
-                        disabled={busy || !canMoveUp}
-                        aria-label={`Move task ${task.name} up`}
-                        title="Move task up"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        className="readme-heading__add-btn"
-                        onClick={() => handleMoveTask(project, taskIdx, 1)}
-                        disabled={busy || !canMoveDown}
-                        aria-label={`Move task ${task.name} down`}
-                        title="Move task down"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        className="readme-heading__add-btn"
-                        onClick={() =>
-                          setTaskModalState({ project, taskIndex: taskIdx })
-                        }
-                        disabled={busy}
-                        aria-label={`Edit task ${task.name}`}
-                        title="Edit task"
-                      >
-                        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-                          <path
-                            fillRule="evenodd"
-                            d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        className="readme-heading__add-btn"
-                        onClick={() =>
-                          setDeleteTaskTarget({ project, taskIndex: taskIdx })
-                        }
-                        disabled={busy}
-                        aria-label={`Delete task ${task.name}`}
-                        title="Delete task"
-                        style={{ color: "#e74c3c" }}
-                      >
-                        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-                          <path
-                            fillRule="evenodd"
-                            d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
-                          />
-                        </svg>
-                      </button>
+
+                      <div className="task-card__actions">
+                        <button
+                          className="task-card__action-btn"
+                          onClick={() =>
+                            setTaskModalState({ project, taskIndex: taskIdx })
+                          }
+                          disabled={busy}
+                          aria-label={`Edit task ${task.name}`}
+                          title="Edit task"
+                        >
+                          <svg
+                            viewBox="0 0 16 16"
+                            className="task-card__action-icon"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          className="task-card__action-btn"
+                          onClick={() => handleMoveTask(project, taskIdx, 1)}
+                          disabled={busy || !canMoveDown}
+                          aria-label={`Move task ${task.name} down`}
+                          title="Move task down"
+                        >
+                          <svg
+                            viewBox="0 0 16 16"
+                            className="task-card__action-icon"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M8 2.25a.75.75 0 0 1 .75.75v8.19l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06L7.25 11.19V3A.75.75 0 0 1 8 2.25z"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          className="task-card__action-btn"
+                          onClick={() => handleMoveTask(project, taskIdx, -1)}
+                          disabled={busy || !canMoveUp}
+                          aria-label={`Move task ${task.name} up`}
+                          title="Move task up"
+                        >
+                          <svg
+                            viewBox="0 0 16 16"
+                            className="task-card__action-icon task-card__action-icon--flip"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M8 2.25a.75.75 0 0 1 .75.75v8.19l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06L7.25 11.19V3A.75.75 0 0 1 8 2.25z"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          className="task-card__action-btn task-card__action-btn--danger"
+                          onClick={() =>
+                            setDeleteTaskTarget({ project, taskIndex: taskIdx })
+                          }
+                          disabled={busy}
+                          aria-label={`Delete task ${task.name}`}
+                          title="Delete task"
+                        >
+                          <svg
+                            viewBox="0 0 16 16"
+                            className="task-card__action-icon"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

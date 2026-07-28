@@ -62,6 +62,7 @@ export default function TaskCard({
   isLast,
   prevTaskDone,
   nextTaskDone,
+  goalManaged,
   onToggleDone,
   onEdit,
   onMoveUp,
@@ -186,6 +187,7 @@ export default function TaskCard({
           createdAt={task.createdAt}
           updatedAt={task.updatedAt}
           ecd={task.ecd}
+          goalManaged={goalManaged}
           onConfirm={(payload) => {
             onEdit(task._id, payload);
             setEditModalOpen(false);

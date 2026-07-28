@@ -5,7 +5,6 @@ import {
   getEcdDateKey,
   isPushedLater,
   isTaskDueToday,
-  isTaskPast,
   isValidYearDate,
   todayDateKey,
 } from "./ecd";
@@ -82,32 +81,6 @@ describe("ecd utils", () => {
 
     it("returns false when day_of_year does not match today", () => {
       expect(isTaskDueToday({ type: "day_of_year", value: "18/6/2026" })).toBe(
-        false,
-      );
-    });
-  });
-
-  describe("isTaskPast", () => {
-    it("returns false for null ecd", () => {
-      expect(isTaskPast(null)).toBe(false);
-    });
-
-    it("returns true for a past date", () => {
-      expect(isTaskPast({ type: "date", value: "2026-06-16" })).toBe(true);
-    });
-
-    it("returns false for today's date", () => {
-      expect(isTaskPast({ type: "date", value: "2026-06-17" })).toBe(false);
-    });
-
-    it("returns false for a future date", () => {
-      expect(isTaskPast({ type: "date", value: "2026-06-18" })).toBe(false);
-    });
-
-    it("returns false for recurring types", () => {
-      expect(isTaskPast({ type: "day_of_week", value: ["Mon"] })).toBe(false);
-      expect(isTaskPast({ type: "day_of_month", value: [1] })).toBe(false);
-      expect(isTaskPast({ type: "day_of_year", value: "1/1/2020" })).toBe(
         false,
       );
     });

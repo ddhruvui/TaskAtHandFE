@@ -1,147 +1,228 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { syncProjectHeaderOrder } from "./projectSync";
+import {
+  syncProjectTasksForTodoDone,
+  syncProjectTasksForTodoEdit,
+  syncProjectTaskOrderForTodo,
+  unlinkProjectTasksForTodoTasks,
+} from "./projectSync";
 import * as projectsApi from "../api/projects";
-import * as headersApi from "../api/headers";
+import type { Project, ProjectTask } from "../types";
 
-vi.mock("../api/projects", () => ({ getAll: vi.fn() }));
-vi.mock("../api/headers", () => ({ getAll: vi.fn(), update: vi.fn() }));
+vi.mock("../api/projects", () => ({ getAll: vi.fn(), update: vi.fn() }));
 
 const getProjects = vi.mocked(projectsApi.getAll);
-const getHeaders = vi.mocked(headersApi.getAll);
-const updateHeader = vi.mocked(headersApi.update);
+const updateProject = vi.mocked(projectsApi.update);
 
-type H = { _id: string; name: string; priority: number };
-
-const hdr = (id: string, name: string, priority: number): H => ({
-  _id: id,
-  name,
-  priority,
+const task = (over: Partial<ProjectTask> = {}): ProjectTask => ({
+  name: "Step",
+  notes: "",
+  date: null,
+  done: false,
+  todoTaskId: null,
+  ...over,
 });
 
-/**
- * Apply one `update(id, { priority })` the way the backend does: moving a
- * header to a new priority shifts the ones in between to keep 0..n-1
- * contiguous. Used to turn the sequence of update calls the helper issued
- * back into a final ordering, so we assert on the outcome, not the exact
- * call sequence.
- */
-function applyUpdate(headers: H[], id: string, newP: number) {
-  const h = headers.find((x) => x._id === id)!;
-  const oldP = h.priority;
-  if (newP === oldP) return;
-  for (const x of headers) {
-    if (x._id === id) continue;
-    if (newP < oldP && x.priority >= newP && x.priority < oldP) x.priority += 1;
-    if (newP > oldP && x.priority > oldP && x.priority <= newP) x.priority -= 1;
-  }
-  h.priority = newP;
+const project = (_id: string, tasks: ProjectTask[]): Project => ({
+  _id,
+  name: `P-${_id}`,
+  priority: 0,
+  tasks,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+});
+
+/** The task list the helper sent for `projectId`, or undefined if it never wrote. */
+function written(projectId: string): ProjectTask[] | undefined {
+  const call = updateProject.mock.calls.find((c) => c[0] === projectId);
+  return call?.[1].tasks as ProjectTask[] | undefined;
 }
 
-/** Names in final priority order after replaying the helper's update calls. */
-function finalOrder(initial: H[]): string[] {
-  const headers = initial.map((h) => ({ ...h }));
-  for (const call of updateHeader.mock.calls) {
-    applyUpdate(headers, call[0] as string, (call[1] as { priority: number }).priority);
-  }
-  return [...headers]
-    .sort((a, b) => a.priority - b.priority)
-    .map((h) => h.name);
-}
+beforeEach(() => {
+  getProjects.mockReset();
+  updateProject.mockReset();
+  updateProject.mockResolvedValue({} as never);
+});
 
-describe("syncProjectHeaderOrder", () => {
-  beforeEach(() => {
-    getProjects.mockReset();
-    getHeaders.mockReset();
-    updateHeader.mockReset();
-    updateHeader.mockResolvedValue({} as never);
-  });
-
-  it("keeps the top non-project header at 0 and places project headers below it in project order", async () => {
+describe("syncProjectTasksForTodoDone", () => {
+  it("mirrors the new done state onto every task linked to the todo task", async () => {
     getProjects.mockResolvedValue([
-      { name: "Home Improvement", priority: 0 },
-      { name: "Automated Stock Market", priority: 1 },
-    ] as never);
-    const initial = [
-      hdr("g", "Groceries", 0),
-      hdr("asm", "Automated Stock Market", 1),
-      hdr("hi", "Home Improvement", 2),
-    ];
-    getHeaders.mockResolvedValue(initial as never);
+      project("p1", [
+        task({ name: "A", todoTaskId: "t1" }),
+        task({ name: "B" }),
+      ]),
+    ]);
 
-    await syncProjectHeaderOrder();
+    await syncProjectTasksForTodoDone("t1", true);
 
-    expect(finalOrder(initial)).toEqual([
-      "Groceries",
-      "Home Improvement",
-      "Automated Stock Market",
+    expect(written("p1")).toEqual([
+      task({ name: "A", todoTaskId: "t1", done: true }),
+      task({ name: "B" }),
     ]);
   });
 
-  it("starts the project block at priority 0 when there are no non-project headers", async () => {
+  it("does not write when no linked task changes state", async () => {
     getProjects.mockResolvedValue([
-      { name: "Home Improvement", priority: 0 },
-      { name: "Automated Stock Market", priority: 1 },
-    ] as never);
-    const initial = [
-      hdr("asm", "Automated Stock Market", 0),
-      hdr("hi", "Home Improvement", 1),
-    ];
-    getHeaders.mockResolvedValue(initial as never);
+      project("p1", [task({ todoTaskId: "t1", done: true })]),
+    ]);
 
-    await syncProjectHeaderOrder();
+    await syncProjectTasksForTodoDone("t1", true);
 
-    expect(finalOrder(initial)).toEqual([
-      "Home Improvement",
-      "Automated Stock Market",
+    expect(updateProject).not.toHaveBeenCalled();
+  });
+});
+
+describe("syncProjectTasksForTodoEdit", () => {
+  it("mirrors a renamed date task onto the project", async () => {
+    getProjects.mockResolvedValue([
+      project("p1", [
+        task({ name: "Old", date: "2026-05-01", todoTaskId: "t1" }),
+      ]),
+    ]);
+
+    await syncProjectTasksForTodoEdit(
+      "t1",
+      "New",
+      { type: "date", value: "2026-06-01" },
+      "",
+    );
+
+    expect(written("p1")).toEqual([
+      task({ name: "New", date: "2026-06-01", todoTaskId: "t1" }),
     ]);
   });
 
-  it("matches project priority order case-insensitively", async () => {
+  it("mirrors edited notes onto the project", async () => {
     getProjects.mockResolvedValue([
-      { name: "Automated Stock Market", priority: 0 },
-      { name: "Home Improvement", priority: 1 },
-    ] as never);
-    const initial = [
-      hdr("hi", "home improvement", 0),
-      hdr("asm", "AUTOMATED STOCK MARKET", 1),
-    ];
-    getHeaders.mockResolvedValue(initial as never);
+      project("p1", [
+        task({ name: "A", notes: "old", date: "2026-05-01", todoTaskId: "t1" }),
+      ]),
+    ]);
 
-    await syncProjectHeaderOrder();
+    await syncProjectTasksForTodoEdit(
+      "t1",
+      "A",
+      { type: "date", value: "2026-05-01" },
+      "new",
+    );
 
-    expect(finalOrder(initial)).toEqual([
-      "AUTOMATED STOCK MARKET",
-      "home improvement",
+    expect(written("p1")).toEqual([
+      task({ name: "A", notes: "new", date: "2026-05-01", todoTaskId: "t1" }),
     ]);
   });
 
-  it("does nothing when the headers are already in order", async () => {
+  it("treats the todo's default placeholder note as empty", async () => {
+    // The linked todo task carries `Step towards "P-p1"` when the project
+    // task has no notes — that placeholder must not become project notes.
     getProjects.mockResolvedValue([
-      { name: "Home Improvement", priority: 0 },
-      { name: "Automated Stock Market", priority: 1 },
-    ] as never);
-    getHeaders.mockResolvedValue([
-      hdr("g", "Groceries", 0),
-      hdr("hi", "Home Improvement", 1),
-      hdr("asm", "Automated Stock Market", 2),
-    ] as never);
+      project("p1", [
+        task({ name: "A", notes: "", date: "2026-05-01", todoTaskId: "t1" }),
+      ]),
+    ]);
 
-    await syncProjectHeaderOrder();
+    await syncProjectTasksForTodoEdit(
+      "t1",
+      "A",
+      { type: "date", value: "2026-05-01" },
+      'Step towards "P-p1"',
+    );
 
-    expect(updateHeader).not.toHaveBeenCalled();
+    expect(updateProject).not.toHaveBeenCalled();
   });
 
-  it("does nothing when no header matches a project", async () => {
+  it("clears the project date for a recurring ECD but keeps the link", async () => {
     getProjects.mockResolvedValue([
-      { name: "Home Improvement", priority: 0 },
-    ] as never);
-    getHeaders.mockResolvedValue([
-      hdr("g", "Groceries", 0),
-      hdr("e", "Errands", 1),
-    ] as never);
+      project("p1", [task({ name: "A", date: "2026-05-01", todoTaskId: "t1" })]),
+    ]);
 
-    await syncProjectHeaderOrder();
+    await syncProjectTasksForTodoEdit(
+      "t1",
+      "A",
+      { type: "day_of_week", value: ["Mon"] },
+      "",
+    );
 
-    expect(updateHeader).not.toHaveBeenCalled();
+    expect(written("p1")).toEqual([
+      task({ name: "A", date: null, todoTaskId: "t1" }),
+    ]);
+  });
+
+  it("clears the project date when the ECD is removed entirely", async () => {
+    getProjects.mockResolvedValue([
+      project("p1", [task({ name: "A", date: "2026-05-01", todoTaskId: "t1" })]),
+    ]);
+
+    await syncProjectTasksForTodoEdit("t1", "A", null, "");
+
+    expect(written("p1")).toEqual([
+      task({ name: "A", date: null, todoTaskId: "t1" }),
+    ]);
+  });
+});
+
+describe("syncProjectTaskOrderForTodo", () => {
+  it("re-arranges linked tasks into the todo's order, leaving unlinked slots alone", async () => {
+    getProjects.mockResolvedValue([
+      project("p1", [
+        task({ name: "A", todoTaskId: "t1" }),
+        task({ name: "Unlinked" }),
+        task({ name: "B", todoTaskId: "t2" }),
+      ]),
+    ]);
+
+    // Todo order is now B, A
+    await syncProjectTaskOrderForTodo(["t2", "t1"]);
+
+    expect(written("p1")?.map((t) => t.name)).toEqual(["B", "Unlinked", "A"]);
+  });
+
+  it("is a no-op for a single-task order", async () => {
+    await syncProjectTaskOrderForTodo(["t1"]);
+    expect(getProjects).not.toHaveBeenCalled();
+  });
+
+  it("does not write when a project has fewer than two linked tasks", async () => {
+    getProjects.mockResolvedValue([
+      project("p1", [
+        task({ name: "A", todoTaskId: "t1" }),
+        task({ name: "B" }),
+      ]),
+    ]);
+
+    await syncProjectTaskOrderForTodo(["t1", "t2"]);
+
+    expect(updateProject).not.toHaveBeenCalled();
+  });
+});
+
+describe("unlinkProjectTasksForTodoTasks", () => {
+  it("drops the link and the date for an undone task", async () => {
+    getProjects.mockResolvedValue([
+      project("p1", [task({ name: "A", date: "2026-05-01", todoTaskId: "t1" })]),
+    ]);
+
+    await unlinkProjectTasksForTodoTasks(["t1"]);
+
+    expect(written("p1")).toEqual([
+      task({ name: "A", date: null, todoTaskId: null }),
+    ]);
+  });
+
+  it("keeps the date on a done task for the record", async () => {
+    getProjects.mockResolvedValue([
+      project("p1", [
+        task({ name: "A", date: "2026-05-01", todoTaskId: "t1", done: true }),
+      ]),
+    ]);
+
+    await unlinkProjectTasksForTodoTasks(["t1"]);
+
+    expect(written("p1")).toEqual([
+      task({ name: "A", date: "2026-05-01", todoTaskId: null, done: true }),
+    ]);
+  });
+
+  it("is a no-op for an empty id list", async () => {
+    await unlinkProjectTasksForTodoTasks([]);
+    expect(getProjects).not.toHaveBeenCalled();
   });
 });

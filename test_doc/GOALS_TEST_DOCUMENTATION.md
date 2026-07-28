@@ -2,7 +2,9 @@
 
 ## Overview
 
-This document describes the end-to-end (E2E) tests for the Goals functionality in the Task At Hand application. A goal is a long-term aim (like "Improve Health") broken into small steps/habits ("Wake up at 6", "Have 1 fruit a day") built **one step at a time**. A step is either **paused/pending** (numbered marker) or **under progress** (∞ marker): starting a step creates a daily recurring task under a todo header named "One Step At A Time" and the habit is kept for life; pausing removes that task. The sync works both ways — deleting the daily task (or the whole header) from the todo pauses the matching step(s).
+This document describes the end-to-end (E2E) tests for the Goals functionality in the Task At Hand application. A goal is a long-term aim (like "Improve Health") broken into small steps/habits ("Wake up at 6", "Have 1 fruit a day") built **one step at a time**. A step is either **paused/pending** (unchecked box, `[ Not started ]` badge) or **under progress** (checked box, `[ ↻ Daily ]` badge): starting a step creates a daily recurring task under a todo header named "One Step At A Time" and the habit is kept for life; pausing removes that task. The sync works both ways — deleting the daily task (or the whole header) from the todo pauses the matching step(s).
+
+Step rows render with the todo's own row markup (`.task-card*` classes from `TaskCard.css`), so the checkbox toggles the step lifecycle and the status badge sits in the slot the todo uses for the ECD. Steps are added one at a time from a `+` button on the goal heading — the same gesture as adding a task to a header — and each row carries move up/down and delete, just like a todo task. Goals themselves are ordered by a server-side contiguous `priority` and moved with arrows on the heading. There is deliberately **no** Edit control on a goal heading: a goal's name and starting steps are fixed at creation.
 
 ## Test File Location
 
@@ -10,7 +12,7 @@ This document describes the end-to-end (E2E) tests for the Goals functionality i
 
 ## Purpose
 
-These tests verify that users can create, edit, and delete goals, that Start/Pause correctly create and remove the daily task under the "One Step At A Time" header, and that todo-side deletions flow back into the goal (step paused, badge lowered).
+These tests verify that users can create and delete goals, reorder goals and their steps, add and delete steps one at a time from the goal rows, that Start/Pause correctly create and remove the daily task under the "One Step At A Time" header, and that todo-side deletions flow back into the goal (step paused, badge lowered).
 
 ---
 
@@ -34,9 +36,9 @@ These tests verify the Goals view toggle and empty state.
   - After the first click `aria-pressed` is "true", the button gets the active style, and the panel is visible
   - After the second click `aria-pressed` is "false" and the panel is hidden
 
-### 2. Goals - Create (5 tests)
+### 2. Goals - Create (10 tests)
 
-These tests verify goal creation through the modal.
+These tests verify goal creation through the modal and step creation from the goal heading.
 
 #### Test: "should create a goal with steps via UI"
 
@@ -44,7 +46,7 @@ These tests verify goal creation through the modal.
 - **Steps**: Open the Goals view, click "Add goal", enter "Improve Health", type "Wake up at 6" and "Have 1 fruit a day" on separate lines, submit
 - **Expected Output**:
   - A new goal section titled "Improve Health" appears with both steps in order
-  - New steps are pending: numbered markers ("1", "2") and a Start button on each row
+  - New steps are pending: `[ Not started ]` badges, no checked boxes, and a Start action on each row
   - The empty state message disappears
 
 #### Test: "should update the step count hint while typing"
@@ -59,7 +61,40 @@ These tests verify goal creation through the modal.
 - **Steps**: Open the add goal modal; observe the Add button is disabled; enter only a name; submit
 - **Expected Output**:
   - Add is disabled until a name is entered (steps are optional)
-  - The goal appears with the hint "No steps yet — edit the goal to list the small habits…"
+  - The goal appears with the hint "No steps yet — add one!"
+
+#### Test: "should add a step from the goal heading like adding a task"
+
+- **Description**: Verifies the todo-style add gesture — a `+` on the goal heading opens a step modal that appends one step
+- **Steps**: Seed a goal with one step, open the Goals view, click "Add step to Improve Health", enter "Have 1 fruit a day", submit
+- **Expected Output**:
+  - The modal title reads "Add step — Improve Health"
+  - The new step is appended after the existing one (order preserved)
+  - It starts pending with a `[ Not started ]` badge
+
+#### Test: "should add the first step to a goal that has none"
+
+- **Description**: Confirms the add-step flow works against an empty backlog and clears the empty state
+- **Steps**: Seed a goal with no steps, open the Goals view, add "Track every expense" via the heading `+`
+- **Expected Output**: "No steps yet — add one!" disappears and the step appears with a `[ Not started ]` badge
+
+#### Test: "should submit a new step on Enter"
+
+- **Description**: Verifies keyboard submit in the add step modal, matching the add task modal
+- **Steps**: Open the add step modal, type "Walk 20 min", press Enter in the name field
+- **Expected Output**: The step is created with a `[ Not started ]` badge without clicking the confirm button
+
+#### Test: "should not add a step when the name is blank"
+
+- **Description**: Guards against creating unnamed steps
+- **Steps**: Open the add step modal; observe the confirm button; type only whitespace
+- **Expected Output**: "Add step" stays disabled both when empty and when the field holds only spaces
+
+#### Test: "should close the add step modal on Escape without adding"
+
+- **Description**: Verifies Escape discards a partially typed step
+- **Steps**: Open the add step modal, type "Discarded step", press Escape in the name field
+- **Expected Output**: The modal closes and the goal still shows "No steps yet — add one!"
 
 #### Test: "should cancel the add goal modal"
 
@@ -73,18 +108,67 @@ These tests verify goal creation through the modal.
 - **Steps**: Open the add goal modal, press Escape in the name field
 - **Expected Output**: The modal closes without creating a goal
 
-### 3. Goals - Update (1 test)
+### 3. Goals - Ordering (9 tests)
 
-#### Test: "should edit a goal via UI and keep statuses of kept steps"
+These tests verify goal-level and step-level reordering, the under-progress-first step sort with its move barrier, and that the Edit control is gone.
 
-- **Description**: Editing reopens the modal with the current name and steps; steps that keep their name keep their status
-- **Steps**: Seed a goal with an under-progress step ("Wake up at 6") and a pending one; edit it: rename to "Get Healthy" and add a third line "Exercise 10 min"; save
+#### Test: "should move a goal up and down like a todo header"
+
+- **Description**: Verifies the heading arrows reorder goals and that goals sort by priority, not name
+- **Steps**: Create "Improve Health" then "Better Finances"; move the second up, then back down
 - **Expected Output**:
-  - The section shows the new name and all three steps in order
-  - "Wake up at 6" still shows the "∞" marker (its under-progress status survived the edit) and the badge reads "1/3 under progress"
-  - The old goal name is gone
+  - Initial order is creation order ("Improve Health", "Better Finances") — proving the sort is by priority, not alphabetical
+  - Moving up swaps them; moving down restores the original order
 
-### 4. Goals - Delete (2 tests)
+#### Test: "should disable the move arrows at the ends of the goal list"
+
+- **Description**: Guards against moves that would fall outside `0..n-1`
+- **Steps**: Create two goals and inspect the first goal's up arrow and the last goal's down arrow
+- **Expected Output**: Both are disabled
+
+#### Test: "should keep the new goal order after a reload"
+
+- **Description**: Confirms the reorder is persisted server-side rather than held in component state
+- **Steps**: Move a goal up, reload the page, reopen the Goals view
+- **Expected Output**: The moved order survives the reload
+
+#### Test: "should move a step up and down within its goal"
+
+- **Description**: Verifies the per-step arrows reorder the goal's step list
+- **Steps**: Seed a goal with three steps; move the third up; then move the (new) first down
+- **Expected Output**: The step list reflects each swap in order
+
+#### Test: "should disable step arrows at the ends of the step list"
+
+- **Description**: The first step cannot move up and the last cannot move down
+- **Steps**: Seed a goal with two steps and inspect the boundary arrows
+- **Expected Output**: Both are disabled
+
+#### Test: "should sort under-progress steps above the pending backlog"
+
+- **Description**: Under-progress steps always render above pending ones, regardless of stored order
+- **Steps**: Seed a goal whose third (last-created) step is `under_progress` and two earlier steps are pending; open the Goals view
+- **Expected Output**: The started step renders first, followed by the pending steps in their original order
+
+#### Test: "should move a step to the top group when it starts"
+
+- **Description**: Starting a step lifts it into the under-progress block at the top, and the new order is persisted
+- **Steps**: Seed a goal with three pending steps; Start the last one; reload and reopen the Goals view
+- **Expected Output**: The started step shows first with the `[ ↻ Daily ]` badge, and the order survives the reload
+
+#### Test: "should not move steps across the started/pending barrier"
+
+- **Description**: The move arrows never mix the under-progress block with the pending backlog (mirror of the todo's done/undone barrier)
+- **Steps**: Seed a goal with one under-progress step above one pending step; inspect the boundary arrows
+- **Expected Output**: The started step's down arrow and the pending step's up arrow are both disabled
+
+#### Test: "should not offer an Edit control on the goal heading"
+
+- **Description**: Locks in the removal of goal editing — the heading has move/delete/add only
+- **Steps**: Seed a goal and look for an "Edit goal …" button
+- **Expected Output**: No such button exists
+
+### 4. Goals - Delete goal (2 tests)
 
 #### Test: "should delete a goal with confirmation"
 
@@ -100,7 +184,32 @@ These tests verify goal creation through the modal.
 - **Steps**: Seed a goal, click its delete button, click Cancel
 - **Expected Output**: The goal section is still visible
 
-### 5. Goals - One Step At A Time (6 tests)
+### 5. Goals - Delete step (3 tests)
+
+These tests verify per-step deletion, including the todo cleanup it must perform.
+
+#### Test: "should delete a pending step after confirmation"
+
+- **Description**: A backlog step can be removed from its row
+- **Steps**: Seed a goal with two steps, click delete on the second, confirm
+- **Expected Output**: The confirmation names the step and its goal; afterwards only the first step remains
+
+#### Test: "should keep the step when the delete is cancelled"
+
+- **Description**: Cancelling the confirmation leaves the step untouched
+- **Steps**: Click delete on a step, then Cancel
+- **Expected Output**: The step is still listed
+
+#### Test: "should remove the daily task when an under-progress step is deleted"
+
+- **Description**: Deleting a started step must also drop the "One Step At A Time" task it owns, or the todo keeps an orphan habit
+- **Steps**: Seed a goal with one step, start it, then delete the step and confirm
+- **Expected Output**:
+  - The confirmation warns 'Its daily task in "One Step At A Time" is removed too'
+  - The goal falls back to "No steps yet — add one!"
+  - The "One Step At A Time" header holds no tasks
+
+### 6. Goals - One Step At A Time (6 tests)
 
 These tests verify the step lifecycle side effects on the todo, in both directions.
 
@@ -110,7 +219,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 - **Steps**: Seed a goal with two pending steps; click Start on "Wake up at 6"; switch back to the todo view
 - **Expected Output**:
   - A notice 'Started "Wake up at 6" — under progress as a daily habit…' appears
-  - The step row shows the "∞" marker and a Pause button
+  - The step row shows a checked box with the `[ ↻ Daily ]` badge and a Pause action
   - The badge rises immediately to "1/2 under progress"
   - The todo has a "One Step At A Time" header containing the task "Wake up at 6"
 
@@ -119,7 +228,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 - **Description**: Starting more steps must not create duplicate headers
 - **Steps**: Start both steps of a goal; query headers via API; switch to the todo view
 - **Expected Output**:
-  - Both rows show "∞" and the badge reads "2/2 under progress"
+  - Both rows show `[ ↻ Daily ]` and the badge reads "2/2 under progress"
   - Exactly one header named "One Step At A Time" exists
   - It contains both tasks, in the order the steps were started
 
@@ -128,7 +237,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 - **Description**: The sync works from the todo side — deleting the daily task pauses the step
 - **Steps**: Start "Wake up at 6" (badge "1/2 under progress"); switch to the todo view; delete the task "Wake up at 6" with the normal task delete flow; reopen the Goals view
 - **Expected Output**:
-  - The step shows a Start button and a numbered ("1") marker again
+  - The step shows a Start action and the `[ Not started ]` badge again
   - The badge drops to "0/2 under progress"
 
 #### Test: "should pause all started steps when the One Step At A Time header is deleted"
@@ -144,7 +253,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 - **Description**: Pausing an under-progress habit seeded from the API removes its daily task
 - **Steps**: Seed a goal whose step is already under progress plus its daily task under "One Step At A Time" (via API, mirroring what Start creates); click Pause on the step; switch to the todo view
 - **Expected Output**:
-  - The step marker shows "∞" and the badge "1/1 under progress" before pausing
+  - The step shows `[ ↻ Daily ]` and the badge "1/1 under progress" before pausing
   - A notice containing "paused — moved back to the backlog" appears
   - The step row shows a Start button again and the badge drops to "0/1 under progress"
   - The "One Step At A Time" header no longer contains the task
@@ -152,7 +261,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 #### Test: "should pause a step back to the backlog and remove its daily task"
 
 - **Description**: Pausing a step started in the same session removes its daily task
-- **Steps**: Seed a goal with one step; start it (∞ marker, badge "1/1 under progress"); click Pause; switch to the todo view
+- **Steps**: Seed a goal with one step; start it (`[ ↻ Daily ]` badge, "1/1 under progress"); click Pause; switch to the todo view
 - **Expected Output**:
   - A notice containing "paused — moved back to the backlog" appears
   - The step row shows a Start button again and the badge drops to "0/1 under progress"
@@ -183,13 +292,17 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 
 ## Summary
 
-These 16 tests comprehensively verify that:
+These 32 tests comprehensively verify that:
 
 1. ✅ Goals can be created (with or without steps) with proper validation
-2. ✅ Goals display correctly with empty states and ordered, numbered steps
-3. ✅ Editing a goal preserves the status of steps that keep their name
-4. ✅ Goals can be safely deleted with confirmation, without touching todo tasks
-5. ✅ Starting a step puts it under progress and creates its daily task under "One Step At A Time" (header reused, never duplicated); pausing removes the task and lowers the badge
-6. ✅ The sync works both ways: deleting the daily task — or the whole header — from the todo pauses the matching step(s)
+2. ✅ Steps can be added one at a time from the goal heading's `+`, exactly as tasks are added to a header — appended in order, validated against blank names, submitted on Enter and discarded on Escape
+3. ✅ Goals display correctly with empty states and ordered steps carrying the todo's row markup and status badges
+4. ✅ Goals are ordered by a persisted priority (not by name) and reorder with heading arrows, which are disabled at the ends of the list and survive a reload
+5. ✅ Steps reorder within their goal with per-step arrows, disabled at the ends of the step list; under-progress steps always sort above the pending backlog (starting a step lifts it to the top group, persisted across reloads) and moves never cross that barrier
+6. ✅ There is no Edit control on a goal heading — a goal's name and starting steps are fixed at creation
+7. ✅ Individual steps can be deleted with confirmation, and deleting an under-progress step also removes its "One Step At A Time" daily task so no orphan habit is left behind
+8. ✅ Goals can be safely deleted with confirmation, without touching todo tasks
+9. ✅ Starting a step puts it under progress and creates its daily task under "One Step At A Time" (header reused, never duplicated); pausing removes the task and lowers the badge
+10. ✅ The sync works both ways: deleting the daily task — or the whole header — from the todo pauses the matching step(s)
 
 The tests ensure the "one step at a time" habit-building flow works end to end against the real backend.

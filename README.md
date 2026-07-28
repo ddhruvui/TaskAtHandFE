@@ -13,10 +13,10 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   dated task (editing it to a later date) offers an optional reason field — a
   reason-less postpone is treated as procrastination, a valid reason as a
   legitimate deferral by the AI coach
-- **View modes** (toolbar toggles, combinable):
-  - **Focus** — only tasks due today
-  - **Past** — only overdue one-time tasks
-  - **By Date** — undone tasks grouped by calendar date, ascending
+- **View modes** (toolbar toggles):
+  - **By Date** — undone tasks grouped by calendar date: today first, then
+    past dates, then future dates, with thick dividers between the present,
+    past and future sections
   - **Insights** — habit stats and the AI coach (see below)
   - **Events** — manage reusable task bundles (see below)
   - **Goals** — habit backlogs built one step at a time (see below)
@@ -32,16 +32,28 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   event can be scheduled again and again
 - **Goals view** — long-term aims (e.g. "Improve Health") broken into small
   steps/habits ("Wake up at 6", "Have 1 fruit a day"), listed in the order
-  you want to build them. A step is either paused (numbered) or **under
-  progress** (∞). **Start** puts it under progress: a daily recurring task
-  is created under a todo header named "One Step At A Time" (reused if it
-  already exists) and kept for life. **Pause** takes it out of progress:
-  the daily task is removed and the step returns to the backlog. The badge
-  (e.g. "1/4 under progress") rises on Start and falls on Pause. The two
-  views stay in sync both ways: deleting the daily task from the todo — or
-  the whole "One Step At A Time" header — pauses the matching step(s)
-  automatically. Editing a goal edits its name and step list (one step per
-  line; steps that keep their name keep their status)
+  you want to build them. Steps render as todo task rows and are added the
+  same way: a `+` on the goal heading opens an add-step dialog that appends
+  one step, just as `+` on a todo header adds a task. A step is either
+  paused (unchecked, `[ Not started ]`) or **under progress** (checked,
+  `[ ↻ Daily ]`); the checkbox toggles between them. **Start** puts it under
+  progress: a daily recurring task is created under a todo header named
+  "One Step At A Time" (reused if it already exists) and kept for life.
+  **Pause** takes it out of progress: the daily task is removed and the step
+  returns to the backlog. The badge (e.g. "1/4 under progress") rises on
+  Start and falls on Pause. Goals are ordered with move up/down arrows on the
+  goal heading (a server-side contiguous priority, like headers and
+  projects), and each step has its own move up/down and delete — deleting an
+  under-progress step removes its daily task too, so the todo never keeps an
+  orphan habit. Under-progress steps always sort above the pending backlog
+  (starting a step lifts it into the top group) and the move arrows never
+  cross that boundary, mirroring the todo's undone-above-done barrier. The two views stay in sync both ways: deleting the daily task
+  from the todo — or the whole "One Step At A Time" header — pauses the
+  matching step(s) automatically. Because the goal links to its task by name,
+  editing a task under "One Step At A Time" locks the name and schedule
+  fields (notes and done stay editable) so the link can't drift. A goal's
+  name and its initial step list are set when it is created; there is no
+  goal-level edit, so steps are managed individually afterwards
 - **Projects view** — long term projects (e.g. "Automated Stock Market")
   broken into ordered tasks/steps ("get data from EODHD", "get data from
   Nasdaq", "deploy to cpu"). Projects are ordered with move up/down arrows
@@ -50,13 +62,14 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   done tasks always drop to the bottom, and moves never cross the
   done/undone barrier. Each task can carry free-text **notes** (shown under
   the task name), just like a todo task. Giving a task a **date** mirrors it
-  into the todo as a one-time date task under a header named after the
-  project (reused case-insensitively if it already exists), and the task's
-  notes are mirrored onto that todo task (an empty note falls back to a
+  into the todo as a one-time date task under the project's own header
+  (created on demand and kept in the projects' order by the backend), and
+  the task's notes are mirrored onto that todo task (an empty note falls back to a
   "Step towards …" default); the badge (e.g. "1/3 done") tracks completion.
   The two views stay in sync both ways: toggling done on
-  either side flips the other, editing the todo task's name or date updates
-  the project task (clearing the date sets it to none there), reordering on
+  either side flips the other, editing the todo task's name, date or notes
+  updates the project task (clearing the date sets it to none there, and the
+  "Step towards …" placeholder note mirrors back as empty), reordering on
   either side mirrors the relative order of linked tasks on the other,
   deleting the todo task (or its header) unlinks the project task (clearing
   its date), removing a task's date removes its todo entry, and renaming
@@ -109,11 +122,11 @@ src/
 │   ├── DatePicker/            # EcdCalendar — shared ECD date/recurrence picker
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
 │   ├── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
-│   ├── GoalsPanel/  GoalModal/                          # Goals view
+│   ├── GoalsPanel/  GoalModal/  AddStepModal/           # Goals view
 │   ├── ProjectsPanel/  ProjectModal/  ProjectTaskModal/ # Projects view
 │   ├── AffirmationsPanel/  AffirmationModal/            # Affirmations view
 │   └── CallsPanel/  CallModal/                          # Calls view
-├── utils/ecd.ts               # ECD due-today/past/date-key helpers
+├── utils/ecd.ts               # ECD due-today/date-key helpers
 ├── utils/goalSync.ts          # goal step ↔ todo sync helpers
 └── utils/projectSync.ts       # project task ↔ todo sync helpers
 ```

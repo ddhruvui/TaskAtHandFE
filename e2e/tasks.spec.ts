@@ -1170,3 +1170,85 @@ test.describe("Tasks - Multiple Headers", () => {
     ).toBeVisible();
   });
 });
+
+test.describe("Tasks - Goal-Managed Tasks", () => {
+  const DAILY_ECD = {
+    type: "day_of_week" as const,
+    value: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  };
+
+  test("should lock name and schedule for One Step At A Time tasks", async ({
+    page,
+  }) => {
+    const header = await createHeader("One Step At A Time");
+    await createTask({
+      name: "Morning run",
+      headerId: header._id,
+      ecd: DAILY_ECD,
+    });
+
+    await page.reload();
+    await waitForPageLoad(page);
+
+    const task = getTask(page, "Morning run");
+    await task.getByTitle("Edit notes").click();
+
+    // Name input is read-only, the ECD pickers are replaced by a static line
+    const nameInput = page.getByPlaceholder("Task name");
+    await expect(nameInput).toHaveAttribute("readonly", "");
+    await expect(page.locator(".edit-modal__mode-btn")).toHaveCount(0);
+    await expect(page.getByText("↻ Every day, for life")).toBeVisible();
+    await expect(
+      page.getByText(
+        "Daily habit managed by its goal — name and schedule are locked.",
+      ),
+    ).toBeVisible();
+  });
+
+  test("should still allow editing notes on a goal-managed task", async ({
+    page,
+  }) => {
+    const header = await createHeader("One Step At A Time");
+    await createTask({
+      name: "Morning run",
+      headerId: header._id,
+      notes: "Old notes",
+      ecd: DAILY_ECD,
+    });
+
+    await page.reload();
+    await waitForPageLoad(page);
+
+    const task = getTask(page, "Morning run");
+    await task.getByTitle("Edit notes").click();
+    await page.getByPlaceholder("Add notes…").fill("New notes");
+    await page.getByRole("button", { name: "Save" }).click();
+
+    // Notes saved; name and daily schedule untouched
+    await expect(task.getByText("New notes")).toBeVisible();
+    await expect(getTask(page, "Morning run")).toBeVisible();
+    await expect(
+      task.getByText("↻ Sun, Mon, Tue, Wed, Thu, Fri, Sat"),
+    ).toBeVisible();
+  });
+
+  test("should not lock tasks under other headers", async ({ page }) => {
+    const header = await createHeader("Work");
+    await createTask({
+      name: "Normal task",
+      headerId: header._id,
+      ecd: DAILY_ECD,
+    });
+
+    await page.reload();
+    await waitForPageLoad(page);
+
+    const task = getTask(page, "Normal task");
+    await task.getByTitle("Edit notes").click();
+
+    await expect(page.getByPlaceholder("Task name")).not.toHaveAttribute(
+      "readonly",
+    );
+    await expect(page.locator(".edit-modal__mode-btn")).toHaveCount(5);
+  });
+});

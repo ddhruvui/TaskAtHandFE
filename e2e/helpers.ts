@@ -22,12 +22,18 @@ export async function cleanDatabase() {
 /**
  * Create a header via API
  */
-export async function createHeader(name: string) {
+export async function createHeader(name: string, projectId?: string) {
   const res = await fetch(`${API_BASE}/headers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(projectId ? { name, projectId } : { name }),
   });
+  return res.json();
+}
+
+/** Delete a project via API (returns `{ deleted, headersUnlinked }`) */
+export async function deleteProject(id: string) {
+  const res = await fetch(`${API_BASE}/projects/${id}`, { method: "DELETE" });
   return res.json();
 }
 
@@ -165,13 +171,16 @@ export async function getProjects() {
 }
 
 /**
- * Trigger the backend cron manually (all steps, today's UTC date)
+ * Trigger the backend cron manually (all steps, today's UTC date).
+ * skipInsights keeps the run fast and free: without it, a backend started
+ * with a real ANTHROPIC_API_KEY would make a real Claude API call for the
+ * daily insight report and blow the 30s test timeout.
  */
 export async function runCron() {
   const res = await fetch(`${API_BASE}/cron/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ skipInsights: true }),
   });
   return res.json();
 }

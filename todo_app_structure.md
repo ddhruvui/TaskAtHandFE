@@ -8,7 +8,8 @@
 {
   "_id": "uuid",
   "name": "string",
-  "priority": "integer (0 to n-1)"
+  "priority": "integer (0 to n-1)",
+  "projectId": "ref → Project._id | null"
 }
 ```
 
@@ -18,6 +19,26 @@
 - On **insert**: assign `priority = total number of existing headers` (add at end), no shifting needed
 - On **delete**: shift all headers with `priority > deletedPriority` down by 1
 - On **reorder**: swap or bulk-update priorities atomically
+- `projectId` is set when the header is the todo home of a long-term project (see Project below) and `null` for an ordinary header. It is the identity of a project header — names are only used to adopt headers created before the field existed
+
+**Project header ordering (server-owned):** headers with a `projectId` are kept
+in their projects' priority order as one contiguous block. When the todo has at
+least one ordinary header, the topmost one keeps slot 0 and the block starts at
+priority 1; otherwise the block starts at 0. The remaining ordinary headers keep
+their relative order and fill the slots after the block. The server re-applies
+this rule (as a single bulk update) on every event that can invalidate it:
+
+| Event                                | Effect                                                     |
+| ------------------------------------ | ---------------------------------------------------------- |
+| `POST /headers` with a `projectId`   | new header is placed in the block instead of at the bottom |
+| `PUT /projects/:id` with `priority`  | block re-ordered to match the new project order            |
+| `PUT /projects/:id` with `name`      | the project's header is renamed to match                   |
+| `DELETE /projects/:id`               | its header is unlinked (`projectId: null`) and leaves the block |
+| Cron step 5                          | block re-asserted after empty headers are deleted          |
+
+The same pass self-heals links: a header with no `projectId` whose name matches
+a project is backfilled, and a header pointing at a deleted project has its
+`projectId` cleared.
 
 ---
 
@@ -93,6 +114,7 @@
 ```
 
 - `value` is an array of integers (1–31)
+- Days the month is too short for resolve to that month's **last day** when the cron checks what is due (`[31]` fires on Feb 28). The stored value is never rewritten, so `[31]` still means the 31st in the next long month
 
 #### `day_of_year` — recurring annually on a specific date
 
@@ -104,8 +126,8 @@
 ```
 
 - `value` is a date string in `D/M/YYYY` format
-- The year advances to the current year by the daily cron on the day the task
-  comes due (see cron step 2)
+- The year is advanced to the current year by the daily cron when today matches the stored month/day (see Cron Step 1). It records the **last** occurrence the cron consumed — sorting uses the next anniversary, not this year
+- Feb 29 resolves to Feb 28 in non-leap years without the stored day changing, so the task returns to Feb 29 in the next leap year
 
 ---
 
@@ -135,6 +157,56 @@
 
 ---
 
+### Affirmation (daily short line)
+
+```json
+{
+  "_id": "uuid",
+  "name": "string",
+  "createdAt": "ISO 8601 datetime",
+  "updatedAt": "ISO 8601 datetime"
+}
+```
+
+**Rules:**
+
+- `name` must be a non-empty string (trimmed)
+- Affirmations are single short lines the user reads daily (e.g. "Thank you
+  blessing") — completely independent of Headers and Tasks
+- Listed in the order they were added (`createdAt` ascending)
+- The cron job ignores the Affirmations collection entirely
+
+---
+
+### Call (biweekly/monthly call reminder)
+
+```json
+{
+  "_id": "uuid",
+  "name": "string",
+  "frequency": "enum: biweekly | monthly",
+  "done": "boolean (default: false)",
+  "doneAt": "ISO 8601 datetime | null (set when done → true, cleared on undo/reset)",
+  "createdAt": "ISO 8601 datetime",
+  "updatedAt": "ISO 8601 datetime"
+}
+```
+
+**Rules:**
+
+- `name` must be a non-empty string (trimmed)
+- `frequency` must be exactly `biweekly` (call twice per month — periods
+  1st–14th and 15th–end) or `monthly` (call once per month)
+- Calls are people the user must phone regularly — completely independent of
+  Headers and Tasks (no `headerId`, no `priority`)
+- `doneAt` mirrors Task semantics: set to the current time when `done` flips
+  to `true`, set back to `null` when `done` flips to `false` (by the user or
+  by a cron reset)
+- Listed in the order they were added (`createdAt` ascending)
+- The daily cron resets done calls at period boundaries (see Cron Step 7)
+
+---
+
 ### Goal (habit backlog, built one step at a time)
 
 ```json
@@ -157,6 +229,11 @@
   and normalized to `under_progress`
 - `steps` is replaced wholesale on update — clients send the full list to
   add, rename, reorder, remove or change the status of steps
+- `priority` orders the goals themselves and is always contiguous `0..n-1`,
+  the same scheme as headers and projects: new goals append at the end,
+  changing one goal's priority shifts the others, and deleting a goal closes
+  the gap. Goals stored before the field existed are backfilled in name order
+  on first read, so existing lists keep their previous order
 - Goals are **roadmaps only** — the backend never turns steps into tasks.
   Clients start a step by posting a daily recurring Task (`day_of_week`, all
   seven days) under a Header named **"One Step At A Time"** — an existing
@@ -205,75 +282,30 @@
   add, rename, reorder, remove or change tasks. On **every** write the
   server re-sorts the list so undone tasks come before done tasks (stable) —
   marking a task done moves it to the bottom, same barrier as the todo
-- The todo connection is client-driven (same find-or-create pattern as goals
-  and event scheduling): giving a project task a `date` creates a one-time
-  `date`-ECD Task in the todo under a Header named after the project (reused
-  case-insensitively, created when missing) and stores its `_id` in
-  `todoTaskId`. Clients keep both sides in sync: toggling done on either
-  side flips the other, removing the date deletes the todo task, a project
-  task's `notes` are mirrored onto the linked todo task when it is created
-  or edited (an empty note falls back to a `Step towards "<project>"`
-  default; notes flow project→todo only), editing the todo task's name/date
-  updates the project task (a cleared or recurring ECD sets the project
-  date to `null`, keeping the link),
-  reordering on either side mirrors the relative order of linked tasks on
-  the other, deleting the todo task (or its header) clears `todoTaskId`
-  **and** `date` on the project task, and renaming the project renames the
-  header
-- Cron step 5 completes the loop: when it deletes a done todo task whose
+- Giving a project task a `date` creates a one-time `date`-ECD Task in the
+  todo under the project's own Header and stores its `_id` in `todoTaskId`.
+  The client obtains that header with `POST /headers { name, projectId }`,
+  which is idempotent and places the header in the project block for it —
+  **where the header sits is the server's business, not the client's**
+- Clients keep the task-level state in sync: toggling done on either side
+  flips the other, removing the date deletes the todo task, a project task's
+  `notes` are mirrored onto the linked todo task when it is created or edited
+  (an empty note falls back to a `Step towards "<project>"` default; notes
+  flow project→todo only), editing the todo task's name/date updates the
+  project task (a cleared or recurring ECD sets the project date to `null`,
+  keeping the link), reordering on either side mirrors the relative order of
+  linked tasks on the other, and deleting the todo task (or its header)
+  clears `todoTaskId` **and** `date` on the project task
+- Header-level effects are all server-side: renaming a project renames its
+  header, moving a project re-orders the header block, and deleting a project
+  unlinks its header (see "Project header ordering" under the Header model)
+- Cron step 4 completes the loop: when it deletes a done todo task whose
   `_id` appears as a `todoTaskId`, the project task is marked `done: true`
   with `todoTaskId` cleared (`date` is kept for the record) and the list is
   re-sorted — the task leaves the todo but is retained in the project as a
   completed step
-- Deleting a project never touches headers or tasks created from its tasks
-
----
-
-### Affirmation (short daily line)
-
-```json
-{
-  "_id": "uuid",
-  "name": "string",
-  "createdAt": "ISO 8601 datetime",
-  "updatedAt": "ISO 8601 datetime"
-}
-```
-
-**Rules:**
-
-- `name` must be a non-empty string (trimmed)
-- Affirmations are completely independent of Headers/Tasks — a flat list
-  sorted by `createdAt` ascending with plain CRUD
-- The cron job ignores the Affirmations collection entirely
-
----
-
-### Call (person to call biweekly or monthly)
-
-```json
-{
-  "_id": "uuid",
-  "name": "string",
-  "frequency": "biweekly | monthly",
-  "done": "boolean",
-  "doneAt": "ISO 8601 datetime | null",
-  "createdAt": "ISO 8601 datetime",
-  "updatedAt": "ISO 8601 datetime"
-}
-```
-
-**Rules:**
-
-- `name` must be a non-empty string
-- `frequency` must be `"biweekly"` (call twice a month) or `"monthly"` (once)
-- Setting `done` to `true` stamps `doneAt`; setting it back to `false`
-  clears `doneAt`
-- Calls are completely independent of Headers/Tasks — a flat list sorted by
-  `createdAt` ascending with plain CRUD
-- The nightly cron resets `done` to `false` for **biweekly** calls on the
-  15th of the month, and for **all** calls on the last day of the month
-  (see cron step 7)
+- Deleting a project keeps its header and the tasks created from it; only the
+  header's `projectId` is cleared
 
 ---
 
@@ -289,9 +321,9 @@ them.
 | ------------------ | --------------------- | ---------------------------------------------------------------- |
 | `habit_result`     | Cron step 0           | A `day_of_week` task's done/missed outcome for one scheduled day |
 | `task_result`      | Cron step 0           | A `day_of_month` / `day_of_year` task's outcome for one cycle    |
-| `task_completed`   | Cron step 5           | A one-time task captured (with `plannedFor`, `doneAt`) before deletion |
+| `task_completed`   | Cron step 4 · `Task.deleteByHeader` | A done task captured (with `plannedFor`, `doneAt`, `headerName`) before deletion — logged both when cron step 4 removes a completed one-off task **and** when a header delete cascades over its done tasks (any ECD type), so completion history is never orphaned |
 | `task_rescheduled` | `Task.update`         | An ECD change: `{ taskId, taskName, headerId, headerName, fromEcd, toEcd, pushedLater, reason }`. `pushedLater` is `true` when a one-time `date` moves later (a postpone). `reason` is the user's optional stated cause for the postpone (`null` when none, or when the reason was blank). A pushed-later reschedule with `reason: null` is unexcused procrastination; a valid stated reason is a legitimate deferral. The reason rides in on the `PUT /tasks/:id` body and is **never** written to the task document. |
-| `task_deleted`     | `Task.delete`         | An **undone** task deleted manually, with the user's `reason`: `{ taskId, taskName, headerId, headerName, ecdType, ecd, reason, taskCreatedAt }`. Logged only for undone tasks (done tasks log nothing); `reason` is `null` when none is supplied. Header-cascade deletes (`Task.deleteByHeader`) are **not** archived. |
+| `task_deleted`     | `Task.delete`         | An **undone** task deleted manually, with the user's `reason`: `{ taskId, taskName, headerId, headerName, ecdType, ecd, reason, taskCreatedAt }`. Logged only for undone tasks (done tasks log nothing); `reason` is `null` when none is supplied. Header-cascade deletes (`Task.deleteByHeader`) do **not** log `task_deleted` for their undone tasks, but their **done** tasks are archived as `task_completed`. |
 | `call_result`      | Cron step 7           | A call's done/missed outcome for one period, logged at the period boundary before the reset: `{ callId, callName, frequency, dueDate, completed, doneAt }` (`dueDate` = the reset day; no header fields — calls have no header) |
 
 ```json
@@ -319,7 +351,7 @@ The `Insights` collection stores one AI coaching report per generation:
 {
   "generatedAt": "ISO 8601 datetime",
   "periodDays": 28,
-  "model": "claude-opus-4-8",
+  "model": "claude-sonnet-4-6",
   "stats": "exact computed stats the report was based on",
   "report": {
     "summary": "string",
@@ -372,41 +404,39 @@ outcome is only knowable at the following midnight:
 - For every `day_of_month` / `day_of_year` task due **yesterday**: log a `task_result` event the same way
 - Idempotent: tasks already archived for that `dueDate` are skipped, so manual cron runs don't double-log
 
-#### Step 1 — Clamp `day_of_month` values _(runs on the 1st of every month only)_
+#### Step 1 — Mark undone: `day_of_year` _(runs daily)_
 
-- For every task with `ecd.type === "day_of_month"`:
-  - Determine the number of days in the current month
-  - For each value in `ecd.value`, if the value exceeds the number of days in the month, clamp it to the last day of the month
-  - If any value was changed, update `updatedAt`
+- For every task with `ecd.type === "day_of_year"` whose stored year is in the **past** (tasks already set to the current or a future year are skipped):
+  - Resolve the stored day against the current year — Feb 29 resolves to Feb 28 in a non-leap year
+  - If the resolved month/day is today: advance the year to **today's year** (e.g. `7/3/2006` → `7/3/2026` when run on March 7 2026), set `done = false`, `doneAt = null`, update `updatedAt`
+- The stored **day is never rewritten** — only the year advances. A Feb 29 task
+  fires on Feb 28 in non-leap years and is still a Feb 29 task in the next leap
+  year. A run that resolved a Feb 29 counts towards `tasksClamped`
 
-#### Step 2 — Clamp & advance `day_of_year` _(runs daily)_
-
-- For every task with `ecd.type === "day_of_year"` whose stored year is in the past:
-  - If today's month/day matches the task's month/day: advance the year to the
-    current year (e.g. `7/3/2006` → `7/3/2026`), set `done = false`,
-    `doneAt = null`, and update `updatedAt`
-  - On Feb 28 of a non-leap year, tasks stored as Feb 29 of a past year are
-    clamped to Feb 28 of the current year and marked undone the same way
-- Tasks whose stored year is the current year or later are skipped
-
-#### Step 3 — Mark undone: `day_of_week`
+#### Step 2 — Mark undone: `day_of_week`
 
 - For every task with `ecd.type === "day_of_week"`:
   - If today's day name (e.g. `"Mon"`) is in `ecd.value`:
     - Set `done = false`, `doneAt = null`
     - Update `updatedAt`
 
-#### Step 4 — Mark undone: `day_of_month`
+#### Step 3 — Mark undone: `day_of_month`
 
-- For every task with `ecd.type === "day_of_month"`:
-  - If today's date number (1–31) is in `ecd.value`:
-    - Set `done = false`, `doneAt = null`
-    - Update `updatedAt`
+- For every task with `ecd.type === "day_of_month"`, resolve `ecd.value` against
+  the current month: any day the month is too short for counts as the month's
+  **last day** (so `[31]` is due on Feb 28, and `[30, 31]` both resolve to the
+  28th)
+- If today's date number is among the resolved days:
+  - Set `done = false`, `doneAt = null`
+  - Update `updatedAt`
+- Resolution happens on read only — `ecd.value` is **never** rewritten, so "the
+  31st" is still the 31st in the next long month. A run that had to resolve a
+  too-large day counts towards `tasksClamped`
 
-#### Step 5 — Delete completed `date` tasks
+#### Step 4 — Delete completed `date` tasks
 
 - For every task with `ecd.type === "date"` (or no ECD):
-  - If `done === true` → archive a `task_completed` event (preserving `plannedFor`, `createdAt`, `doneAt`, `headerName`), then **delete** the task
+  - If `done === true` → archive a `task_completed` event (preserving `plannedFor`, `taskCreatedAt`, `doneAt`, `headerName`), then **delete** the task
   - If `done === false` → do nothing
 - After deleting, sync long-term projects: for every project task whose
   `todoTaskId` matches a deleted task's `_id`, set `done = true`, clear
@@ -415,41 +445,63 @@ outcome is only knowable at the following midnight:
   retained in the project as a completed step. Counted in the run stats as
   `projectTasksCompleted`
 
-#### Step 6 — Reorder priorities per header _(runs last)_
+#### Step 5 — Delete empty headers & re-assert header order
+
+Runs after step 4 so headers emptied by task deletion are cleaned up in the
+same run:
+
+- Any header that has **no tasks** is deleted (including headers that were
+  never given a task). Counted in the run stats as `headersDeleted`
+- The surviving headers are then re-numbered by the same routine the API uses
+  (see "Project header ordering" under the Header model): priorities stay
+  contiguous (`0..n-1`) **and** project headers stay in their projects' order
+  as one block. Counted in the run stats as `headersReprioritized`
+- Applying both rules here is what keeps the cron and the clients in
+  agreement — plain re-numbering could leave a project header above the todo's
+  topmost ordinary header, and the next project action would then visibly
+  reshuffle the list
+- The same pass repairs `projectId` links (backfill by name, clear when the
+  project is gone)
+
+#### Step 6 — Reorder priorities per header
 
 - For each header, collect all its tasks and sort as follows:
   1. **Undone tasks** (`done === false`) — sorted by next upcoming ECD date **ascending** → assigned priorities `0, 1, 2, ...` (sooner = closer to 0)
   2. **Done tasks** (`done === true`) — assigned the remaining higher priority values after all undone tasks
-- Update `priority` and `updatedAt` on any task whose priority changed
+- Ties (two tasks due the same day) keep their **existing relative order** — the
+  sort is stable, so a manual ordering within a single day survives the run
+- Only `priority` is written; `updatedAt` is deliberately left alone, so
+  "recently edited" keeps meaning "the user edited it"
 
 ##### Resolving "next upcoming ECD date" for sorting
 
 | `type`         | Next due date                                                                 |
 | -------------- | ----------------------------------------------------------------------------- |
-| `date`         | The date value itself                                                         |
-| `day_of_week`  | The nearest upcoming day from the `value` array                               |
-| `day_of_month` | The nearest upcoming date in the current or next month from the `value` array |
-| `day_of_year`  | The date stored in `value` (e.g. `7/3/2007`)                                  |
+| `date`         | The date value itself (a past date sorts first — overdue work surfaces)        |
+| `day_of_week`  | The nearest upcoming day from the `value` array, today included               |
+| `day_of_month` | The nearest upcoming date in the current or next month from the `value` array, each clamped to that month's length |
+| `day_of_year`  | The **next anniversary** of the stored day/month on or after today, Feb 29 clamped to Feb 28 in non-leap years. The stored year records the last occurrence the cron consumed, not the next one, so it is not used here |
+| _none_         | Infinity — no-ECD tasks sort last among undone tasks                           |
 
-#### Step 7 — Archive call outcomes and reset calls _(runs on the 15th and on the last day of the month)_
+#### Step 7 — Archive call outcomes and reset calls at period boundaries _(runs last)_
 
-- On the **15th of the month**: every **biweekly** call is due
-- On the **last day of the month**: **all** calls (biweekly and monthly) are due
-- For every due call (done **and** missed): log a `call_result` archive event
-  `{ callId, callName, frequency, dueDate: today, completed: call.done, doneAt }`
-  **before** resetting, so insights can track miss patterns (idempotent per
-  `dueDate` — manual re-runs don't double-log)
-- Then every due call that is done gets `done = false`, `doneAt = null`
-- Biweekly = call twice a month, monthly = once
-- The number of calls reset is reported as `callsReset` in the cron stats
-  (archive events are not counted)
+Calls are independent of tasks/headers, so this step runs after all task
+steps. Biweekly calls are due twice per month (periods 1st–14th and
+15th–end), monthly calls once; the reset clears the "called" checkmark at
+each period boundary:
+
+- If today (UTC) is the **15th** of the month: `biweekly` calls are due
+- If today (UTC) is the **last day** of the month: **all** calls are due, both `biweekly` and `monthly`
+- On any other day: no-op
+- For every due call (done **and** missed): log a `call_result` archive event `{ callId, callName, frequency, dueDate: today, completed: call.done, doneAt }` **before** resetting, so insights can track miss patterns. Idempotent: calls already archived for this `dueDate` are skipped on manual re-runs.
+- Then reset every due call that is done → `done = false`, `doneAt = null`, update `updatedAt` (the `callsReset` stat counts only these resets, not archive events)
 
 #### Final step — Generate the daily AI insight report
 
 - After step 7, when `ANTHROPIC_API_KEY` is set (and not in test mode):
   - Compute exact stats over the last 28 days of `TaskArchive` events (habit completion rates, streaks, missed-by-weekday, task slippage, reschedule counts, per-person call completion and miss streaks)
   - Fetch the live call list and include it as `currentCalls` in the prompt payload
-  - Send stats + recent events + the previous report to `claude-opus-4-8` with a structured-output schema
+  - Send stats + recent events + the previous report to `claude-sonnet-4-6` with a structured-output schema
   - Store the result in the `Insights` collection
 - Failures here never fail the cron run (logged, `insightGenerated: false` in stats)
 
@@ -467,8 +519,8 @@ Returns all headers sorted by `priority` ascending.
 
 ```json
 [
-  { "_id": "uuid", "name": "Work", "priority": 0 },
-  { "_id": "uuid", "name": "Personal", "priority": 1 }
+  { "_id": "uuid", "name": "Work", "priority": 0, "projectId": null },
+  { "_id": "uuid", "name": "Automated Stock Market", "priority": 1, "projectId": "uuid" }
 ]
 ```
 
@@ -478,23 +530,34 @@ Returns all headers sorted by `priority` ascending.
 
 Creates a new header. Priority is automatically assigned as `total headers` (added at end).
 
+Passing `projectId` marks the header as the todo home of that long-term
+project. Such a header is placed in the project block (see "Project header
+ordering" under the Header model) instead of at the bottom, and the call is
+**idempotent**: if the project already has a header — or a pre-`projectId`
+header matches the project by name — that header is adopted and returned with
+`200` instead of a duplicate being created.
+
 **Request body**
 
 ```json
 {
-  "name": "string"
+  "name": "string",
+  "projectId": "ref → Project._id | null (optional)"
 }
 ```
 
-**Response `201`**
+**Response `201`** (created) / **`200`** (existing project header reused)
 
 ```json
 {
   "_id": "uuid",
   "name": "Work",
-  "priority": 2
+  "priority": 2,
+  "projectId": null
 }
 ```
+
+**Response `400`** — `projectId` is neither a valid id string nor `null`
 
 ---
 
@@ -517,7 +580,7 @@ Updates a header's name and/or priority. If `priority` is changed, all affected 
 
 #### `DELETE /headers/:id`
 
-Deletes a header and all tasks associated with it. Shifts priorities of remaining headers down to keep contiguous.
+Deletes a header and all tasks associated with it. Shifts priorities of remaining headers down to keep contiguous. Any **done** tasks are archived as `task_completed` events before deletion so their completion history isn't orphaned; undone tasks are removed without archiving.
 
 **Response `200`**
 
@@ -552,6 +615,7 @@ Returns all tasks for a given header, sorted by `priority` ascending.
     "priority": 0,
     "ecd": { "type": "date", "value": "2026-04-10" },
     "done": false,
+    "doneAt": null,
     "createdAt": "2026-03-26T00:00:00Z",
     "updatedAt": "2026-03-26T00:00:00Z"
   }
@@ -696,6 +760,130 @@ Deletes an event template. Headers/tasks previously created from it remain.
 
 ---
 
+### Affirmations
+
+#### `GET /affirmations`
+
+Returns all affirmations sorted by `createdAt` ascending (order added).
+
+**Response `200`**
+
+```json
+[
+  {
+    "_id": "uuid",
+    "name": "Thank you blessing",
+    "createdAt": "2026-07-10T00:00:00Z",
+    "updatedAt": "2026-07-10T00:00:00Z"
+  }
+]
+```
+
+---
+
+#### `POST /affirmations`
+
+Creates a new affirmation.
+
+**Request body**
+
+```json
+{
+  "name": "string"
+}
+```
+
+**Response `201`** — returns created affirmation with timestamps
+
+---
+
+#### `PUT /affirmations/:id`
+
+Updates an affirmation's name. Validated the same as on create.
+
+**Response `200`** — returns updated affirmation
+
+---
+
+#### `DELETE /affirmations/:id`
+
+Deletes an affirmation.
+
+**Response `200`**
+
+```json
+{
+  "deleted": "uuid"
+}
+```
+
+---
+
+### Calls
+
+#### `GET /calls`
+
+Returns all calls sorted by `createdAt` ascending (order added).
+
+**Response `200`**
+
+```json
+[
+  {
+    "_id": "uuid",
+    "name": "Grandma",
+    "frequency": "biweekly",
+    "done": false,
+    "doneAt": null,
+    "createdAt": "2026-07-10T00:00:00Z",
+    "updatedAt": "2026-07-10T00:00:00Z"
+  }
+]
+```
+
+---
+
+#### `POST /calls`
+
+Creates a new call. New calls start undone (`done = false`, `doneAt = null`).
+
+**Request body**
+
+```json
+{
+  "name": "string",
+  "frequency": "biweekly | monthly"
+}
+```
+
+**Response `201`** — returns created call with timestamps
+
+---
+
+#### `PUT /calls/:id`
+
+Updates a call's name, frequency, and/or done state. Fields are optional but
+validated the same as on create when present (`done` must be a boolean).
+Setting `done = true` stamps `doneAt`; setting `done = false` clears it.
+
+**Response `200`** — returns updated call
+
+---
+
+#### `DELETE /calls/:id`
+
+Deletes a call.
+
+**Response `200`**
+
+```json
+{
+  "deleted": "uuid"
+}
+```
+
+---
+
 ### Goals
 
 #### `GET /goals`
@@ -824,139 +1012,16 @@ projects to stay contiguous (same as headers).
 
 #### `DELETE /projects/:id`
 
-Deletes a project and shifts remaining priorities. Headers/tasks previously
-created from its dated tasks remain.
+Deletes a project and shifts remaining priorities. Its todo header and the
+tasks previously created from its dated tasks remain, but the header's
+`projectId` is cleared so it leaves the ordered project block.
 
 **Response `200`**
 
 ```json
 {
-  "deleted": "uuid"
-}
-```
-
----
-
-### Affirmations
-
-#### `GET /affirmations`
-
-Returns all affirmations sorted by `createdAt` ascending.
-
-**Response `200`**
-
-```json
-[
-  {
-    "_id": "uuid",
-    "name": "Thank you blessing",
-    "createdAt": "2026-07-11T00:00:00Z",
-    "updatedAt": "2026-07-11T00:00:00Z"
-  }
-]
-```
-
----
-
-#### `POST /affirmations`
-
-Creates a new affirmation. `name` must be a non-empty string.
-
-**Request body**
-
-```json
-{
-  "name": "string"
-}
-```
-
-**Response `201`** — returns created affirmation with timestamps
-
----
-
-#### `PUT /affirmations/:id`
-
-Updates an affirmation's `name`.
-
-**Response `200`** — returns updated affirmation
-
----
-
-#### `DELETE /affirmations/:id`
-
-Deletes an affirmation.
-
-**Response `200`**
-
-```json
-{
-  "deleted": "uuid"
-}
-```
-
----
-
-### Calls
-
-#### `GET /calls`
-
-Returns all calls sorted by `createdAt` ascending.
-
-**Response `200`**
-
-```json
-[
-  {
-    "_id": "uuid",
-    "name": "Grandma",
-    "frequency": "biweekly",
-    "done": false,
-    "doneAt": null,
-    "createdAt": "2026-07-11T00:00:00Z",
-    "updatedAt": "2026-07-11T00:00:00Z"
-  }
-]
-```
-
----
-
-#### `POST /calls`
-
-Creates a new call. `name` must be a non-empty string; `frequency` must be
-`"biweekly"` or `"monthly"`.
-
-**Request body**
-
-```json
-{
-  "name": "string",
-  "frequency": "biweekly | monthly"
-}
-```
-
-**Response `201`** — returns created call (`done: false`, `doneAt: null`)
-with timestamps
-
----
-
-#### `PUT /calls/:id`
-
-Updates a call's `name`, `frequency`, and/or `done`. Setting `done` to `true`
-stamps `doneAt`; setting it to `false` clears `doneAt`.
-
-**Response `200`** — returns updated call
-
----
-
-#### `DELETE /calls/:id`
-
-Deletes a call.
-
-**Response `200`**
-
-```json
-{
-  "deleted": "uuid"
+  "deleted": "uuid",
+  "headersUnlinked": 1
 }
 ```
 
@@ -966,17 +1031,17 @@ Deletes a call.
 
 #### `POST /cron/run`
 
-Manually triggers the cron job. Accepts an optional `date` body override. Runs all steps in order:
+Manually triggers the cron job. Accepts optional `date` (run as if it were that date) and `skipInsights` (skip step 8's AI report — used by e2e tests) body fields. Runs all steps in order:
 
 0. Archive yesterday's habit/recurring outcomes (idempotent)
-1. Clamp `day_of_month` values _(if today is the 1st)_
-2. Clamp & advance `day_of_year` to the current year _(daily, when the task comes due)_
-3. Mark undone: `day_of_week`
-4. Mark undone: `day_of_month`
-5. Archive + delete completed `date` tasks (and mark linked long-term project tasks done)
+1. Mark undone: `day_of_year` _(daily — advance the year and reset when today matches the task's month/day; Feb 29 resolves to Feb 28 in non-leap years)_
+2. Mark undone: `day_of_week`
+3. Mark undone: `day_of_month` _(values are resolved against the current month's length; the stored value is never rewritten)_
+4. Archive + delete completed `date` tasks (and mark linked long-term project tasks done)
+5. Delete headers with no tasks & re-assert header order (contiguous, project headers in project order)
 6. Reorder priorities per header
-7. Reset calls _(biweekly calls on the 15th; all calls on the last day of the month)_
-8. Generate the daily AI insight report _(when `ANTHROPIC_API_KEY` is set)_
+7. Reset done calls _(if today is the 15th: biweekly only; if today is the last day of the month: all)_
+8. Generate the daily AI insight report _(when `ANTHROPIC_API_KEY` is set and the request did not pass `skipInsights: true` — not a numbered step)_
 
 **Response `200`**
 
@@ -986,10 +1051,12 @@ Manually triggers the cron job. Accepts an optional `date` body override. Runs a
   "tasksDeleted": 2,
   "tasksMarkedUndone": 5,
   "tasksClamped": 1,
+  "headersDeleted": 0,
+  "headersReprioritized": 2,
   "headersReordered": 3,
   "projectTasksCompleted": 1,
   "outcomesArchived": 4,
-  "callsReset": 2,
+  "callsReset": 0,
   "insightGenerated": true
 }
 ```
@@ -1008,9 +1075,11 @@ Manually triggers the cron job. No request body required. Runs the same steps as
   "tasksDeleted": 2,
   "tasksMarkedUndone": 5,
   "tasksClamped": 1,
+  "headersDeleted": 0,
+  "headersReprioritized": 2,
   "headersReordered": 3,
   "projectTasksCompleted": 1,
-  "callsReset": 2
+  "callsReset": 0
 }
 ```
 
@@ -1028,9 +1097,11 @@ Returns metadata about the last cron run.
   "tasksDeleted": 2,
   "tasksMarkedUndone": 5,
   "tasksClamped": 1,
+  "headersDeleted": 0,
+  "headersReprioritized": 2,
   "headersReordered": 3,
   "projectTasksCompleted": 1,
-  "callsReset": 2
+  "callsReset": 0
 }
 ```
 
@@ -1048,9 +1119,11 @@ Returns metadata about the last cron run. Alias for `GET /cron/status`.
   "tasksDeleted": 2,
   "tasksMarkedUndone": 5,
   "tasksClamped": 1,
+  "headersDeleted": 0,
+  "headersReprioritized": 2,
   "headersReordered": 3,
   "projectTasksCompleted": 1,
-  "callsReset": 2
+  "callsReset": 0
 }
 ```
 

@@ -536,6 +536,37 @@ These tests verify task isolation between different headers.
   2. Create task "Review" in Personal header
 - **Expected Output**: Both "Review" tasks exist independently
 
+### 10. Tasks - Goal-Managed Tasks (3 tests)
+
+These tests verify that daily habit tasks under the "One Step At A Time" header — linked to their goal step by name — have name and schedule locked in the edit modal, while notes stay editable.
+
+#### Test: "should lock name and schedule for One Step At A Time tasks"
+
+- **Description**: The edit modal locks the identity fields of a goal-managed task
+- **Steps**:
+  1. Create the "One Step At A Time" header with an every-day weekly task via API
+  2. Open the task's edit modal
+- **Expected Output**:
+  - The name input has the `readonly` attribute
+  - No ECD mode buttons render; a static "↻ Every day, for life" line shows instead
+  - The hint "Daily habit managed by its goal — name and schedule are locked." is visible
+
+#### Test: "should still allow editing notes on a goal-managed task"
+
+- **Description**: Notes remain editable on a locked task and saving changes nothing else
+- **Steps**:
+  1. Create the "One Step At A Time" header with an every-day weekly task with notes
+  2. Open edit, change the notes, save
+- **Expected Output**: The new notes show on the card; the name and the "↻ Sun, Mon, Tue, Wed, Thu, Fri, Sat" schedule are unchanged
+
+#### Test: "should not lock tasks under other headers"
+
+- **Description**: The lock applies only to the "One Step At A Time" header, not to recurring tasks elsewhere
+- **Steps**:
+  1. Create a "Work" header with an every-day weekly task
+  2. Open the task's edit modal
+- **Expected Output**: The name input is editable (no `readonly`) and all 5 ECD mode buttons render
+
 ---
 
 ## Test Setup
@@ -571,7 +602,7 @@ These tests verify task isolation between different headers.
 
 ## Summary
 
-These 58 tests comprehensively verify that:
+These 61 tests comprehensively verify that:
 
 1. ✅ Tasks can be created with various ECD types (date, weekly, monthly, yearly, none)
 2. ✅ Tasks display correctly with all their information
@@ -588,5 +619,6 @@ These 58 tests comprehensively verify that:
 13. ✅ Done status is preserved through edit and reload operations
 14. ✅ Complex scenarios with multiple done/undone toggles work correctly
 15. ✅ Edge cases like all tasks being done are handled properly
+16. ✅ Goal-managed daily habit tasks ("One Step At A Time") lock name and schedule edits while keeping notes editable, protecting the goal↔todo name link
 
 The tests ensure a robust and user-friendly task management experience within the Task At Hand application, with comprehensive coverage of both active and completed task workflows.

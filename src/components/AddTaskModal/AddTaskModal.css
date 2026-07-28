@@ -43,6 +43,10 @@
   border-radius: var(--m-radius);
   padding: 24px 28px;
   width: min(520px, calc(100vw - 32px));
+  /* Same cap as the edit modal: the ECD calendar can outgrow a short
+     viewport and put the confirm buttons out of reach. */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   box-shadow: 0 8px 24px rgba(31, 35, 40, 0.15);
   animation: add-scale-in 0.18s ease;
   font-family:

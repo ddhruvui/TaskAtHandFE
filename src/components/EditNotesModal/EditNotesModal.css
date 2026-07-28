@@ -43,6 +43,11 @@
   border-radius: var(--m-radius);
   padding: 24px 28px;
   width: min(540px, calc(100vw - 32px));
+  /* With the ECD calendar (and the postpone reason field) open this box can
+     exceed a short viewport; the centered grid overlay would then push the
+     confirm buttons off-screen and out of reach. Cap it and scroll instead. */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   box-shadow: 0 8px 24px rgba(31, 35, 40, 0.15);
   animation: edit-scale-in 0.18s ease;
   font-family:
@@ -91,6 +96,17 @@
 .edit-modal__name-input:focus {
   border-color: var(--m-accent);
   box-shadow: 0 0 0 3px rgba(26, 127, 55, 0.12);
+}
+
+/* Goal-managed daily habit: name is read-only */
+.edit-modal__name-input--locked {
+  color: var(--m-text-muted);
+  cursor: not-allowed;
+}
+
+.edit-modal__name-input--locked:focus {
+  border-color: var(--m-border);
+  box-shadow: none;
 }
 
 .edit-modal__meta {

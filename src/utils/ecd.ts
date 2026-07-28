@@ -65,25 +65,6 @@ export function isPushedLater(
 }
 
 /**
- * Returns true if the task's ECD is in the past and not a yearly event.
- * This includes past dates, but excludes day_of_week, day_of_month, and day_of_year.
- */
-export function isTaskPast(ecd: ECD | null): boolean {
-  if (!ecd) return false;
-  const now = new Date();
-
-  // Only show past dates; exclude recurring patterns (week, month, year)
-  if (ecd.type === "date") {
-    return (
-      ecd.value <
-      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
-    );
-  }
-
-  return false;
-}
-
-/**
  * Resolves a task's ECD to a concrete calendar date key (YYYY-MM-DD) used to
  * group tasks in the By Date view. Fixed dates and yearly dates resolve to a
  * single day. Recurring weekly/monthly patterns have no single calendar date,

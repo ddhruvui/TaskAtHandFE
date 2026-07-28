@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback } from "react";
 import { TaskCard } from "./components/TaskCard";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { AddTaskModal } from "./components/AddTaskModal";
@@ -13,12 +13,7 @@ import type { Header, Task } from "./types";
 import type { EditPayload } from "./components/TaskCard/TaskCard.types";
 import * as headersApi from "./api/headers";
 import * as tasksApi from "./api/tasks";
-import {
-  isTaskDueToday,
-  isTaskPast,
-  getEcdDateKey,
-  formatDateKey,
-} from "./utils/ecd";
+import { getEcdDateKey, formatDateKey, todayDateKey } from "./utils/ecd";
 import {
   isOneStepHeaderName,
   pauseStepsMatchingTask,
@@ -41,8 +36,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [focusMode, setFocusMode] = useState(false);
-  const [pastMode, setPastMode] = useState(false);
   const [byDateMode, setByDateMode] = useState(false);
   const [insightsMode, setInsightsMode] = useState(false);
   const [eventsMode, setEventsMode] = useState(false);
@@ -228,9 +221,14 @@ function App() {
           ...(payload.reason ? { reason: payload.reason } : {}),
         });
         await reloadHeaderTasks(headerId);
-        // A task linked from a long-term project mirrors its name and date
-        // there (a cleared/recurring ECD clears the project date)
-        await syncProjectTasksForTodoEdit(taskId, payload.name, payload.ecd);
+        // A task linked from a long-term project mirrors its name, date and
+        // notes there (a cleared/recurring ECD clears the project date)
+        await syncProjectTasksForTodoEdit(
+          taskId,
+          payload.name,
+          payload.ecd,
+          payload.notes,
+        );
         setActionError(null);
       } catch (err) {
         setActionError((err as Error).message);
@@ -338,24 +336,21 @@ function App() {
 
   const addTaskHeader = headers.find((h) => h._id === addTaskHeaderId);
 
-  /* ── Shared Focus/Past filter (applies in both views) ── */
-  const matchesFilter = (task: Task) => {
-    if (focusMode && pastMode)
-      return isTaskDueToday(task.ecd) || isTaskPast(task.ecd);
-    if (focusMode) return isTaskDueToday(task.ecd);
-    if (pastMode) return isTaskPast(task.ecd);
-    return true;
-  };
+  // Daily habit tasks under "One Step At A Time" are linked to their goal
+  // step by name — TaskCard locks name/schedule edits for them.
+  const oneStepHeaderIds = new Set(
+    headers.filter((h) => isOneStepHeaderName(h.name)).map((h) => h._id),
+  );
 
-  /* ── By Date view: group filtered tasks by their calendar date ── */
-  const byDateGroups = (() => {
+  /* ── By Date view: group tasks by calendar date into present, past and
+     future sections (today first, then old dates, then future ones) ── */
+  const byDateSections = (() => {
     if (!byDateMode) return [];
     const groups = new Map<string, { task: Task; headerPriority: number }[]>();
     const noDate: { task: Task; headerPriority: number }[] = [];
     headers.forEach((header) => {
       header.tasks.forEach((task) => {
         if (task.done) return; // drop done tasks before grouping by date
-        if (!matchesFilter(task)) return;
         const key = getEcdDateKey(task.ecd);
         if (!key) {
           if (!task.ecd) noDate.push({ task, headerPriority: header.priority });
@@ -380,15 +375,23 @@ function App() {
         label: formatDateKey(key),
         tasks: sortTasks(items),
       }));
+    const today = todayDateKey();
+    const present = dated.filter((g) => g.key === today);
+    const past = dated.filter((g) => g.key < today);
+    const future = dated.filter((g) => g.key > today);
     if (noDate.length > 0) {
       // undated tasks always come last
-      dated.push({
+      future.push({
         key: "__no_date__",
         label: "No date",
         tasks: sortTasks(noDate),
       });
     }
-    return dated;
+    return [
+      { key: "present", groups: present },
+      { key: "past", groups: past },
+      { key: "future", groups: future },
+    ].filter((section) => section.groups.length > 0);
   })();
 
   return (
@@ -399,7 +402,7 @@ function App() {
         {actionError && (
           <p className="empty-message">Action failed: {actionError}</p>
         )}
-        {/* Add Header button at the top */}
+        {/* View-mode toggle buttons at the top */}
         <div
           style={{
             marginBottom: "24px",
@@ -408,57 +411,6 @@ function App() {
             justifyContent: "flex-end",
           }}
         >
-          <button
-            className={`readme-heading__add-btn focus-toggle-btn${focusMode ? " focus-toggle-btn--active" : ""}`}
-            onClick={() => setFocusMode((prev) => !prev)}
-            aria-label={focusMode ? "Disable focus mode" : "Enable focus mode"}
-            aria-pressed={focusMode}
-            title={
-              focusMode
-                ? pastMode
-                  ? "Focus mode on — showing today's and past tasks"
-                  : "Focus mode on — showing today's tasks only"
-                : "Enable focus mode"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm0 1.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zM8 4a4 4 0 1 1 0 8A4 4 0 0 1 8 4zm0 1.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM8 7a1 1 0 1 1 0 2A1 1 0 0 1 8 7z" />
-            </svg>
-            Focus
-          </button>
-          <button
-            className={`readme-heading__add-btn past-toggle-btn${pastMode ? " past-toggle-btn--active" : ""}`}
-            onClick={() => setPastMode((prev) => !prev)}
-            aria-label={pastMode ? "Disable past mode" : "Enable past mode"}
-            aria-pressed={pastMode}
-            title={
-              pastMode
-                ? focusMode
-                  ? "Past mode on — showing today's and past tasks"
-                  : "Past mode on — showing overdue tasks only"
-                : "Enable past mode"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8z" />
-              <path d="M8 3.75a.75.75 0 0 0-.75.75v3.5H5.5a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 .75-.75V4.5a.75.75 0 0 0-.75-.75z" />
-            </svg>
-            Past
-          </button>
           <button
             className={`readme-heading__add-btn bydate-toggle-btn${byDateMode ? " bydate-toggle-btn--active" : ""}`}
             onClick={() => setByDateMode((prev) => !prev)}
@@ -624,21 +576,38 @@ function App() {
             </svg>
             Calls
           </button>
-          <button
-            className="readme-heading__add-btn"
-            onClick={() => setHeaderModalState({ mode: "add" })}
-            aria-label="Add header"
-            title="Add header"
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <span style={{ marginRight: "6px" }}>+</span> Add Header
-          </button>
         </div>
+
+        {/* Add Header on its own row, todo view only */}
+        {!insightsMode &&
+          !eventsMode &&
+          !goalsMode &&
+          !projectsMode &&
+          !affirmationsMode &&
+          !callsMode && (
+            <div
+              style={{
+                marginBottom: "24px",
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                className="readme-heading__add-btn"
+                onClick={() => setHeaderModalState({ mode: "add" })}
+                aria-label="Add header"
+                title="Add header"
+                style={{
+                  width: "auto",
+                  padding: "8px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ marginRight: "6px" }}>+</span> Add Header
+              </button>
+            </div>
+          )}
 
         {insightsMode && <InsightsPanel />}
 
@@ -673,10 +642,8 @@ function App() {
           !callsMode &&
           !byDateMode &&
           headers.map((header, idx) => {
-            const visibleTasks = header.tasks.filter(matchesFilter);
+            const visibleTasks = header.tasks;
 
-            if ((focusMode || pastMode) && visibleTasks.length === 0)
-              return null;
             return (
               <section key={header._id} className="readme-section">
                 {/* ── Header heading ── */}
@@ -785,6 +752,7 @@ function App() {
                           ? visibleTasks[taskIdx + 1].done
                           : undefined
                       }
+                      goalManaged={oneStepHeaderIds.has(header._id)}
                       onToggleDone={handleToggleDone(header._id)}
                       onEdit={handleEditTask(header._id)}
                       onMoveUp={handleMoveTaskUp(header._id)}
@@ -807,36 +775,9 @@ function App() {
           !affirmationsMode &&
           !callsMode &&
           !byDateMode && (
-          <>
-            {headers.length === 0 && (
-              <p className="empty-message">No headers yet — add one!</p>
-            )}
-            {focusMode &&
-              pastMode &&
-              headers.length > 0 &&
-              headers.every(
-                (h) =>
-                  !h.tasks.some(
-                    (t) => isTaskDueToday(t.ecd) || isTaskPast(t.ecd),
-                  ),
-              ) && (
-                <p className="empty-message">
-                  No tasks due today or in the past.
-                </p>
-              )}
-            {focusMode &&
-              !pastMode &&
-              headers.length > 0 &&
-              headers.every(
-                (h) => !h.tasks.some((t) => isTaskDueToday(t.ecd)),
-              ) && <p className="empty-message">No tasks due today.</p>}
-            {!focusMode &&
-              pastMode &&
-              headers.length > 0 &&
-              headers.every((h) => !h.tasks.some((t) => isTaskPast(t.ecd))) && (
-                <p className="empty-message">No past tasks.</p>
-              )}
-          </>
+          headers.length === 0 && (
+            <p className="empty-message">No headers yet — add one!</p>
+          )
         )}
 
         {!insightsMode &&
@@ -847,33 +788,36 @@ function App() {
           !callsMode &&
           byDateMode && (
           <>
-            {byDateGroups.map((group) => (
-              <section key={group.key} className="readme-section">
-                <div className="readme-heading">
-                  <h2 className="readme-heading__text">{group.label}</h2>
-                </div>
-                <div className="readme-tasks">
-                  {group.tasks.map((task) => (
-                    <TaskCard
-                      key={task._id}
-                      task={task}
-                      isFirst
-                      isLast
-                      onToggleDone={handleToggleDone(task.headerId)}
-                      onEdit={handleEditTask(task.headerId)}
-                      onMoveUp={handleMoveTaskUp(task.headerId)}
-                      onMoveDown={handleMoveTaskDown(task.headerId)}
-                      onDelete={handleDeleteTask(task.headerId)}
-                    />
-                  ))}
-                </div>
-              </section>
+            {byDateSections.map((section, sectionIdx) => (
+              <Fragment key={section.key}>
+                {sectionIdx > 0 && <hr className="bydate-divider" />}
+                {section.groups.map((group) => (
+                  <section key={group.key} className="readme-section">
+                    <div className="readme-heading">
+                      <h2 className="readme-heading__text">{group.label}</h2>
+                    </div>
+                    <div className="readme-tasks">
+                      {group.tasks.map((task) => (
+                        <TaskCard
+                          key={task._id}
+                          task={task}
+                          isFirst
+                          isLast
+                          goalManaged={oneStepHeaderIds.has(task.headerId)}
+                          onToggleDone={handleToggleDone(task.headerId)}
+                          onEdit={handleEditTask(task.headerId)}
+                          onMoveUp={handleMoveTaskUp(task.headerId)}
+                          onMoveDown={handleMoveTaskDown(task.headerId)}
+                          onDelete={handleDeleteTask(task.headerId)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </Fragment>
             ))}
-            {byDateGroups.length === 0 && (
-              <p className="empty-message">
-                No dated tasks to show
-                {focusMode || pastMode ? " for this filter" : ""}.
-              </p>
+            {byDateSections.length === 0 && (
+              <p className="empty-message">No dated tasks to show.</p>
             )}
           </>
         )}

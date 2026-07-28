@@ -14,6 +14,12 @@ export interface TaskCardProps {
   isLast: boolean;
   prevTaskDone?: boolean; // Whether the previous task is done
   nextTaskDone?: boolean; // Whether the next task is done
+  /**
+   * True for daily habit tasks under "One Step At A Time". Goal steps link to
+   * their todo task by name, so the edit modal locks name and schedule (notes
+   * and done stay editable) to keep the goal↔todo link from drifting.
+   */
+  goalManaged?: boolean;
   onToggleDone: (id: string) => void;
   onEdit: (id: string, payload: EditPayload) => void;
   onMoveUp: (id: string) => void;

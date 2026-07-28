@@ -1,7 +1,8 @@
 /**
  * E2E tests for the Projects view (long-term projects built step by step)
  * and its sync with the todo: a dated project task lives in the todo under
- * a header named after the project until the cron completes it.
+ * the project's own header (linked by projectId, ordered by the server)
+ * until the cron completes it.
  */
 
 import { test, expect, type Page } from "@playwright/test";
@@ -10,6 +11,7 @@ import {
   cleanProjects,
   createProject,
   createHeader,
+  deleteProject,
   createTask,
   deleteTaskViaUI,
   getHeaders,
@@ -362,7 +364,7 @@ test.describe("Projects - Tasks", () => {
       .toBe("prefer the REST feed");
   });
 
-  test("should reuse an existing header (case-insensitive) for dated tasks", async ({
+  test("should adopt an existing header (case-insensitive) for dated tasks", async ({
     page,
   }) => {
     await createHeader("automated stock market");
@@ -380,9 +382,12 @@ test.describe("Projects - Tasks", () => {
     );
     await expect(taskRow(page, "get data from EODHD")).toBeVisible();
 
+    // The pre-projectId header is adopted (keeping its own casing), not duplicated
     const headers = await getHeaders();
     expect(headers).toHaveLength(1);
     expect(headers[0].name).toBe("automated stock market");
+    const projects = await getProjects();
+    expect(headers[0].projectId).toBe(projects[0]._id);
   });
 
   test("should move done tasks to the bottom when toggled in the panel", async ({
@@ -563,6 +568,7 @@ test.describe("Projects - Tasks", () => {
     const projects = await getProjects();
     expect(projects[0].tasks[0]).toEqual({
       name: "get data from EODHD",
+      notes: "",
       date: null,
       done: false,
       todoTaskId: null,
@@ -630,6 +636,72 @@ test.describe("Projects - Todo edit & order sync", () => {
     // The link is kept — only the date is gone
     const projects = await getProjects();
     expect(projects[0].tasks[0].todoTaskId).toBe(todoTask._id);
+  });
+
+  test("should mirror edited todo notes onto the project task", async ({
+    page,
+  }) => {
+    const header = await createHeader("Automated Stock Market");
+    const todoTask = await createTask({
+      name: "get data from EODHD",
+      headerId: header._id,
+      notes: "old notes",
+      ecd: { type: "date", value: dateKey(1) },
+    });
+    await createProject("Automated Stock Market", [
+      {
+        name: "get data from EODHD",
+        notes: "old notes",
+        date: dateKey(1),
+        todoTaskId: todoTask._id,
+      },
+    ]);
+    await page.reload();
+    await waitForPageLoad(page);
+
+    const task = page.locator(".task-card", { hasText: "get data from EODHD" });
+    await task.getByTitle("Edit notes").click();
+    await page.getByPlaceholder("Add notes…").fill("fresh notes");
+    await page.getByRole("button", { name: "Save" }).click();
+
+    await expect
+      .poll(async () => (await getProjects())[0].tasks[0].notes)
+      .toBe("fresh notes");
+  });
+
+  test("should not copy the todo's placeholder note into the project", async ({
+    page,
+  }) => {
+    // A project task without notes carries `Step towards "<project>"` in the
+    // todo; a todo-side edit must not turn that placeholder into real notes.
+    const header = await createHeader("Automated Stock Market");
+    const todoTask = await createTask({
+      name: "get data from EODHD",
+      headerId: header._id,
+      notes: 'Step towards "Automated Stock Market"',
+      ecd: { type: "date", value: dateKey(1) },
+    });
+    await createProject("Automated Stock Market", [
+      {
+        name: "get data from EODHD",
+        notes: "",
+        date: dateKey(1),
+        todoTaskId: todoTask._id,
+      },
+    ]);
+    await page.reload();
+    await waitForPageLoad(page);
+
+    // Rename the todo task, leaving the placeholder note untouched
+    const task = page.locator(".task-card", { hasText: "get data from EODHD" });
+    await task.getByTitle("Edit notes").click();
+    await page.getByPlaceholder("Task name").fill("get data from EODHD v2");
+    await page.getByRole("button", { name: "Save" }).click();
+
+    await expect
+      .poll(async () => (await getProjects())[0].tasks[0].name)
+      .toBe("get data from EODHD v2");
+    expect((await getProjects())[0].tasks[0].notes).toBe("");
   });
 
   test("should mirror a project task reorder into the todo", async ({
@@ -811,6 +883,70 @@ test.describe("Projects - Header order sync", () => {
       )
       .toEqual(["Automated Stock Market", "Home Improvement"]);
   });
+
+  test("adding a second dated task reuses the project header instead of duplicating it", async ({
+    page,
+  }) => {
+    await createProject("Automated Stock Market");
+    await openProjectsView(page);
+
+    const day = new Date().getDate();
+    await addProjectTaskViaUI(
+      page,
+      "Automated Stock Market",
+      "get data from EODHD",
+      day,
+    );
+    await expect(taskRow(page, "get data from EODHD")).toBeVisible();
+    await addProjectTaskViaUI(
+      page,
+      "Automated Stock Market",
+      "get data from Nasdaq",
+      day,
+    );
+    await expect(taskRow(page, "get data from Nasdaq")).toBeVisible();
+
+    await expect
+      .poll(async () =>
+        (await getHeaders()).map((h: { name: string }) => h.name),
+      )
+      .toEqual(["Automated Stock Market"]);
+  });
+
+  test("deleting a project unlinks its header, which keeps its tasks and leaves the block", async () => {
+    await createHeader("Groceries");
+    const hi = await createProject("Home Improvement");
+    const asm = await createProject("Automated Stock Market");
+    const hiHeader = await createHeader("Home Improvement", hi._id);
+    await createHeader("Automated Stock Market", asm._id);
+    await createTask({
+      name: "paint the fence",
+      headerId: hiHeader._id,
+      ecd: { type: "date", value: dateKey(1) },
+    });
+
+    expect((await getHeaders()).map((h: { name: string }) => h.name)).toEqual([
+      "Groceries",
+      "Home Improvement",
+      "Automated Stock Market",
+    ]);
+
+    const res = await deleteProject(hi._id);
+    expect(res.headersUnlinked).toBe(1);
+
+    // The header survives with its task; it just leaves the project block
+    const headers = await getHeaders();
+    expect(headers.map((h: { name: string }) => h.name)).toEqual([
+      "Groceries",
+      "Automated Stock Market",
+      "Home Improvement",
+    ]);
+    expect(
+      headers.find((h: { name: string }) => h.name === "Home Improvement")
+        .projectId,
+    ).toBeNull();
+    expect(await getTasks(hiHeader._id)).toHaveLength(1);
+  });
 });
 
 test.describe("Projects - Cron completion", () => {
@@ -832,16 +968,26 @@ test.describe("Projects - Cron completion", () => {
     const stats = await runCron();
     expect(stats.projectTasksCompleted).toBe(1);
 
-    // Gone from the todo
-    const tasks = await getTasks(header._id);
-    expect(tasks).toHaveLength(0);
+    // Gone from the todo — the header was its only task, so the same run
+    // deletes the now-empty header too
+    const headers = await getHeaders();
+    expect(headers.map((h: { _id: string }) => h._id)).not.toContain(
+      header._id,
+    );
 
     // Retained in the project: done, date kept, link consumed, at the bottom
     const projects = await getProjects();
     expect(projects[0].tasks).toEqual([
-      { name: "get data from Nasdaq", date: null, done: false, todoTaskId: null },
+      {
+        name: "get data from Nasdaq",
+        notes: "",
+        date: null,
+        done: false,
+        todoTaskId: null,
+      },
       {
         name: "get data from EODHD",
+        notes: "",
         date: dateKey(-1),
         done: true,
         todoTaskId: null,

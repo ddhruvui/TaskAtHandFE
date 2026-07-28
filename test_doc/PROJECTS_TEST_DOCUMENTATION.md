@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the end-to-end (E2E) tests for the Projects functionality in the Task At Hand application. A project is a long-term effort (like "Automated Stock Market") broken into ordered tasks/steps ("get data from EODHD", "get data from Nasdaq", "deploy to cpu"). Projects are ordered by a header-style priority, and inside each project undone tasks always sit above done tasks (the done/undone barrier from the todo). Giving a task a **date** mirrors it into the todo as a one-time date task under a header named after the project (reused case-insensitively, created otherwise). The sync works both ways: toggling done on either side flips the other, deleting the todo task unlinks the project task, and when the nightly cron deletes the completed todo task the project task is marked done and retained in the project as a completed step.
+This document describes the end-to-end (E2E) tests for the Projects functionality in the Task At Hand application. A project is a long-term effort (like "Automated Stock Market") broken into ordered tasks/steps ("get data from EODHD", "get data from Nasdaq", "deploy to cpu"). Projects are ordered by a header-style priority, and inside each project undone tasks always sit above done tasks (the done/undone barrier from the todo). Giving a task a **date** mirrors it into the todo as a one-time date task under the project's own header (created via `POST /headers { name, projectId }`, which is idempotent per project and adopts a pre-`projectId` header matching by name; the server also owns where that header sits). The sync works both ways: toggling done on either side flips the other, deleting the todo task unlinks the project task, and when the nightly cron deletes the completed todo task the project task is marked done and retained in the project as a completed step.
 
 ## Test File Location
 
@@ -72,7 +72,7 @@ These tests verify project task CRUD, the done/undone barrier, the notes field, 
 - **Steps**: Add a task "get data from EODHD" via the panel and pick today in the Date calendar
 - **Expected Output**:
   - The row appears with a date chip
-  - A todo header named after the project is created holding one task with a `date` ECD of today
+  - The project's todo header is created holding one task with a `date` ECD of today
   - The project task's `todoTaskId` links to the created todo task
   - The main todo view shows the task under the project header
 
@@ -106,11 +106,11 @@ These tests verify project task CRUD, the done/undone barrier, the notes field, 
 - **Steps**: With a linked dated task, open Edit task, set notes to "prefer the REST feed", Save
 - **Expected Output**: The panel row shows the new note and the linked todo task's `notes` updates to match
 
-#### Test: "should reuse an existing header (case-insensitive) for dated tasks"
+#### Test: "should adopt an existing header (case-insensitive) for dated tasks"
 
-- **Description**: Same find-or-create pattern as event scheduling and goal steps
+- **Description**: A header created before `projectId` existed is adopted by the project rather than duplicated — the server matches it by name, case-insensitively, and links it
 - **Steps**: Create a header "automated stock market" via API; add a dated task to project "Automated Stock Market"
-- **Expected Output**: No second header is created; the existing lowercase header is reused
+- **Expected Output**: No second header is created; the existing lowercase header keeps its own casing and now carries the project's `projectId`
 
 #### Test: "should move done tasks to the bottom when toggled in the panel"
 
@@ -148,7 +148,7 @@ These tests verify project task CRUD, the done/undone barrier, the notes field, 
 - **Steps**: Create a linked project task via API; delete the todo task from the todo view (with a reason)
 - **Expected Output**: `GET /projects` shows the task with `date: null`, `done: false`, `todoTaskId: null`
 
-### 4. Projects - Todo edit & order sync (4 tests)
+### 4. Projects - Todo edit & order sync (6 tests)
 
 These tests verify that todo-side edits and reorders flow back into the project, and that project reorders flow into the todo.
 
@@ -164,6 +164,18 @@ These tests verify that todo-side edits and reorders flow back into the project,
 - **Steps**: Create a linked project task via API; in the todo view edit the task, select the "None" due mode, save
 - **Expected Output**: The project task's `date` becomes `null` while `todoTaskId` is kept (only the date is gone)
 
+#### Test: "should mirror edited todo notes onto the project task"
+
+- **Description**: Editing the todo task's notes updates the linked project task's notes
+- **Steps**: Create a linked project task (notes "old notes") and its todo task via API; in the todo view edit the task's notes to "fresh notes"; save
+- **Expected Output**: The project task's `notes` become "fresh notes"
+
+#### Test: "should not copy the todo's placeholder note into the project"
+
+- **Description**: The `Step towards "<project>"` default note a no-notes project task carries in the todo must not become real project notes on a todo-side edit
+- **Steps**: Create a linked project task with empty notes whose todo task carries the placeholder note; in the todo view rename the task, leaving the note untouched; save
+- **Expected Output**: The project task's name updates but its `notes` stay empty
+
 #### Test: "should mirror a project task reorder into the todo"
 
 - **Description**: Moving a task within a project also reorders the linked todo tasks
@@ -176,7 +188,9 @@ These tests verify that todo-side edits and reorders flow back into the project,
 - **Steps**: Same setup; in the todo view move the second task up with the task card's arrow
 - **Expected Output**: `GET /projects` returns the project tasks in the swapped order
 
-### 5. Projects - Header order sync (3 tests)
+### 5. Projects - Header order sync (5 tests)
+
+_The ordering itself is enforced by the backend (`POST /headers { projectId }` and the project update/delete cascades); these tests assert the behaviour end to end through the UI._
 
 #### Test: "places a new project header below the top header (priority 1), in project order"
 
@@ -196,6 +210,21 @@ These tests verify that todo-side edits and reorders flow back into the project,
 - **Steps**: Seed two headers, two dated linked todo tasks and two matching projects via API (Home Improvement above Automated Stock Market); reload and open the Projects panel; click "Move project Automated Stock Market up"
 - **Expected Output**: `GET /headers` flips to `["Automated Stock Market", "Home Improvement"]`, mirroring the new project order
 
+#### Test: "adding a second dated task reuses the project header instead of duplicating it"
+
+- **Description**: `POST /headers { projectId }` is idempotent per project, so a second dated task lands under the same header
+- **Steps**: Create project "Automated Stock Market"; in the panel add two dated tasks to it
+- **Expected Output**: `GET /headers` still returns exactly `["Automated Stock Market"]`
+
+#### Test: "deleting a project unlinks its header, which keeps its tasks and leaves the block"
+
+- **Description**: Deleting a project does not delete the todo work it produced — the header survives with its tasks, but stops being ordered with the projects
+- **Steps**: Create a non-project header "Groceries", two projects with their linked headers and one todo task; `DELETE /projects/:id` for the first project
+- **Expected Output**:
+  - The response reports `headersUnlinked: 1`
+  - `GET /headers` returns `["Groceries", "Automated Stock Market", "Home Improvement"]` — the remaining project header moves up into the block and the unlinked one falls after it
+  - The unlinked header has `projectId: null` and still holds its task
+
 ### 6. Projects - Cron completion (1 test)
 
 #### Test: "done dated task leaves the todo but is retained as done in the project"
@@ -204,7 +233,7 @@ These tests verify that todo-side edits and reorders flow back into the project,
 - **Steps**: Create a linked, **done** todo task (dated yesterday) and its project via API; trigger `POST /cron/run`; reload and open the Projects view
 - **Expected Output**:
   - The cron stats report `projectTasksCompleted: 1`
-  - The todo header has no tasks left
+  - The header, left empty by the deletion, is removed in the same run
   - The project task is `done: true` with its date kept and `todoTaskId` cleared, sorted to the bottom
   - The panel shows the row with done styling and the badge "1/2 done"
 
@@ -212,4 +241,4 @@ These tests verify that todo-side edits and reorders flow back into the project,
 
 ## Summary
 
-Total: **27 tests** across 6 categories, covering the Projects panel toggle, project CRUD and priority ordering, task CRUD with the done/undone barrier (including guarding a repeated-save against duplicate todo tasks), project task notes (shown in the panel and mirrored onto the linked todo task), the two-way todo sync for dated tasks (done state, date edits and reordering), the project→todo header order sync, and the cron completion flow.
+Total: **31 tests** across 6 categories, covering the Projects panel toggle, project CRUD and priority ordering, task CRUD with the done/undone barrier (including guarding a repeated-save against duplicate todo tasks), project task notes (shown in the panel and mirrored both ways onto/from the linked todo task, with the "Step towards …" placeholder mirroring back as empty), the two-way todo sync for dated tasks (done state, date, name and notes edits, and reordering), the server-owned project→todo header ordering (placement, idempotent create, project move, project delete), and the cron completion flow.

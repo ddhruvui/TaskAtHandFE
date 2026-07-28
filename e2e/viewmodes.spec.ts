@@ -1,5 +1,5 @@
 /**
- * E2E tests for the view-mode toggles: Focus, Past, and By Date
+ * E2E tests for the By Date view mode
  */
 
 import { test, expect } from "@playwright/test";
@@ -23,208 +23,37 @@ test.beforeEach(async ({ page }) => {
   await waitForPageLoad(page);
 });
 
-test.describe("View Modes - Focus", () => {
-  test("should toggle focus button pressed state", async ({ page }) => {
-    const btn = page.locator(".focus-toggle-btn");
+test.describe("View Modes - By Date", () => {
+  test("should toggle by date button pressed state", async ({ page }) => {
+    const btn = page.locator(".bydate-toggle-btn");
     await expect(btn).toHaveAttribute("aria-pressed", "false");
 
     await btn.click();
     await expect(btn).toHaveAttribute("aria-pressed", "true");
-    await expect(btn).toHaveClass(/focus-toggle-btn--active/);
+    await expect(btn).toHaveClass(/bydate-toggle-btn--active/);
 
     await btn.click();
     await expect(btn).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("should show only tasks due today in focus mode", async ({ page }) => {
-    const header = await createHeader("Work");
-    await createTask({
-      name: "Due today",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(0) },
-    });
-    await createTask({
-      name: "Due tomorrow",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(1) },
-    });
-    await createTask({ name: "No date task", headerId: header._id });
-    await page.reload();
-    await waitForPageLoad(page);
-
-    await page.locator(".focus-toggle-btn").click();
-
-    await expect(getTask(page, "Due today")).toBeVisible();
-    await expect(getTask(page, "Due tomorrow")).not.toBeVisible();
-    await expect(getTask(page, "No date task")).not.toBeVisible();
-  });
-
-  test("should include recurring tasks due today in focus mode", async ({
-    page,
-  }) => {
-    const header = await createHeader("Habits");
-    await createTask({
-      name: "Weekly today",
-      headerId: header._id,
-      ecd: { type: "day_of_week", value: [todayDow] },
-    });
-    await createTask({
-      name: "Weekly other day",
-      headerId: header._id,
-      ecd: { type: "day_of_week", value: [otherDow] },
-    });
-    await createTask({
-      name: "Monthly today",
-      headerId: header._id,
-      ecd: { type: "day_of_month", value: [new Date().getDate()] },
-    });
-    await page.reload();
-    await waitForPageLoad(page);
-
-    await page.locator(".focus-toggle-btn").click();
-
-    await expect(getTask(page, "Weekly today")).toBeVisible();
-    await expect(getTask(page, "Monthly today")).toBeVisible();
-    await expect(getTask(page, "Weekly other day")).not.toBeVisible();
-  });
-
-  test("should hide headers with no matching tasks in focus mode", async ({
-    page,
-  }) => {
-    const work = await createHeader("Work");
-    const idle = await createHeader("Idle");
-    await createTask({
-      name: "Due today",
-      headerId: work._id,
-      ecd: { type: "date", value: dateKey(0) },
-    });
-    await createTask({
-      name: "Far future",
-      headerId: idle._id,
-      ecd: { type: "date", value: dateKey(30) },
-    });
-    await page.reload();
-    await waitForPageLoad(page);
-
-    await page.locator(".focus-toggle-btn").click();
-
-    await expect(
-      page.locator(".readme-section", { hasText: "Work" }),
-    ).toBeVisible();
-    await expect(
-      page.locator(".readme-section", { hasText: "Idle" }),
-    ).not.toBeVisible();
-  });
-
-  test("should restore all tasks when focus mode is disabled", async ({
+  test("should order groups as today first, then past, then future", async ({
     page,
   }) => {
     const header = await createHeader("Work");
     await createTask({
-      name: "Due tomorrow",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(1) },
-    });
-    await page.reload();
-    await waitForPageLoad(page);
-
-    await page.locator(".focus-toggle-btn").click();
-    await expect(getTask(page, "Due tomorrow")).not.toBeVisible();
-
-    await page.locator(".focus-toggle-btn").click();
-    await expect(getTask(page, "Due tomorrow")).toBeVisible();
-  });
-});
-
-test.describe("View Modes - Past", () => {
-  test("should show only overdue one-time tasks in past mode", async ({
-    page,
-  }) => {
-    const header = await createHeader("Work");
-    await createTask({
-      name: "Overdue task",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(-1) },
-    });
-    await createTask({
-      name: "Due today",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(0) },
-    });
-    await createTask({
-      name: "Due tomorrow",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(1) },
-    });
-    await page.reload();
-    await waitForPageLoad(page);
-
-    await page.locator(".past-toggle-btn").click();
-
-    await expect(getTask(page, "Overdue task")).toBeVisible();
-    await expect(getTask(page, "Due today")).not.toBeVisible();
-    await expect(getTask(page, "Due tomorrow")).not.toBeVisible();
-  });
-
-  test("should not treat recurring tasks as past", async ({ page }) => {
-    const header = await createHeader("Habits");
-    await createTask({
-      name: "Weekly habit",
-      headerId: header._id,
-      ecd: { type: "day_of_week", value: [todayDow] },
-    });
-    await createTask({
-      name: "Monthly chore",
-      headerId: header._id,
-      ecd: { type: "day_of_month", value: [1] },
-    });
-    await page.reload();
-    await waitForPageLoad(page);
-
-    await page.locator(".past-toggle-btn").click();
-
-    await expect(getTask(page, "Weekly habit")).not.toBeVisible();
-    await expect(getTask(page, "Monthly chore")).not.toBeVisible();
-  });
-
-  test("should show today's and overdue tasks when focus and past are combined", async ({
-    page,
-  }) => {
-    const header = await createHeader("Work");
-    await createTask({
-      name: "Overdue task",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(-1) },
-    });
-    await createTask({
-      name: "Due today",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(0) },
-    });
-    await createTask({
-      name: "Due tomorrow",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(1) },
-    });
-    await page.reload();
-    await waitForPageLoad(page);
-
-    await page.locator(".focus-toggle-btn").click();
-    await page.locator(".past-toggle-btn").click();
-
-    await expect(getTask(page, "Overdue task")).toBeVisible();
-    await expect(getTask(page, "Due today")).toBeVisible();
-    await expect(getTask(page, "Due tomorrow")).not.toBeVisible();
-  });
-});
-
-test.describe("View Modes - By Date", () => {
-  test("should group tasks by date in ascending order", async ({ page }) => {
-    const header = await createHeader("Work");
-    await createTask({
-      name: "Later task",
+      name: "Future task",
       headerId: header._id,
       ecd: { type: "date", value: dateKey(2) },
+    });
+    await createTask({
+      name: "Old task",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(-3) },
+    });
+    await createTask({
+      name: "Older task",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(-5) },
     });
     await createTask({
       name: "Today task",
@@ -239,6 +68,8 @@ test.describe("View Modes - By Date", () => {
     const groupLabels = page.locator(".readme-heading__text");
     await expect(groupLabels).toHaveText([
       formatDateKey(dateKey(0)),
+      formatDateKey(dateKey(-5)),
+      formatDateKey(dateKey(-3)),
       formatDateKey(dateKey(2)),
     ]);
 
@@ -246,6 +77,52 @@ test.describe("View Modes - By Date", () => {
       hasText: formatDateKey(dateKey(0)),
     });
     await expect(todayGroup.getByText("Today task")).toBeVisible();
+  });
+
+  test("should divide present, past and future with thick dividers", async ({
+    page,
+  }) => {
+    const header = await createHeader("Work");
+    await createTask({
+      name: "Today task",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(0) },
+    });
+    await createTask({
+      name: "Old task",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(-3) },
+    });
+    await createTask({
+      name: "Future task",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(2) },
+    });
+    await page.reload();
+    await waitForPageLoad(page);
+
+    await page.locator(".bydate-toggle-btn").click();
+
+    // Three populated sections → two dividers between them
+    await expect(page.locator(".bydate-divider")).toHaveCount(2);
+  });
+
+  test("should not render dividers when only one section has tasks", async ({
+    page,
+  }) => {
+    const header = await createHeader("Work");
+    await createTask({
+      name: "Future task",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(2) },
+    });
+    await page.reload();
+    await waitForPageLoad(page);
+
+    await page.locator(".bydate-toggle-btn").click();
+
+    await expect(getTask(page, "Future task")).toBeVisible();
+    await expect(page.locator(".bydate-divider")).toHaveCount(0);
   });
 
   test("should show undated tasks under a No date group last", async ({
@@ -328,29 +205,5 @@ test.describe("View Modes - By Date", () => {
     await page.locator(".bydate-toggle-btn").click();
 
     await expect(page.getByText("No dated tasks to show.")).toBeVisible();
-  });
-
-  test("should combine by date view with the focus filter", async ({
-    page,
-  }) => {
-    const header = await createHeader("Work");
-    await createTask({
-      name: "Due tomorrow",
-      headerId: header._id,
-      ecd: { type: "date", value: dateKey(1) },
-    });
-    await page.reload();
-    await waitForPageLoad(page);
-
-    await page.locator(".focus-toggle-btn").click();
-    await page.locator(".bydate-toggle-btn").click();
-
-    await expect(
-      page.getByText("No dated tasks to show for this filter."),
-    ).toBeVisible();
-
-    // Disabling focus reveals tomorrow's group again
-    await page.locator(".focus-toggle-btn").click();
-    await expect(getTask(page, "Due tomorrow")).toBeVisible();
   });
 });
