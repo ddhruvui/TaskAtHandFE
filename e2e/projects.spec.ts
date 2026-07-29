@@ -514,6 +514,144 @@ test.describe("Projects - Tasks", () => {
     ).toBeDisabled();
   });
 
+  test("should sort undone dated tasks above undated ones", async ({
+    page,
+  }) => {
+    const header = await createHeader("Automated Stock Market");
+    const todoTask = await createTask({
+      name: "get data from EODHD",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(1) },
+    });
+    // Sent undated-first and with the dated task done last — the server
+    // returns dated undone, undated undone, done
+    await createProject("Automated Stock Market", [
+      { name: "deploy to cpu" },
+      { name: "get data from EODHD", date: dateKey(1), todoTaskId: todoTask._id },
+      { name: "write the README", date: dateKey(2), done: true },
+    ]);
+    await page.reload();
+    await waitForPageLoad(page);
+    await openProjectsView(page);
+
+    await expect(page.locator(".projects-panel__task-name")).toHaveText([
+      "get data from EODHD",
+      "deploy to cpu",
+      "write the README",
+    ]);
+  });
+
+  test("should not let moves cross the dated/undated barrier", async ({
+    page,
+  }) => {
+    const header = await createHeader("Automated Stock Market");
+    const t1 = await createTask({
+      name: "get data from EODHD",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(1) },
+    });
+    const t2 = await createTask({
+      name: "get data from Nasdaq",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(2) },
+    });
+    await createProject("Automated Stock Market", [
+      { name: "get data from EODHD", date: dateKey(1), todoTaskId: t1._id },
+      { name: "get data from Nasdaq", date: dateKey(2), todoTaskId: t2._id },
+      { name: "deploy to cpu" },
+      { name: "write the README" },
+    ]);
+    await page.reload();
+    await waitForPageLoad(page);
+    await openProjectsView(page);
+
+    // Moves inside each group still work
+    await page
+      .getByRole("button", { name: "Move task get data from Nasdaq up" })
+      .click();
+    await expect(page.locator(".projects-panel__task-name")).toHaveText([
+      "get data from Nasdaq",
+      "get data from EODHD",
+      "deploy to cpu",
+      "write the README",
+    ]);
+
+    // …but the last dated task can't move down into the undated zone,
+    // and the first undated task can't move up into the dated one
+    await expect(
+      page.getByRole("button", { name: "Move task get data from EODHD down" }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Move task deploy to cpu up" }),
+    ).toBeDisabled();
+  });
+
+  test("should lift a task above the undated ones once it is given a date", async ({
+    page,
+  }) => {
+    await createProject("Automated Stock Market", [
+      { name: "get data from EODHD" },
+      { name: "get data from Nasdaq" },
+      { name: "deploy to cpu" },
+    ]);
+    await openProjectsView(page);
+
+    await page
+      .getByRole("button", { name: "Edit task deploy to cpu" })
+      .click();
+    await page.getByRole("button", { name: "Date", exact: true }).click();
+    await page
+      .locator(".ecd-calendar__day", {
+        hasText: new RegExp(`^${new Date().getDate()}$`),
+      })
+      .click();
+    await page.getByRole("button", { name: "Save" }).click();
+
+    await expect(page.locator(".projects-panel__task-name")).toHaveText([
+      "deploy to cpu",
+      "get data from EODHD",
+      "get data from Nasdaq",
+    ]);
+  });
+
+  test("should drop a task below the dated ones once its date is removed", async ({
+    page,
+  }) => {
+    const header = await createHeader("Automated Stock Market");
+    const todoTask = await createTask({
+      name: "get data from EODHD",
+      headerId: header._id,
+      ecd: { type: "date", value: dateKey(1) },
+    });
+    await createProject("Automated Stock Market", [
+      { name: "get data from EODHD", date: dateKey(1), todoTaskId: todoTask._id },
+      { name: "get data from Nasdaq", date: dateKey(2) },
+      { name: "deploy to cpu" },
+    ]);
+    await page.reload();
+    await waitForPageLoad(page);
+    await openProjectsView(page);
+
+    await page
+      .getByRole("button", { name: "Edit task get data from EODHD" })
+      .click();
+    await page.getByRole("button", { name: "None", exact: true }).click();
+    await page.getByRole("button", { name: "Save" }).click();
+
+    // It falls below the still-dated task, but the sort is stable within the
+    // undated group, so it keeps its position relative to "deploy to cpu"
+    // rather than being pushed to the end of the list.
+    await expect(page.locator(".projects-panel__task-name")).toHaveText([
+      "get data from Nasdaq",
+      "get data from EODHD",
+      "deploy to cpu",
+    ]);
+    // Losing the date also removed its todo entry
+    await expect
+      .poll(async () => (await getTasks(header._id)).length)
+      .toBe(0);
+  });
+
   test("should delete the linked todo task when the project task is deleted", async ({
     page,
   }) => {

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the end-to-end (E2E) tests for the Projects functionality in the Task At Hand application. A project is a long-term effort (like "Automated Stock Market") broken into ordered tasks/steps ("get data from EODHD", "get data from Nasdaq", "deploy to cpu"). Projects are ordered by a header-style priority, and inside each project undone tasks always sit above done tasks (the done/undone barrier from the todo). Giving a task a **date** mirrors it into the todo as a one-time date task under the project's own header (created via `POST /headers { name, projectId }`, which is idempotent per project and adopts a pre-`projectId` header matching by name; the server also owns where that header sits). The sync works both ways: toggling done on either side flips the other, deleting the todo task unlinks the project task, and when the nightly cron deletes the completed todo task the project task is marked done and retained in the project as a completed step.
+This document describes the end-to-end (E2E) tests for the Projects functionality in the Task At Hand application. A project is a long-term effort (like "Automated Stock Market") broken into ordered tasks/steps ("get data from EODHD", "get data from Nasdaq", "deploy to cpu"). Projects are ordered by a header-style priority, and inside each project undone tasks always sit above done tasks (the done/undone barrier from the todo) with dated undone tasks above undated ones (a dated step is already committed to the todo, so it outranks the undated backlog). Giving a task a **date** mirrors it into the todo as a one-time date task under the project's own header (created via `POST /headers { name, projectId }`, which is idempotent per project and adopts a pre-`projectId` header matching by name; the server also owns where that header sits). The sync works both ways: toggling done on either side flips the other, deleting the todo task unlinks the project task, and when the nightly cron deletes the completed todo task the project task is marked done and retained in the project as a completed step.
 
 ## Test File Location
 
@@ -56,9 +56,9 @@ These tests verify project creation, priority ordering and deletion.
 - **Steps**: Create a header + linked todo task + project via API; delete the project via UI and confirm
 - **Expected Output**: The confirm message notes "Tasks already added to the todo stay."; the panel returns to the empty state; the todo task still exists
 
-### 3. Projects - Tasks (14 tests)
+### 3. Projects - Tasks (18 tests)
 
-These tests verify project task CRUD, the done/undone barrier, the notes field, and the two-way todo sync.
+These tests verify project task CRUD, the done/undone and dated/undated barriers, the notes field, and the two-way todo sync.
 
 #### Test: "should add an undated task (panel only, no todo entry)"
 
@@ -135,6 +135,30 @@ These tests verify project task CRUD, the done/undone barrier, the notes field, 
 - **Description**: Task priority moves mirror the todo's rules — never across the barrier
 - **Steps**: Create a project with two undone tasks and one done task; move the second undone task up
 - **Expected Output**: The undone tasks swap; the last undone task's "down" and the done task's "up" arrows are disabled
+
+#### Test: "should sort undone dated tasks above undated ones"
+
+- **Description**: Dated steps outrank the undated backlog — a step with a date is already committed to the todo, so it sorts to the top
+- **Steps**: Create a project via API sending an undated task first, then a dated undone task, then a dated **done** task
+- **Expected Output**: The panel lists the dated undone task first, then the undated undone one, then the done one at the bottom
+
+#### Test: "should not let moves cross the dated/undated barrier"
+
+- **Description**: The dated/undated barrier is enforced like the done/undone one, so the panel never offers a swap the server would revert
+- **Steps**: Create a project with two dated undone tasks and two undated undone tasks; move the second dated task up
+- **Expected Output**: The two dated tasks swap; the last dated task's "down" and the first undated task's "up" arrows are disabled
+
+#### Test: "should lift a task above the undated ones once it is given a date"
+
+- **Description**: Adding a date in the edit modal re-sorts the task into the dated group
+- **Steps**: Create a project with three undated tasks; edit the last one and give it today's date
+- **Expected Output**: The newly dated task jumps to the top, above the two still-undated tasks
+
+#### Test: "should drop a task below the dated ones once its date is removed"
+
+- **Description**: Clearing the date drops the task into the undated group — but the sort is stable, so it keeps its position relative to the other undated tasks rather than being pushed to the end
+- **Steps**: Create a project with two dated tasks (the first one linked to a todo task) and one undated task; edit the first task and switch its date mode to "None"
+- **Expected Output**: The still-dated task moves to the top; the un-dated task sits between it and "deploy to cpu"; the linked todo task is removed from the header
 
 #### Test: "should delete the linked todo task when the project task is deleted"
 
@@ -241,4 +265,4 @@ _The ordering itself is enforced by the backend (`POST /headers { projectId }` a
 
 ## Summary
 
-Total: **31 tests** across 6 categories, covering the Projects panel toggle, project CRUD and priority ordering, task CRUD with the done/undone barrier (including guarding a repeated-save against duplicate todo tasks), project task notes (shown in the panel and mirrored both ways onto/from the linked todo task, with the "Step towards …" placeholder mirroring back as empty), the two-way todo sync for dated tasks (done state, date, name and notes edits, and reordering), the server-owned project→todo header ordering (placement, idempotent create, project move, project delete), and the cron completion flow.
+Total: **35 tests** across 6 categories, covering the Projects panel toggle, project CRUD and priority ordering, task CRUD with the done/undone and dated/undated barriers (including guarding a repeated-save against duplicate todo tasks), project task notes (shown in the panel and mirrored both ways onto/from the linked todo task, with the "Step towards …" placeholder mirroring back as empty), the two-way todo sync for dated tasks (done state, date, name and notes edits, and reordering), the server-owned project→todo header ordering (placement, idempotent create, project move, project delete), and the cron completion flow.
