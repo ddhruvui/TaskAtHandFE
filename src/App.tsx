@@ -1,10 +1,12 @@
 import { Fragment, useState, useEffect, useCallback } from "react";
+import { AddButton } from "./components/AddButton";
 import { TaskCard } from "./components/TaskCard";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { AddTaskModal } from "./components/AddTaskModal";
 import { HeaderModal } from "./components/HeaderModal";
 import { InsightsPanel } from "./components/InsightsPanel";
 import { EventsPanel } from "./components/EventsPanel";
+import { LifeEventsPanel } from "./components/LifeEventsPanel";
 import { GoalsPanel } from "./components/GoalsPanel";
 import { ProjectsPanel } from "./components/ProjectsPanel";
 import { AffirmationsPanel } from "./components/AffirmationsPanel";
@@ -25,6 +27,11 @@ import {
   syncProjectTaskOrderForTodo,
   unlinkProjectTasksForTodoTasks,
 } from "./utils/projectSync";
+import {
+  syncLifeEventsForTodoDone,
+  syncLifeEventsForTodoEdit,
+  unlinkLifeEventsForTodoTasks,
+} from "./utils/lifeEventSync";
 import "./App.css";
 
 interface HeaderWithTasks extends Header {
@@ -39,6 +46,7 @@ function App() {
   const [byDateMode, setByDateMode] = useState(false);
   const [insightsMode, setInsightsMode] = useState(false);
   const [eventsMode, setEventsMode] = useState(false);
+  const [lifeEventsMode, setLifeEventsMode] = useState(false);
   const [goalsMode, setGoalsMode] = useState(false);
   const [projectsMode, setProjectsMode] = useState(false);
   const [affirmationsMode, setAffirmationsMode] = useState(false);
@@ -140,6 +148,8 @@ function App() {
       }
       // Cascade-deleted tasks may back dated project tasks — unlink them
       await unlinkProjectTasksForTodoTasks(cascadedTaskIds);
+      // …and may back life events — unlink those too (done state untouched)
+      await unlinkLifeEventsForTodoTasks(cascadedTaskIds);
       setDeleteTarget(null);
       setActionError(null);
     } catch (err) {
@@ -205,6 +215,8 @@ function App() {
       await reloadHeaderTasks(headerId);
       // A task linked from a long-term project mirrors its done state there
       await syncProjectTasksForTodoDone(taskId, !task.done);
+      // A task added from a life event mirrors its done state there too
+      await syncLifeEventsForTodoDone(taskId, !task.done);
       setActionError(null);
     } catch (err) {
       setActionError((err as Error).message);
@@ -229,6 +241,9 @@ function App() {
           payload.ecd,
           payload.notes,
         );
+        // A task added from a life event mirrors its name there (the annual
+        // date is not synced — rescheduling this year's task doesn't move it)
+        await syncLifeEventsForTodoEdit(taskId, payload.name);
         setActionError(null);
       } catch (err) {
         setActionError((err as Error).message);
@@ -300,6 +315,8 @@ function App() {
       }
       // A task backing a dated project task unlinks it there
       await unlinkProjectTasksForTodoTasks([deleteTarget.id]);
+      // A task added from a life event unlinks it there (done untouched)
+      await unlinkLifeEventsForTodoTasks([deleteTarget.id]);
       setDeleteTarget(null);
       setActionError(null);
     } catch (err) {
@@ -483,6 +500,29 @@ function App() {
             Events
           </button>
           <button
+            className={`readme-heading__add-btn lifeevents-toggle-btn${lifeEventsMode ? " lifeevents-toggle-btn--active" : ""}`}
+            onClick={() => setLifeEventsMode((prev) => !prev)}
+            aria-label={lifeEventsMode ? "Hide life events" : "Show life events"}
+            aria-pressed={lifeEventsMode}
+            title={
+              lifeEventsMode
+                ? "Life events on — annual dates added to the todo each year"
+                : "Manage life events (annual dates like birthdays)"
+            }
+            style={{
+              width: "auto",
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+              <path d="M2 2.75C2 1.784 2.784 1 3.75 1h2.5c.966 0 1.75.784 1.75 1.75V5h4.25C13.216 5 14 5.784 14 6.75v5.5A2.75 2.75 0 0 1 11.25 15h-6.5A2.75 2.75 0 0 1 2 12.25v-9.5zm1.5 0v9.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25v-5.5a.25.25 0 0 0-.25-.25H8a.75.75 0 0 1-.75-.75V2.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25zM8 8.75A.75.75 0 0 1 8.75 8h2.5a.75.75 0 0 1 0 1.5h-2.5A.75.75 0 0 1 8 8.75zm-3.5 3A.75.75 0 0 1 5.25 11h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75zM5.25 8a.75.75 0 0 0 0 1.5h.5a.75.75 0 0 0 0-1.5h-.5z" />
+            </svg>
+            Life Events
+          </button>
+          <button
             className={`readme-heading__add-btn goals-toggle-btn${goalsMode ? " goals-toggle-btn--active" : ""}`}
             onClick={() => setGoalsMode((prev) => !prev)}
             aria-label={goalsMode ? "Hide goals" : "Show goals"}
@@ -581,6 +621,7 @@ function App() {
         {/* Add Header on its own row, todo view only */}
         {!insightsMode &&
           !eventsMode &&
+          !lifeEventsMode &&
           !goalsMode &&
           !projectsMode &&
           !affirmationsMode &&
@@ -592,20 +633,11 @@ function App() {
                 justifyContent: "flex-end",
               }}
             >
-              <button
-                className="readme-heading__add-btn"
+              <AddButton
+                label="Add Header"
+                ariaLabel="Add header"
                 onClick={() => setHeaderModalState({ mode: "add" })}
-                aria-label="Add header"
-                title="Add header"
-                style={{
-                  width: "auto",
-                  padding: "8px 16px",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ marginRight: "6px" }}>+</span> Add Header
-              </button>
+              />
             </div>
           )}
 
@@ -613,22 +645,30 @@ function App() {
 
         {!insightsMode && eventsMode && <EventsPanel onTasksAdded={loadAll} />}
 
-        {!insightsMode && !eventsMode && goalsMode && (
-          <GoalsPanel onTasksChanged={loadAll} />
+        {!insightsMode && !eventsMode && lifeEventsMode && (
+          <LifeEventsPanel onTasksChanged={loadAll} />
         )}
 
-        {!insightsMode && !eventsMode && !goalsMode && projectsMode && (
-          <ProjectsPanel onTasksChanged={loadAll} />
+        {!insightsMode && !eventsMode && !lifeEventsMode && goalsMode && (
+          <GoalsPanel onTasksChanged={loadAll} />
         )}
 
         {!insightsMode &&
           !eventsMode &&
+          !lifeEventsMode &&
+          !goalsMode &&
+          projectsMode && <ProjectsPanel onTasksChanged={loadAll} />}
+
+        {!insightsMode &&
+          !eventsMode &&
+          !lifeEventsMode &&
           !goalsMode &&
           !projectsMode &&
           affirmationsMode && <AffirmationsPanel />}
 
         {!insightsMode &&
           !eventsMode &&
+          !lifeEventsMode &&
           !goalsMode &&
           !projectsMode &&
           !affirmationsMode &&
@@ -636,6 +676,7 @@ function App() {
 
         {!insightsMode &&
           !eventsMode &&
+          !lifeEventsMode &&
           !goalsMode &&
           !projectsMode &&
           !affirmationsMode &&
@@ -770,6 +811,7 @@ function App() {
 
         {!insightsMode &&
           !eventsMode &&
+          !lifeEventsMode &&
           !goalsMode &&
           !projectsMode &&
           !affirmationsMode &&
@@ -782,6 +824,7 @@ function App() {
 
         {!insightsMode &&
           !eventsMode &&
+          !lifeEventsMode &&
           !goalsMode &&
           !projectsMode &&
           !affirmationsMode &&

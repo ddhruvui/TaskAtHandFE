@@ -54,6 +54,18 @@ Validates frontend wrapper methods for the Events collection (4 tests):
 | update calls PUT `/events/:id` with partial body | Event update payload is passed as expected |
 | remove calls DELETE `/events/:id` | Delete request maps to correct endpoint and method |
 
+### `src/api/lifeevents.test.ts`
+
+Validates frontend wrapper methods for the LifeEvents collection (5 tests):
+
+| Test | What it checks |
+| --- | --- |
+| getAll calls GET `/lifeevents` and returns the life event list | Wrapper maps to the correct endpoint and returns the life event list |
+| create calls POST `/lifeevents` with body | `{ name, date }` payload is serialized and sent correctly |
+| update calls PUT `/lifeevents/:id` with body | `{ done, todoTaskId }` sync payload is passed as expected |
+| update can move a life event by priority | `{ priority }` reorder payload is passed as expected |
+| remove calls DELETE `/lifeevents/:id` | Delete request maps to correct endpoint and method |
+
 ### `src/api/goals.test.ts`
 
 Validates frontend wrapper methods for the Goals collection (5 tests):
@@ -147,6 +159,21 @@ Validates the project↔todo task-level sync helpers (mocks `projectsApi.getAll`
 | drops the link and the date for an undone task | `unlinkProjectTasksForTodoTasks` clears `todoTaskId` and `date` |
 | keeps the date on a done task for the record | Done tasks keep `date` when unlinked |
 | is a no-op for an empty id list | Early return — no API calls |
+
+### `src/utils/lifeEventSync.test.ts`
+
+Validates the life event↔todo sync helpers (mocks `lifeEventsApi.getAll` / `lifeEventsApi.update` and asserts the per-event updates each helper writes back). The event's annual date is deliberately never synced from the todo task's ECD:
+
+| Test | What it checks |
+| --- | --- |
+| mirrors the new done state onto every event linked to the todo task | `syncLifeEventsForTodoDone` flips `done` on events matching `todoTaskId` |
+| does not write when the linked event already has that state | No `update` call when the event already agrees |
+| does not touch unlinked events | Events with `todoTaskId: null` are never written |
+| mirrors a rename onto the linked event | `syncLifeEventsForTodoEdit` copies the todo task's new name |
+| does not write when the name is unchanged | No `update` call for a same-name edit |
+| clears the link on every event backed by a deleted todo task | `unlinkLifeEventsForTodoTasks` sets `todoTaskId: null` |
+| keeps the done state as-is when unlinking | Deleting the task isn't completing it — `done` untouched |
+| skips the fetch entirely for an empty id list | Early return — no API calls |
 
 ---
 

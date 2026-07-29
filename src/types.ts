@@ -59,6 +59,20 @@ export interface EventTemplate {
   updatedAt: string; // ISO 8601 timestamp
 }
 
+// ── Life Events (annually recurring dates, added to the todo by the cron) ───
+
+export interface LifeEvent {
+  _id: string; // MongoDB ObjectId
+  name: string; // Life event name (required), e.g. "Wife's birthday"
+  date: string; // "D/M" (no zero-padding, no year), e.g. "7/3" — recurs annually
+  lastAddedYear: number; // Server-managed: year of the last occurrence the cron consumed
+  done: boolean; // This year's occurrence completed
+  todoTaskId: string | null; // _id of the linked todo Task while one exists
+  priority: number; // Display order, contiguous 0..n-1 (new events append at end)
+  createdAt: string; // ISO 8601 timestamp
+  updatedAt: string; // ISO 8601 timestamp
+}
+
 // ── Goals (habit backlogs built one step at a time) ─────────────────────────
 
 // Legacy values ("active", "achieved") may still come back from old data;

@@ -19,6 +19,7 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
     past and future sections
   - **Insights** — habit stats and the AI coach (see below)
   - **Events** — manage reusable task bundles (see below)
+  - **Life Events** — annual dates the cron adds to the todo (see below)
   - **Goals** — habit backlogs built one step at a time (see below)
   - **Projects** — long term projects built step by step (see below)
   - **Affirmations** — short lines to read daily (see below)
@@ -30,6 +31,15 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   event (reused if it already exists, so later additions join it). Each task
   row also has a per-task quick add. Templates are never consumed, so an
   event can be scheduled again and again
+- **Life Events view** — dates that repeat every year (e.g. "Wife's birthday"
+  on March 7), stored as a day + month with no year. Every year on the day,
+  the backend cron adds a one-time task named after the event to the todo
+  under an "Events" header (reused case-insensitively, created otherwise) and
+  links it. Toggling done on either side flips the other; when the nightly
+  cron deletes the completed todo task it marks the event done and keeps it —
+  a life event is never deleted by the cron and fires again next year. Rows
+  are ordered with move up/down arrows (a contiguous priority like projects)
+  and show an "in todo" badge while this year's task is in the todo
 - **Goals view** — long-term aims (e.g. "Improve Health") broken into small
   steps/habits ("Wake up at 6", "Have 1 fruit a day"), listed in the order
   you want to build them. Steps render as todo task rows and are added the
@@ -112,6 +122,7 @@ src/
 │   ├── client.ts              # fetch wrapper (VITE_API_BASE_URL)
 │   ├── headers.ts / tasks.ts  # CRUD calls
 │   ├── events.ts              # /events CRUD (reusable task bundles)
+│   ├── lifeevents.ts          # /lifeevents CRUD (annual dates, cron-linked)
 │   ├── goals.ts               # /goals CRUD (habit backlogs)
 │   ├── projects.ts            # /projects CRUD (long term projects)
 │   ├── affirmations.ts        # /affirmations CRUD (short daily lines)
@@ -119,16 +130,19 @@ src/
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
+│   ├── AddButton/             # Shared "+ Add X" toolbar button (all views)
 │   ├── DatePicker/            # EcdCalendar — shared ECD date/recurrence picker
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
 │   ├── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
+│   ├── LifeEventsPanel/  LifeEventModal/                # Life Events view
 │   ├── GoalsPanel/  GoalModal/  AddStepModal/           # Goals view
 │   ├── ProjectsPanel/  ProjectModal/  ProjectTaskModal/ # Projects view
 │   ├── AffirmationsPanel/  AffirmationModal/            # Affirmations view
 │   └── CallsPanel/  CallModal/                          # Calls view
 ├── utils/ecd.ts               # ECD due-today/date-key helpers
 ├── utils/goalSync.ts          # goal step ↔ todo sync helpers
-└── utils/projectSync.ts       # project task ↔ todo sync helpers
+├── utils/projectSync.ts       # project task ↔ todo sync helpers
+└── utils/lifeEventSync.ts     # life event ↔ todo sync helpers
 ```
 
 ## Setup & Run

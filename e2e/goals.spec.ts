@@ -589,10 +589,14 @@ test.describe("Goals - One Step At A Time", () => {
     // ...and raises the under-progress count right away
     await expect(page.getByText("1/2 under progress")).toBeVisible();
 
-    // Switch back to the todo view and verify the task landed
+    // Switch back to the todo view and verify the task landed. Starting a
+    // step triggers a background refetch of the todo; wait for it to land
+    // rather than reading the header once and racing the reload.
     await page.locator(".goals-toggle-btn").click();
-    const names = await getTaskNamesInHeader(page, ONE_STEP_HEADER);
-    expect(names).toEqual(["Wake up at 6"]);
+    await expect(async () => {
+      const names = await getTaskNamesInHeader(page, ONE_STEP_HEADER);
+      expect(names).toEqual(["Wake up at 6"]);
+    }).toPass({ timeout: 5000 });
   });
 
   test("should reuse the One Step At A Time header when starting a second step", async ({

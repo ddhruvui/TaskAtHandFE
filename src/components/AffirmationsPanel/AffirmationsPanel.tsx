@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { Affirmation } from "../../types";
 import * as affirmationsApi from "../../api/affirmations";
 import { AffirmationModal } from "../AffirmationModal";
+import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
 import "./AffirmationsPanel.css";
 
@@ -81,14 +82,11 @@ export default function AffirmationsPanel() {
       {error && <p className="empty-message">Action failed: {error}</p>}
 
       <div className="affirmations-panel__toolbar">
-        <button
-          className="readme-heading__add-btn affirmations-panel__add-btn"
+        <AddButton
+          label="Add Affirmation"
+          ariaLabel="Add affirmation"
           onClick={() => setModalState({ mode: "add" })}
-          aria-label="Add affirmation"
-          title="Add affirmation"
-        >
-          <span style={{ marginRight: "6px" }}>+</span> Add Affirmation
-        </button>
+        />
       </div>
 
       <ul className="affirmations-panel__list">

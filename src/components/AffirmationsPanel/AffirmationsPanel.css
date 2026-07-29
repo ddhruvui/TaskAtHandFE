@@ -10,18 +10,6 @@
   margin-bottom: 24px;
 }
 
-/* Double class beats the 26px square base style in App.css regardless of
-   stylesheet order (App.css is bundled after component CSS) */
-.readme-heading__add-btn.affirmations-panel__add-btn {
-  width: auto;
-  height: auto;
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  font-family: inherit;
-}
-
 /* ── Affirmation list ── */
 .affirmations-panel__list {
   list-style: none;

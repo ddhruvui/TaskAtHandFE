@@ -1,31 +1,17 @@
-.calls-panel {
+.lifeevents-panel {
   display: flex;
   flex-direction: column;
 }
 
 /* ── Toolbar ── */
-.calls-panel__toolbar {
+.lifeevents-panel__toolbar {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 24px;
 }
 
-/* ── Frequency sections ── */
-.calls-panel__section {
-  margin-bottom: 24px;
-}
-
-.calls-panel__section-title {
-  margin: 0 0 8px;
-  padding-bottom: 6px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--rm-text, #1f2328);
-  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
-}
-
-/* ── Call list ── */
-.calls-panel__list {
+/* ── Life event list ── */
+.lifeevents-panel__list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -33,7 +19,7 @@
   flex-direction: column;
 }
 
-.calls-panel__row {
+.lifeevents-panel__row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -41,16 +27,16 @@
   border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
 }
 
-.calls-panel__row:last-child {
+.lifeevents-panel__row:last-child {
   border-bottom: none;
 }
 
-.calls-panel__row--done {
+.lifeevents-panel__row--done {
   opacity: 0.6;
 }
 
-/* ── Called checkbox (mirrors the task-card checkbox) ── */
-.calls-panel__checkbox {
+/* ── Done checkbox (mirrors the task-card checkbox) ── */
+.lifeevents-panel__checkbox {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
@@ -66,16 +52,16 @@
     border-color 0.15s;
 }
 
-.calls-panel__checkbox:hover {
+.lifeevents-panel__checkbox:hover {
   border-color: #2da44e;
 }
 
-.calls-panel__checkbox--checked {
+.lifeevents-panel__checkbox--checked {
   background: #2da44e;
   border-color: #2da44e;
 }
 
-.calls-panel__check-icon {
+.lifeevents-panel__check-icon {
   width: 10px;
   height: 10px;
   fill: #fff;
@@ -83,29 +69,46 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .calls-panel__checkbox:hover {
+  .lifeevents-panel__checkbox:hover {
     border-color: #3fb950;
   }
 
-  .calls-panel__checkbox--checked {
+  .lifeevents-panel__checkbox--checked {
     background: #3fb950;
     border-color: #3fb950;
   }
 }
 
-/* ── Name (strikethrough when called, like a done task) ── */
-.calls-panel__name {
+/* ── Name (strikethrough when done, like a done task) ── */
+.lifeevents-panel__name {
   font-size: 15px;
   color: var(--rm-text, #1f2328);
 }
 
-.calls-panel__name--done {
+.lifeevents-panel__name--done {
   text-decoration: line-through;
   color: var(--rm-text-muted, #656d76);
 }
 
+/* ── Annual date badge (matches the recurring-ECD look of task cards) ── */
+.lifeevents-panel__date {
+  font-size: 13px;
+  color: var(--rm-text-muted, #656d76);
+  white-space: nowrap;
+}
+
+/* ── "in todo" hint while a linked task exists ── */
+.lifeevents-panel__intodo {
+  font-size: 12px;
+  padding: 1px 8px;
+  border: 1px solid var(--rm-border-muted, #d0d7de);
+  border-radius: 10px;
+  color: var(--rm-text-muted, #656d76);
+  white-space: nowrap;
+}
+
 /* ── Row action buttons ── */
-.calls-panel__actions {
+.lifeevents-panel__actions {
   margin-left: auto;
   display: flex;
   gap: 6px;

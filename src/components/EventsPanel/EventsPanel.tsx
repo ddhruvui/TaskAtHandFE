@@ -5,6 +5,7 @@ import * as headersApi from "../../api/headers";
 import * as tasksApi from "../../api/tasks";
 import { EventModal } from "../EventModal";
 import { ScheduleEventModal } from "../ScheduleEventModal";
+import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
 import { formatDateKey } from "../../utils/ecd";
 import "./EventsPanel.css";
@@ -137,14 +138,11 @@ export default function EventsPanel({ onTasksAdded }: EventsPanelProps) {
       )}
 
       <div className="events-panel__toolbar">
-        <button
-          className="readme-heading__add-btn events-panel__add-event-btn"
+        <AddButton
+          label="Add Event"
+          ariaLabel="Add event"
           onClick={() => setEventModalState({ mode: "add" })}
-          aria-label="Add event"
-          title="Add event"
-        >
-          <span style={{ marginRight: "6px" }}>+</span> Add Event
-        </button>
+        />
       </div>
 
       {events.map((event) => (

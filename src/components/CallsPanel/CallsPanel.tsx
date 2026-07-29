@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { Call, CallFrequency } from "../../types";
 import * as callsApi from "../../api/calls";
 import { CallModal } from "../CallModal";
+import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
 import "./CallsPanel.css";
 
@@ -112,14 +113,11 @@ export default function CallsPanel() {
       {error && <p className="empty-message">Action failed: {error}</p>}
 
       <div className="calls-panel__toolbar">
-        <button
-          className="readme-heading__add-btn calls-panel__add-btn"
+        <AddButton
+          label="Add Call"
+          ariaLabel="Add call"
           onClick={() => setModalState({ mode: "add" })}
-          aria-label="Add call"
-          title="Add call"
-        >
-          <span style={{ marginRight: "6px" }}>+</span> Add Call
-        </button>
+        />
       </div>
 
       {calls.length === 0 ? (

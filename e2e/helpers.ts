@@ -105,6 +105,40 @@ export async function createEvent(name: string, tasks: string[]) {
 }
 
 /**
+ * Clean all life events from the database
+ */
+export async function cleanLifeEvents() {
+  const lifeEvents = await fetch(`${API_BASE}/lifeevents`).then((r) =>
+    r.json(),
+  );
+  for (const lifeEvent of lifeEvents) {
+    await fetch(`${API_BASE}/lifeevents/${lifeEvent._id}`, {
+      method: "DELETE",
+    });
+  }
+}
+
+/**
+ * Create a life event via API (`date` is a "D/M" string, e.g. "7/3")
+ */
+export async function createLifeEvent(name: string, date: string) {
+  const res = await fetch(`${API_BASE}/lifeevents`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, date }),
+  });
+  return res.json();
+}
+
+/**
+ * Get all life events from API
+ */
+export async function getLifeEvents() {
+  const res = await fetch(`${API_BASE}/lifeevents`);
+  return res.json();
+}
+
+/**
  * Clean all goals from the database
  */
 export async function cleanGoals() {

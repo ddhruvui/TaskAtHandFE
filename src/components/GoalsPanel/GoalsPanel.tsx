@@ -6,6 +6,7 @@ import * as tasksApi from "../../api/tasks";
 import { ONE_STEP_HEADER } from "../../utils/goalSync";
 import { GoalModal } from "../GoalModal";
 import { AddStepModal } from "../AddStepModal";
+import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
 // Step rows reuse the todo's row styling (.task-card*) so the two lists stay
 // visually identical from one source. Imported explicitly rather than relying
@@ -318,14 +319,11 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
       )}
 
       <div className="goals-panel__toolbar">
-        <button
-          className="readme-heading__add-btn goals-panel__add-goal-btn"
+        <AddButton
+          label="Add Goal"
+          ariaLabel="Add goal"
           onClick={() => setAddGoalOpen(true)}
-          aria-label="Add goal"
-          title="Add goal"
-        >
-          <span style={{ marginRight: "6px" }}>+</span> Add Goal
-        </button>
+        />
       </div>
 
       {goals.map((goal, idx) => {

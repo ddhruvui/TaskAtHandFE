@@ -5,6 +5,7 @@ import * as headersApi from "../../api/headers";
 import * as tasksApi from "../../api/tasks";
 import { ProjectModal } from "../ProjectModal";
 import { ProjectTaskModal } from "../ProjectTaskModal";
+import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
 // Task rows reuse the todo's row styling (.task-card*) so the two lists stay
 // visually identical from one source. Imported explicitly rather than relying
@@ -408,14 +409,11 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
       {error && <p className="empty-message">Action failed: {error}</p>}
 
       <div className="projects-panel__toolbar">
-        <button
-          className="readme-heading__add-btn projects-panel__add-project-btn"
+        <AddButton
+          label="Add Project"
+          ariaLabel="Add project"
           onClick={() => setProjectModalState({ mode: "add" })}
-          aria-label="Add project"
-          title="Add project"
-        >
-          <span style={{ marginRight: "6px" }}>+</span> Add Project
-        </button>
+        />
       </div>
 
       {projects.map((project, idx) => {
