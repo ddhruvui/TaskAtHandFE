@@ -41,7 +41,7 @@ These tests verify creating, editing, reordering, completing and deleting life e
 #### Test: "should create a life event via UI"
 
 - **Description**: Verifies a user can create a life event with the month/day pickers
-- **Steps**: Open the Life Events view, click "Add Life Event", enter "Wife's birthday", pick March and 7, submit
+- **Steps**: Open the Life Events view, click the toolbar "+" ("Add life event"), enter "Wife's birthday", pick March and 7, submit
 - **Expected Output**: A row appears with the name and the "↻ 7 Mar" date badge; the API stores `date: "7/3"`, `done: false`, `todoTaskId: null`
 
 #### Test: "should disable Add until a name is entered"

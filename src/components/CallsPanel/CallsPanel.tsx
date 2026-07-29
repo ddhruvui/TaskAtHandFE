@@ -114,7 +114,6 @@ export default function CallsPanel() {
 
       <div className="calls-panel__toolbar">
         <AddButton
-          label="Add Call"
           ariaLabel="Add call"
           onClick={() => setModalState({ mode: "add" })}
         />

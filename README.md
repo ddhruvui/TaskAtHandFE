@@ -13,6 +13,9 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   dated task (editing it to a later date) offers an optional reason field — a
   reason-less postpone is treated as procrastination, a valid reason as a
   legitimate deferral by the AI coach
+- **Adding things** — every view's add action is an icon-only **"+"** button in
+  the right-aligned toolbar at the top of that view (hover or a screen reader
+  gives the full name, e.g. "Add header", "Add project")
 - **View modes** (toolbar toggles):
   - **By Date** — undone tasks grouped by calendar date: today first, then
     past dates, then future dates, with thick dividers between the present,
@@ -137,7 +140,7 @@ src/
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
-│   ├── AddButton/             # Shared "+ Add X" toolbar button (all views)
+│   ├── AddButton/             # Shared icon-only "+" toolbar button (all views)
 │   ├── DatePicker/            # EcdCalendar — shared ECD date/recurrence picker
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
 │   ├── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view

@@ -319,11 +319,7 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
       )}
 
       <div className="goals-panel__toolbar">
-        <AddButton
-          label="Add Goal"
-          ariaLabel="Add goal"
-          onClick={() => setAddGoalOpen(true)}
-        />
+        <AddButton ariaLabel="Add goal" onClick={() => setAddGoalOpen(true)} />
       </div>
 
       {goals.map((goal, idx) => {

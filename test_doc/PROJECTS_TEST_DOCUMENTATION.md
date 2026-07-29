@@ -41,7 +41,7 @@ These tests verify project creation, priority ordering and deletion.
 #### Test: "should create a project via UI"
 
 - **Description**: Verifies a user can create a project using the interface
-- **Steps**: Open the Projects view, click "Add Project", enter "Automated Stock Market", submit
+- **Steps**: Open the Projects view, click the toolbar "+" ("Add project"), enter "Automated Stock Market", submit
 - **Expected Output**: A new project section titled "Automated Stock Market" appears with the "No tasks yet…" hint
 
 #### Test: "should reorder projects with move up/down"

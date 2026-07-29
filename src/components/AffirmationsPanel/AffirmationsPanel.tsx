@@ -57,9 +57,7 @@ export default function AffirmationsPanel() {
     if (!deleteTarget) return;
     try {
       await affirmationsApi.remove(deleteTarget._id);
-      setAffirmations((prev) =>
-        prev.filter((a) => a._id !== deleteTarget._id),
-      );
+      setAffirmations((prev) => prev.filter((a) => a._id !== deleteTarget._id));
       setDeleteTarget(null);
       setError(null);
     } catch (err) {
@@ -83,7 +81,6 @@ export default function AffirmationsPanel() {
 
       <div className="affirmations-panel__toolbar">
         <AddButton
-          label="Add Affirmation"
           ariaLabel="Add affirmation"
           onClick={() => setModalState({ mode: "add" })}
         />
@@ -92,9 +89,7 @@ export default function AffirmationsPanel() {
       <ul className="affirmations-panel__list">
         {affirmations.map((affirmation) => (
           <li key={affirmation._id} className="affirmations-panel__row">
-            <span className="affirmations-panel__name">
-              {affirmation.name}
-            </span>
+            <span className="affirmations-panel__name">{affirmation.name}</span>
             <div className="affirmations-panel__actions">
               <button
                 className="readme-heading__add-btn"
@@ -140,8 +135,8 @@ export default function AffirmationsPanel() {
 
       {affirmations.length === 0 && (
         <p className="empty-message">
-          No affirmations yet — add one! An affirmation is a short line you
-          read daily (e.g. "Thank you blessing").
+          No affirmations yet — add one! An affirmation is a short line you read
+          daily (e.g. "Thank you blessing").
         </p>
       )}
 

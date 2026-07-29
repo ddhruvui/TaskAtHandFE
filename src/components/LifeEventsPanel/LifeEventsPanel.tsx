@@ -160,7 +160,6 @@ export default function LifeEventsPanel({
 
       <div className="lifeevents-panel__toolbar">
         <AddButton
-          label="Add Life Event"
           ariaLabel="Add life event"
           onClick={() => setModalState({ mode: "add" })}
         />

@@ -1,16 +1,10 @@
-/* Widens the 26px square readme-heading__add-btn base (App.css) into the
-   shared "+ Add X" toolbar button. Double class beats the base style
-   regardless of stylesheet order (App.css is bundled after component CSS) */
+/* Scales the 26px square readme-heading__add-btn base (App.css) up into the
+   shared toolbar "+" button. Double class beats the base style regardless of
+   stylesheet order (App.css is bundled after component CSS) */
 .readme-heading__add-btn.add-button {
-  width: auto;
-  height: auto;
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  line-height: 1;
   font-family: inherit;
-}
-
-.add-button__plus {
-  margin-right: 6px;
 }

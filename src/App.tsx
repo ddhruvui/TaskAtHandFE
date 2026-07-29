@@ -521,7 +521,9 @@ function App() {
           <button
             className={`readme-heading__add-btn lifeevents-toggle-btn${lifeEventsMode ? " lifeevents-toggle-btn--active" : ""}`}
             onClick={() => togglePanelMode(setLifeEventsMode)}
-            aria-label={lifeEventsMode ? "Hide life events" : "Show life events"}
+            aria-label={
+              lifeEventsMode ? "Hide life events" : "Show life events"
+            }
             aria-pressed={lifeEventsMode}
             title={
               lifeEventsMode
@@ -653,7 +655,6 @@ function App() {
               }}
             >
               <AddButton
-                label="Add Header"
                 ariaLabel="Add header"
                 onClick={() => setHeaderModalState({ mode: "add" })}
               />
@@ -835,11 +836,10 @@ function App() {
           !projectsMode &&
           !affirmationsMode &&
           !callsMode &&
-          !byDateMode && (
+          !byDateMode &&
           headers.length === 0 && (
             <p className="empty-message">No headers yet — add one!</p>
-          )
-        )}
+          )}
 
         {!insightsMode &&
           !eventsMode &&
@@ -849,40 +849,40 @@ function App() {
           !affirmationsMode &&
           !callsMode &&
           byDateMode && (
-          <>
-            {byDateSections.map((section, sectionIdx) => (
-              <Fragment key={section.key}>
-                {sectionIdx > 0 && <hr className="bydate-divider" />}
-                {section.groups.map((group) => (
-                  <section key={group.key} className="readme-section">
-                    <div className="readme-heading">
-                      <h2 className="readme-heading__text">{group.label}</h2>
-                    </div>
-                    <div className="readme-tasks">
-                      {group.tasks.map((task) => (
-                        <TaskCard
-                          key={task._id}
-                          task={task}
-                          isFirst
-                          isLast
-                          goalManaged={oneStepHeaderIds.has(task.headerId)}
-                          onToggleDone={handleToggleDone(task.headerId)}
-                          onEdit={handleEditTask(task.headerId)}
-                          onMoveUp={handleMoveTaskUp(task.headerId)}
-                          onMoveDown={handleMoveTaskDown(task.headerId)}
-                          onDelete={handleDeleteTask(task.headerId)}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </Fragment>
-            ))}
-            {byDateSections.length === 0 && (
-              <p className="empty-message">No dated tasks to show.</p>
-            )}
-          </>
-        )}
+            <>
+              {byDateSections.map((section, sectionIdx) => (
+                <Fragment key={section.key}>
+                  {sectionIdx > 0 && <hr className="bydate-divider" />}
+                  {section.groups.map((group) => (
+                    <section key={group.key} className="readme-section">
+                      <div className="readme-heading">
+                        <h2 className="readme-heading__text">{group.label}</h2>
+                      </div>
+                      <div className="readme-tasks">
+                        {group.tasks.map((task) => (
+                          <TaskCard
+                            key={task._id}
+                            task={task}
+                            isFirst
+                            isLast
+                            goalManaged={oneStepHeaderIds.has(task.headerId)}
+                            onToggleDone={handleToggleDone(task.headerId)}
+                            onEdit={handleEditTask(task.headerId)}
+                            onMoveUp={handleMoveTaskUp(task.headerId)}
+                            onMoveDown={handleMoveTaskDown(task.headerId)}
+                            onDelete={handleDeleteTask(task.headerId)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </Fragment>
+              ))}
+              {byDateSections.length === 0 && (
+                <p className="empty-message">No dated tasks to show.</p>
+              )}
+            </>
+          )}
       </div>
 
       {/* Modals */}
