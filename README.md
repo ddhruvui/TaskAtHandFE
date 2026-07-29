@@ -24,6 +24,12 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   - **Projects** — long term projects built step by step (see below)
   - **Affirmations** — short lines to read daily (see below)
   - **Calls** — people to call biweekly or monthly (see below)
+
+  The panel toggles (everything except By Date) are mutually exclusive:
+  clicking one opens that panel and deactivates whichever was open, and
+  clicking the active one returns to the todo list. By Date is a todo-list
+  filter, stays active while a panel is open, and applies again when the
+  panel closes.
 - **Events view** — reusable task bundles (e.g. "Burger Night" with its
   shopping list). "Add to todo" opens a date picker plus a checklist of the
   event's tasks (all selected by default, tap to unmark); confirming adds the

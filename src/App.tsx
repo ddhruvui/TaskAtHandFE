@@ -52,6 +52,25 @@ function App() {
   const [affirmationsMode, setAffirmationsMode] = useState(false);
   const [callsMode, setCallsMode] = useState(false);
 
+  // Panel views are mutually exclusive — activating one deactivates the rest,
+  // so the clicked tab is always the one shown (byDateMode is a todo-list
+  // filter, not a panel, and stays independent).
+  const panelModeSetters = [
+    setInsightsMode,
+    setEventsMode,
+    setLifeEventsMode,
+    setGoalsMode,
+    setProjectsMode,
+    setAffirmationsMode,
+    setCallsMode,
+  ];
+  const togglePanelMode = (setter: (typeof panelModeSetters)[number]) => {
+    panelModeSetters.forEach((s) => {
+      if (s !== setter) s(false);
+    });
+    setter((prev) => !prev);
+  };
+
   // Modal states
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "header" | "task";
@@ -455,7 +474,7 @@ function App() {
           </button>
           <button
             className={`readme-heading__add-btn insights-toggle-btn${insightsMode ? " insights-toggle-btn--active" : ""}`}
-            onClick={() => setInsightsMode((prev) => !prev)}
+            onClick={() => togglePanelMode(setInsightsMode)}
             aria-label={insightsMode ? "Hide insights" : "Show insights"}
             aria-pressed={insightsMode}
             title={
@@ -478,7 +497,7 @@ function App() {
           </button>
           <button
             className={`readme-heading__add-btn events-toggle-btn${eventsMode ? " events-toggle-btn--active" : ""}`}
-            onClick={() => setEventsMode((prev) => !prev)}
+            onClick={() => togglePanelMode(setEventsMode)}
             aria-label={eventsMode ? "Hide events" : "Show events"}
             aria-pressed={eventsMode}
             title={
@@ -501,7 +520,7 @@ function App() {
           </button>
           <button
             className={`readme-heading__add-btn lifeevents-toggle-btn${lifeEventsMode ? " lifeevents-toggle-btn--active" : ""}`}
-            onClick={() => setLifeEventsMode((prev) => !prev)}
+            onClick={() => togglePanelMode(setLifeEventsMode)}
             aria-label={lifeEventsMode ? "Hide life events" : "Show life events"}
             aria-pressed={lifeEventsMode}
             title={
@@ -524,7 +543,7 @@ function App() {
           </button>
           <button
             className={`readme-heading__add-btn goals-toggle-btn${goalsMode ? " goals-toggle-btn--active" : ""}`}
-            onClick={() => setGoalsMode((prev) => !prev)}
+            onClick={() => togglePanelMode(setGoalsMode)}
             aria-label={goalsMode ? "Hide goals" : "Show goals"}
             aria-pressed={goalsMode}
             title={
@@ -547,7 +566,7 @@ function App() {
           </button>
           <button
             className={`readme-heading__add-btn projects-toggle-btn${projectsMode ? " projects-toggle-btn--active" : ""}`}
-            onClick={() => setProjectsMode((prev) => !prev)}
+            onClick={() => togglePanelMode(setProjectsMode)}
             aria-label={projectsMode ? "Hide projects" : "Show projects"}
             aria-pressed={projectsMode}
             title={
@@ -570,7 +589,7 @@ function App() {
           </button>
           <button
             className={`readme-heading__add-btn affirmations-toggle-btn${affirmationsMode ? " affirmations-toggle-btn--active" : ""}`}
-            onClick={() => setAffirmationsMode((prev) => !prev)}
+            onClick={() => togglePanelMode(setAffirmationsMode)}
             aria-label={
               affirmationsMode ? "Hide affirmations" : "Show affirmations"
             }
@@ -595,7 +614,7 @@ function App() {
           </button>
           <button
             className={`readme-heading__add-btn calls-toggle-btn${callsMode ? " calls-toggle-btn--active" : ""}`}
-            onClick={() => setCallsMode((prev) => !prev)}
+            onClick={() => togglePanelMode(setCallsMode)}
             aria-label={callsMode ? "Hide calls" : "Show calls"}
             aria-pressed={callsMode}
             title={

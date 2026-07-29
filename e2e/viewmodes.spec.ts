@@ -1,5 +1,5 @@
 /**
- * E2E tests for the By Date view mode
+ * E2E tests for the By Date view mode and panel-toggle exclusivity
  */
 
 import { test, expect } from "@playwright/test";
@@ -204,6 +204,52 @@ test.describe("View Modes - By Date", () => {
   }) => {
     await page.locator(".bydate-toggle-btn").click();
 
+    await expect(page.getByText("No dated tasks to show.")).toBeVisible();
+  });
+});
+
+test.describe("View Modes - Panel switching", () => {
+  test("should open the clicked panel and deactivate the previous one", async ({
+    page,
+  }) => {
+    const eventsBtn = page.locator(".events-toggle-btn");
+    const lifeEventsBtn = page.locator(".lifeevents-toggle-btn");
+
+    await eventsBtn.click();
+    await expect(page.locator(".events-panel")).toBeVisible();
+
+    // Events renders before Life Events, so without exclusivity the Events
+    // panel would keep showing even though Life Events reads as active.
+    await lifeEventsBtn.click();
+    await expect(page.locator(".lifeevents-panel")).toBeVisible();
+    await expect(page.locator(".events-panel")).not.toBeVisible();
+    await expect(lifeEventsBtn).toHaveAttribute("aria-pressed", "true");
+    await expect(lifeEventsBtn).toHaveClass(/lifeevents-toggle-btn--active/);
+    await expect(eventsBtn).toHaveAttribute("aria-pressed", "false");
+
+    // The active class must come with real styling — the Life Events toggle
+    // once had no --active CSS rule, so it never visually highlighted.
+    const background = (btn: typeof lifeEventsBtn) =>
+      btn.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(await background(lifeEventsBtn)).not.toBe(await background(eventsBtn));
+  });
+
+  test("should keep by date mode active across panel toggling", async ({
+    page,
+  }) => {
+    const byDateBtn = page.locator(".bydate-toggle-btn");
+    const lifeEventsBtn = page.locator(".lifeevents-toggle-btn");
+
+    await byDateBtn.click();
+    await expect(byDateBtn).toHaveAttribute("aria-pressed", "true");
+
+    await lifeEventsBtn.click();
+    await expect(page.locator(".lifeevents-panel")).toBeVisible();
+    await expect(byDateBtn).toHaveAttribute("aria-pressed", "true");
+
+    await lifeEventsBtn.click();
+    await expect(page.locator(".lifeevents-panel")).not.toBeVisible();
+    await expect(byDateBtn).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText("No dated tasks to show.")).toBeVisible();
   });
 });

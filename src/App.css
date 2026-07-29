@@ -163,6 +163,18 @@
   border-color: #6e40c9 !important;
 }
 
+/* ─── Life Events toggle button active state ─── */
+.lifeevents-toggle-btn--active {
+  background: #9a6700 !important;
+  border-color: #9a6700 !important;
+  color: #ffffff !important;
+}
+
+.lifeevents-toggle-btn--active:hover {
+  background: #7d5400 !important;
+  border-color: #7d5400 !important;
+}
+
 /* ─── Goals toggle button active state ─── */
 .goals-toggle-btn--active {
   background: #bc4c00 !important;
@@ -254,6 +266,17 @@
   .goals-toggle-btn--active:hover {
     background: #e8824a !important;
     border-color: #e8824a !important;
+  }
+
+  .lifeevents-toggle-btn--active {
+    background: #bb8009 !important;
+    border-color: #bb8009 !important;
+    color: #ffffff !important;
+  }
+
+  .lifeevents-toggle-btn--active:hover {
+    background: #d29922 !important;
+    border-color: #d29922 !important;
   }
 
   .insights-toggle-btn--active {
