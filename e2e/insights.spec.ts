@@ -15,7 +15,13 @@ const emptyStats = {
   eventCount: 0,
   habits: [],
   recurringTasks: [],
-  oneTimeTasks: { completedCount: 0, avgSlippageDays: null, recent: [] },
+  oneTimeTasks: {
+    completedCount: 0,
+    onTimeCount: 0,
+    lateCount: 0,
+    avgSlippageDays: null,
+    recent: [],
+  },
   reschedules: [],
   byHeader: {},
   calls: [],
@@ -42,7 +48,15 @@ const richStats = {
     },
   ],
   recurringTasks: [],
-  oneTimeTasks: { completedCount: 5, avgSlippageDays: 1.5, recent: [] },
+  // 3 of the 5 landed on or before their planned date; the 2 late ones drag
+  // the (lateness-only) average to 1.5 days
+  oneTimeTasks: {
+    completedCount: 5,
+    onTimeCount: 3,
+    lateCount: 2,
+    avgSlippageDays: 1.5,
+    recent: [],
+  },
   reschedules: [
     { taskName: "File taxes", headerName: "Admin", total: 3, pushedLater: 2 },
   ],
@@ -210,6 +224,7 @@ test.describe("Insights - Stats display", () => {
     await expect(taskStats).toContainText(
       "5 one-time tasks completed in the last 28 days",
     );
+    await expect(taskStats).toContainText("3 on or before the planned date");
     await expect(taskStats).toContainText(
       "average slip of 1.5 days past the planned date",
     );
@@ -217,6 +232,30 @@ test.describe("Insights - Stats display", () => {
     await expect(taskStats).toContainText(
       "File taxes — moved 3× (2× pushed later)",
     );
+  });
+
+  test("should credit on-time work and drop the slip line when nothing ran late", async ({
+    page,
+  }) => {
+    await mockInsights(page, {
+      stats: {
+        ...richStats,
+        oneTimeTasks: {
+          completedCount: 4,
+          onTimeCount: 4,
+          lateCount: 0,
+          avgSlippageDays: 0,
+          recent: [],
+        },
+      },
+      latest: null,
+    });
+    await openInsightsView(page);
+
+    const taskStats = page.locator(".insights-task-stats");
+    await expect(taskStats).toContainText("4 on or before the planned date");
+    // Everything landed on or ahead of schedule — no slip to report
+    await expect(taskStats).not.toContainText("average slip");
   });
 });
 

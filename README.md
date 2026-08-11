@@ -115,12 +115,15 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
 - **Insights view** — powered by the backend's archive and insights endpoints:
   - Habit cards: completion %, current/best streak, and a hit/miss dot row of
     recent scheduled days (habits = tasks scheduled by day of week)
-  - Task stats: one-time tasks completed, average slip past the planned date,
-    most-rescheduled tasks (procrastination signal)
+  - Task stats: one-time tasks completed, how many landed on or before their
+    planned date (finishing early or on the day counts as on time), the average
+    slip past the planned date when some ran late, and the most-rescheduled
+    tasks (procrastination signal)
   - Coach: the latest AI report (summary, habits on track/slipping, task
     insights, procrastination flags, calls to make, suggestions) with a
     "Generate now" button — the "Calls to make" section appears only for
-    reports generated after the Calls feature
+    reports generated after the Calls feature. The backend generates a report
+    on its own **once a week, on Friday**; "Generate now" is not limited by that
 
 ## Project Structure
 

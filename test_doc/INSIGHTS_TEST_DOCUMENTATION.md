@@ -62,7 +62,7 @@ These tests verify behavior when the archive has no data yet.
 - **Steps**: Mock empty stats; open the Insights view; inspect the "Generate now" button
 - **Expected Output**: The button is disabled with the title "No archive data to analyze yet"
 
-### 3. Insights - Stats display (2 tests)
+### 3. Insights - Stats display (3 tests)
 
 These tests verify the exact-stats sections render the mocked archive data.
 
@@ -74,9 +74,15 @@ These tests verify the exact-stats sections render the mocked archive data.
 
 #### Test: "should render task stats and the most rescheduled list"
 
-- **Description**: Checks the one-time task rollup and the most-rescheduled list
-- **Steps**: Mock rich stats (5 completed one-time tasks, avg slip 1.5 days, "File taxes" moved 3× with 2 pushed later); open the Insights view
-- **Expected Output**: The task stats show "5 one-time tasks completed in the last 28 days", "average slip of 1.5 days past the planned date", "Most rescheduled:", and "File taxes — moved 3× (2× pushed later)"
+- **Description**: Checks the one-time task rollup (including the on-time count) and the most-rescheduled list
+- **Steps**: Mock rich stats (5 completed one-time tasks, 3 of them on or before the planned date, avg slip 1.5 days, "File taxes" moved 3× with 2 pushed later); open the Insights view
+- **Expected Output**: The task stats show "5 one-time tasks completed in the last 28 days", "3 on or before the planned date", "average slip of 1.5 days past the planned date", "Most rescheduled:", and "File taxes — moved 3× (2× pushed later)"
+
+#### Test: "should credit on-time work and drop the slip line when nothing ran late"
+
+- **Description**: Verifies that finishing on or before the planned date reads as a win — with no late tasks, the panel reports the on-time count and shows no slip figure at all
+- **Steps**: Mock stats where all 4 completed one-time tasks are on time (`onTimeCount: 4`, `lateCount: 0`, `avgSlippageDays: 0`); open the Insights view
+- **Expected Output**: The task stats show "4 on or before the planned date" and do **not** contain "average slip"
 
 ### 4. Insights - Coach report (4 tests)
 
@@ -114,6 +120,6 @@ These tests verify the AI report rendering, including the calls-to-make section 
 | ------------------------- | ------ |
 | Insights - Panel          | 4      |
 | Insights - Empty states   | 2      |
-| Insights - Stats display  | 2      |
+| Insights - Stats display  | 3      |
 | Insights - Coach report   | 4      |
-| **Total**                 | **12** |
+| **Total**                 | **13** |

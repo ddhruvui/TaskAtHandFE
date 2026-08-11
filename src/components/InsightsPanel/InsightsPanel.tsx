@@ -115,14 +115,25 @@ export function InsightsPanel() {
             <p>
               <strong>{stats.oneTimeTasks.completedCount}</strong> one-time
               tasks completed in the last {stats.periodDays} days
-              {stats.oneTimeTasks.avgSlippageDays !== null && (
+              {/* On or before the planned date is a win — shown first, and the
+                  slip line only appears when something was actually late.
+                  Older backends don't send the counts, hence the guard. */}
+              {stats.oneTimeTasks.onTimeCount !== undefined && (
                 <>
                   {" "}
-                  · average slip of{" "}
-                  <strong>{stats.oneTimeTasks.avgSlippageDays} days</strong>{" "}
-                  past the planned date
+                  · <strong>{stats.oneTimeTasks.onTimeCount}</strong> on or
+                  before the planned date
                 </>
               )}
+              {stats.oneTimeTasks.avgSlippageDays !== null &&
+                stats.oneTimeTasks.avgSlippageDays > 0 && (
+                  <>
+                    {" "}
+                    · average slip of{" "}
+                    <strong>{stats.oneTimeTasks.avgSlippageDays} days</strong>{" "}
+                    past the planned date
+                  </>
+                )}
             </p>
             {stats.reschedules.length > 0 && (
               <>
@@ -196,7 +207,7 @@ export function InsightsPanel() {
           </div>
         ) : (
           <p className="empty-message">
-            No AI report yet — one is generated automatically each night, or
+            No AI report yet — one is generated automatically every Friday, or
             click "Generate now".
           </p>
         )}

@@ -165,13 +165,19 @@ export interface InsightStats {
   }[];
   oneTimeTasks: {
     completedCount: number;
+    // Finished on or before the planned date vs. after it. Optional: reports
+    // stored before the on-time split don't carry them.
+    onTimeCount?: number;
+    lateCount?: number;
+    // Average days *late* — early and on-the-day completions count as 0
     avgSlippageDays: number | null;
     recent: {
       taskName: string;
       headerName: string | null;
       plannedFor: string | null;
       doneAt: string | null;
-      slippageDays: number | null;
+      slippageDays: number | null; // negative = finished early
+      onTime?: boolean | null;
     }[];
   };
   reschedules: {
