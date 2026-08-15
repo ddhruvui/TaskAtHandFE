@@ -1200,7 +1200,7 @@ test.describe("Tasks - Goal-Managed Tasks", () => {
     await expect(page.getByText("↻ Every day, for life")).toBeVisible();
     await expect(
       page.getByText(
-        "Daily habit managed by its goal — name and schedule are locked.",
+        "Habit managed by its goal — name and schedule are locked. Change its days in the Goals view.",
       ),
     ).toBeVisible();
   });

@@ -13,7 +13,11 @@ import {
   deleteHeaderViaUI,
   waitForPageLoad,
   getHeaders,
+  getTask,
+  getTasks,
   getTaskNamesInHeader,
+  toggleTaskDone,
+  runCron,
 } from "./helpers";
 
 const ONE_STEP_HEADER = "One Step At A Time";
@@ -38,6 +42,56 @@ function stepStatus(page: Page, stepName: string) {
 
 const UNDER_PROGRESS = "[ ↻ Daily ]";
 const NOT_STARTED = "[ Not started ]";
+
+const ALL_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** The day picker that Start and "Change days" both open. */
+function daysModal(page: Page) {
+  return page.locator(".add-modal");
+}
+
+/**
+ * Pick exactly `days` in an open day picker. Starts from the "Every day"
+ * preset so the selection is absolute rather than relative to whatever the
+ * step already had.
+ */
+async function pickDays(page: Page, days: string[]) {
+  const modal = daysModal(page);
+  await modal.getByRole("button", { name: "Every day" }).click();
+  for (const day of ALL_DAYS) {
+    if (!days.includes(day)) {
+      await modal.getByRole("button", { name: `Toggle ${day}` }).click();
+    }
+  }
+}
+
+/**
+ * Start a step through the day picker its checkbox now opens. Omitting `days`
+ * confirms the default (all seven), which is what starting a step did
+ * implicitly before the days were selectable.
+ */
+async function startStep(page: Page, stepName: string, days?: string[]) {
+  await stepRow(page, stepName)
+    .getByRole("button", { name: `Start step ${stepName}` })
+    .click();
+  await expect(daysModal(page)).toBeVisible();
+  if (days) await pickDays(page, days);
+  await daysModal(page)
+    .getByRole("button", { name: "Start step", exact: true })
+    .click();
+  await expect(daysModal(page)).toBeHidden();
+}
+
+/** Reschedule an already-started step through the same picker. */
+async function changeStepDays(page: Page, stepName: string, days: string[]) {
+  await stepRow(page, stepName)
+    .getByRole("button", { name: `Change days for step ${stepName}` })
+    .click();
+  await expect(daysModal(page)).toBeVisible();
+  await pickDays(page, days);
+  await daysModal(page).getByRole("button", { name: "Save days" }).click();
+  await expect(daysModal(page)).toBeHidden();
+}
 
 test.beforeEach(async ({ page }) => {
   await cleanDatabase();
@@ -406,7 +460,7 @@ test.describe("Goals - Ordering", () => {
     ]);
     await openGoalsView(page);
 
-    await page.getByRole("button", { name: "Start step Walk 20 min" }).click();
+    await startStep(page, "Walk 20 min");
 
     const steps = page.locator(".goals-panel__step-name");
     await expect(steps).toHaveText([
@@ -503,9 +557,7 @@ test.describe("Goals - Delete step", () => {
     await createGoal("Improve Health", [{ name: "Wake up at 6" }]);
     await openGoalsView(page);
 
-    await stepRow(page, "Wake up at 6")
-      .getByRole("button", { name: "Start" })
-      .click();
+    await startStep(page, "Wake up at 6");
     await expect(stepStatus(page, "Wake up at 6")).toHaveText(UNDER_PROGRESS);
 
     await page
@@ -571,12 +623,12 @@ test.describe("Goals - One Step At A Time", () => {
     ]);
     await openGoalsView(page);
 
-    await stepRow(page, "Wake up at 6")
-      .getByRole("button", { name: "Start" })
-      .click();
+    await startStep(page, "Wake up at 6");
 
     await expect(
-      page.getByText(`Started "Wake up at 6" — under progress as a daily habit`),
+      page.getByText(
+        `Started "Wake up at 6" — under progress every Sun, Mon, Tue, Wed, Thu, Fri, Sat`,
+      ),
     ).toBeVisible();
     // Start puts the step straight under progress: checked box + Pause action
     await expect(stepStatus(page, "Wake up at 6")).toHaveText(UNDER_PROGRESS);
@@ -608,14 +660,10 @@ test.describe("Goals - One Step At A Time", () => {
     ]);
     await openGoalsView(page);
 
-    await stepRow(page, "Wake up at 6")
-      .getByRole("button", { name: "Start" })
-      .click();
+    await startStep(page, "Wake up at 6");
     await expect(stepStatus(page, "Wake up at 6")).toHaveText(UNDER_PROGRESS);
 
-    await stepRow(page, "Have 1 fruit a day")
-      .getByRole("button", { name: "Start" })
-      .click();
+    await startStep(page, "Have 1 fruit a day");
     await expect(stepStatus(page, "Have 1 fruit a day")).toHaveText(
       UNDER_PROGRESS,
     );
@@ -645,9 +693,7 @@ test.describe("Goals - One Step At A Time", () => {
     ]);
     await openGoalsView(page);
 
-    await stepRow(page, "Wake up at 6")
-      .getByRole("button", { name: "Start" })
-      .click();
+    await startStep(page, "Wake up at 6");
     await expect(page.getByText("1/2 under progress")).toBeVisible();
 
     // Delete the daily task from the todo view like any other task
@@ -672,13 +718,9 @@ test.describe("Goals - One Step At A Time", () => {
     ]);
     await openGoalsView(page);
 
-    await stepRow(page, "Wake up at 6")
-      .getByRole("button", { name: "Start" })
-      .click();
+    await startStep(page, "Wake up at 6");
     await expect(page.getByText("1/2 under progress")).toBeVisible();
-    await stepRow(page, "Have 1 fruit a day")
-      .getByRole("button", { name: "Start" })
-      .click();
+    await startStep(page, "Have 1 fruit a day");
     await expect(page.getByText("2/2 under progress")).toBeVisible();
 
     // Delete the whole header (and its daily tasks) from the todo view
@@ -738,9 +780,7 @@ test.describe("Goals - One Step At A Time", () => {
     await createGoal("Improve Health", [{ name: "Wake up at 6" }]);
     await openGoalsView(page);
 
-    await stepRow(page, "Wake up at 6")
-      .getByRole("button", { name: "Start" })
-      .click();
+    await startStep(page, "Wake up at 6");
     await expect(stepStatus(page, "Wake up at 6")).toHaveText(UNDER_PROGRESS);
     await expect(page.getByText("1/1 under progress")).toBeVisible();
 
@@ -758,5 +798,268 @@ test.describe("Goals - One Step At A Time", () => {
     await page.locator(".goals-toggle-btn").click();
     const names = await getTaskNamesInHeader(page, ONE_STEP_HEADER);
     expect(names).toEqual([]);
+  });
+});
+
+test.describe("Goals - Habit days", () => {
+  /** The ECD of the started step's task, straight from the API. */
+  async function oneStepTaskEcd(taskName: string) {
+    const headers = await getHeaders();
+    const header = headers.find(
+      (h: { name: string }) => h.name === ONE_STEP_HEADER,
+    );
+    if (!header) return null;
+    const tasks = await getTasks(header._id);
+    const task = tasks.find((t: { name: string }) => t.name === taskName);
+    return task ? task.ecd : null;
+  }
+
+  test("should start a step only on the days picked in the modal", async ({
+    page,
+  }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+
+    await startStep(page, "Gym", ["Mon", "Wed", "Fri"]);
+
+    // The badge lists the days instead of collapsing to "Daily"
+    await expect(stepStatus(page, "Gym")).toHaveText("[ ↻ Mon, Wed, Fri ]");
+    await expect(
+      page.getByText(`Started "Gym" — under progress every Mon, Wed, Fri`),
+    ).toBeVisible();
+
+    // ...and the habit's task carries exactly those days, in week order
+    await expect(async () => {
+      expect(await oneStepTaskEcd("Gym")).toEqual({
+        type: "day_of_week",
+        value: ["Mon", "Wed", "Fri"],
+      });
+    }).toPass({ timeout: 5000 });
+  });
+
+  test("should show the picked days on the habit's todo task too", async ({
+    page,
+  }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+    await startStep(page, "Gym", ["Sat", "Sun"]);
+
+    await page.locator(".goals-toggle-btn").click();
+    // Week order is Sunday-first, matching what the backend stores
+    await expect(getTask(page, "Gym").locator(".task-card__ecd")).toHaveText(
+      "[ ↻ Sun, Sat ]",
+    );
+  });
+
+  test("should default the picker to every day", async ({ page }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+
+    await stepRow(page, "Gym")
+      .getByRole("button", { name: "Start step Gym" })
+      .click();
+    await expect(
+      daysModal(page).getByText(
+        "Due every Sun, Mon, Tue, Wed, Thu, Fri, Sat",
+      ),
+    ).toBeVisible();
+    for (const day of ALL_DAYS) {
+      await expect(
+        daysModal(page).getByRole("button", { name: `Toggle ${day}` }),
+      ).toHaveAttribute("aria-pressed", "true");
+    }
+
+    await daysModal(page)
+      .getByRole("button", { name: "Start step", exact: true })
+      .click();
+    // The full week collapses back to the "Daily" badge
+    await expect(stepStatus(page, "Gym")).toHaveText(UNDER_PROGRESS);
+  });
+
+  test("should offer weekday and weekend presets", async ({ page }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+
+    await stepRow(page, "Gym")
+      .getByRole("button", { name: "Start step Gym" })
+      .click();
+    await daysModal(page).getByRole("button", { name: "Weekdays" }).click();
+    await daysModal(page)
+      .getByRole("button", { name: "Start step", exact: true })
+      .click();
+
+    await expect(stepStatus(page, "Gym")).toHaveText(
+      "[ ↻ Mon, Tue, Wed, Thu, Fri ]",
+    );
+  });
+
+  test("should not let a step start with no day selected", async ({ page }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+
+    await stepRow(page, "Gym")
+      .getByRole("button", { name: "Start step Gym" })
+      .click();
+    for (const day of ALL_DAYS) {
+      await daysModal(page)
+        .getByRole("button", { name: `Toggle ${day}` })
+        .click();
+    }
+
+    await expect(
+      daysModal(page).getByText("Pick at least one day"),
+    ).toBeVisible();
+    await expect(
+      daysModal(page).getByRole("button", { name: "Start step", exact: true }),
+    ).toBeDisabled();
+  });
+
+  test("should leave the step pending when the picker is cancelled", async ({
+    page,
+  }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+
+    await stepRow(page, "Gym")
+      .getByRole("button", { name: "Start step Gym" })
+      .click();
+    await daysModal(page).getByRole("button", { name: "Cancel" }).click();
+
+    await expect(daysModal(page)).toBeHidden();
+    await expect(stepStatus(page, "Gym")).toHaveText(NOT_STARTED);
+    await expect(page.getByText("0/1 under progress")).toBeVisible();
+    expect(await oneStepTaskEcd("Gym")).toBeNull();
+  });
+
+  test("should not offer a days control on a pending step", async ({
+    page,
+  }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+
+    await expect(
+      stepRow(page, "Gym").getByRole("button", {
+        name: "Change days for step Gym",
+      }),
+    ).toHaveCount(0);
+  });
+
+  test("should change a started step's days and rewrite its task ECD", async ({
+    page,
+  }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+    await startStep(page, "Gym", ["Mon", "Wed", "Fri"]);
+
+    await changeStepDays(page, "Gym", ["Tue", "Thu"]);
+
+    await expect(stepStatus(page, "Gym")).toHaveText("[ ↻ Tue, Thu ]");
+    await expect(
+      page.getByText(`"Gym" is now due every Tue, Thu`),
+    ).toBeVisible();
+    await expect(async () => {
+      expect(await oneStepTaskEcd("Gym")).toEqual({
+        type: "day_of_week",
+        value: ["Tue", "Thu"],
+      });
+    }).toPass({ timeout: 5000 });
+  });
+
+  test("should keep the chosen days after a reload", async ({ page }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+    await startStep(page, "Gym", ["Mon", "Wed", "Fri"]);
+
+    await page.reload();
+    await waitForPageLoad(page);
+    await openGoalsView(page);
+
+    await expect(stepStatus(page, "Gym")).toHaveText("[ ↻ Mon, Wed, Fri ]");
+  });
+
+  test("should restore the chosen days when a paused step is started again", async ({
+    page,
+  }) => {
+    await createGoal("Improve Health", [{ name: "Gym" }]);
+    await openGoalsView(page);
+    await startStep(page, "Gym", ["Mon", "Wed", "Fri"]);
+
+    await stepRow(page, "Gym").getByRole("button", { name: "Pause" }).click();
+    await expect(stepStatus(page, "Gym")).toHaveText(NOT_STARTED);
+
+    // Pausing keeps the schedule on the step, so the picker reopens on it
+    await stepRow(page, "Gym")
+      .getByRole("button", { name: "Start step Gym" })
+      .click();
+    await expect(
+      daysModal(page).getByText("Due every Mon, Wed, Fri"),
+    ).toBeVisible();
+    await daysModal(page)
+      .getByRole("button", { name: "Start step", exact: true })
+      .click();
+
+    await expect(stepStatus(page, "Gym")).toHaveText("[ ↻ Mon, Wed, Fri ]");
+  });
+});
+
+test.describe("Goals - Habit streak", () => {
+  /**
+   * Streaks come from the nightly archive, which only records a result for a
+   * task on the days its ECD covers — so these run the cron once to produce
+   * yesterday's outcome. Step names are unique per test because the archive
+   * is not wiped between tests and habits are matched by name.
+   */
+  test("should show a zero streak for a habit missed yesterday", async ({
+    page,
+  }) => {
+    await createGoal("Improve Health", [{ name: "Streak miss habit" }]);
+    await openGoalsView(page);
+    await startStep(page, "Streak miss habit");
+
+    // Never ticked off, so last night's run archives it as a miss
+    await runCron();
+    await page.reload();
+    await waitForPageLoad(page);
+    await openGoalsView(page);
+
+    await expect(
+      stepRow(page, "Streak miss habit").locator(".goals-panel__step-streak"),
+    ).toHaveText("🔥 0");
+  });
+
+  test("should count a day the habit was completed", async ({ page }) => {
+    await createGoal("Improve Health", [{ name: "Streak hit habit" }]);
+    await openGoalsView(page);
+    await startStep(page, "Streak hit habit");
+
+    // Tick it off in the todo, then let the nightly run score the day. The
+    // cron reads the task straight from the DB, so wait for the done write to
+    // land before triggering it rather than racing the refetch.
+    await page.locator(".goals-toggle-btn").click();
+    await expect(getTask(page, "Streak hit habit")).toBeVisible();
+    await toggleTaskDone(page, "Streak hit habit");
+    await expect(getTask(page, "Streak hit habit")).toHaveClass(
+      /task-card--done/,
+    );
+    await runCron();
+
+    await page.reload();
+    await waitForPageLoad(page);
+    await openGoalsView(page);
+
+    await expect(
+      stepRow(page, "Streak hit habit").locator(".goals-panel__step-streak"),
+    ).toHaveText("🔥 1");
+  });
+
+  test("should not show a streak on a pending step", async ({ page }) => {
+    await createGoal("Improve Health", [{ name: "Streak pending habit" }]);
+    await openGoalsView(page);
+
+    await expect(
+      stepRow(page, "Streak pending habit").locator(
+        ".goals-panel__step-streak",
+      ),
+    ).toHaveCount(0);
   });
 });

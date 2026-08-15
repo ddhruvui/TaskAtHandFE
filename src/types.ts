@@ -12,9 +12,11 @@ export interface ECDDate {
   value: string; // YYYY-MM-DD
 }
 
+export type DayOfWeek = "Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat";
+
 export interface ECDDayOfWeek {
   type: "day_of_week";
-  value: ("Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun")[]; // Non-empty array
+  value: DayOfWeek[]; // Non-empty array
 }
 
 export interface ECDDayOfMonth {
@@ -82,7 +84,12 @@ export type GoalStepStatus = "pending" | "under_progress";
 
 export interface GoalStep {
   name: string; // Step/habit name (required), e.g. "Wake up at 6"
-  status: GoalStepStatus; // pending = backlog/paused, under_progress = daily habit in play (lifelong)
+  status: GoalStepStatus; // pending = backlog/paused, under_progress = habit in play (lifelong)
+  // Weekdays the habit is expected on; becomes the started step's day_of_week
+  // ECD, so the streak only counts these days. Optional because steps stored
+  // before the field existed read back without it — treat that as every day
+  // (`stepDays` in utils/goalSync).
+  days?: DayOfWeek[];
 }
 
 export interface Goal {

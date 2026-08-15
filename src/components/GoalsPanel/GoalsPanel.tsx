@@ -1,11 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
-import type { ECD, Goal, GoalStep, GoalStepStatus } from "../../types";
+import type { DayOfWeek, Goal, GoalStep, GoalStepStatus } from "../../types";
 import * as goalsApi from "../../api/goals";
 import * as headersApi from "../../api/headers";
 import * as tasksApi from "../../api/tasks";
-import { ONE_STEP_HEADER } from "../../utils/goalSync";
+import * as insightsApi from "../../api/insights";
+import {
+  ONE_STEP_HEADER,
+  daysLabel,
+  daysToEcd,
+  isOneStepHeaderName,
+  stepDays,
+} from "../../utils/goalSync";
 import { GoalModal } from "../GoalModal";
 import { AddStepModal } from "../AddStepModal";
+import { StepDaysModal } from "../StepDaysModal";
 import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
 // Step rows reuse the todo's row styling (.task-card*) so the two lists stay
@@ -14,11 +22,8 @@ import { ConfirmModal } from "../ConfirmModal";
 import "../TaskCard/TaskCard.css";
 import "./GoalsPanel.css";
 
-/** Started steps become daily habits so Insights can track them. */
-const DAILY_ECD: ECD = {
-  type: "day_of_week",
-  value: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-};
+/** Current/best streak of a started step, keyed by lower-cased step name. */
+type StreakMap = Record<string, { current: number; longest: number }>;
 
 /**
  * Under-progress steps sort above the pending backlog (stable within each
@@ -40,6 +45,7 @@ interface GoalsPanelProps {
 
 export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [streaks, setStreaks] = useState<StreakMap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -55,6 +61,13 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
     goal: Goal;
     index: number;
   } | null>(null);
+  // Day picker, opened either to start a pending step or to reschedule a
+  // started one. `mode` decides which of the two the confirm handler runs.
+  const [daysTarget, setDaysTarget] = useState<{
+    goal: Goal;
+    index: number;
+    mode: "start" | "edit";
+  } | null>(null);
 
   const loadGoals = useCallback(async () => {
     try {
@@ -67,9 +80,37 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
     }
   }, []);
 
+  /**
+   * Habit streaks for the started steps, from the same archive stats the
+   * Insights view reads. The archive only records a result on days the task's
+   * ECD covers, so a streak here counts scheduled days: a Mon/Wed/Fri habit
+   * survives an untouched Tuesday.
+   *
+   * Habits are matched by name under the "One Step At A Time" header — the
+   * same case-insensitive link the rest of the goal↔todo sync uses. Failure is
+   * silent: stats are decoration on this view, not the reason it exists.
+   */
+  const loadStreaks = useCallback(async () => {
+    try {
+      const stats = await insightsApi.getStats();
+      const map: StreakMap = {};
+      for (const habit of stats.habits) {
+        if (!habit.headerName || !isOneStepHeaderName(habit.headerName)) continue;
+        map[habit.taskName.trim().toLowerCase()] = {
+          current: habit.currentStreak,
+          longest: habit.longestStreak,
+        };
+      }
+      setStreaks(map);
+    } catch {
+      setStreaks(null);
+    }
+  }, []);
+
   useEffect(() => {
     loadGoals();
-  }, [loadGoals]);
+    loadStreaks();
+  }, [loadGoals, loadStreaks]);
 
   /* ── Goal CRUD ── */
 
@@ -168,15 +209,8 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
     setBusyStep(`${goal._id}:${index}`);
     try {
       if (step.status !== "pending") {
-        const header = await findOneStepHeader();
-        if (header) {
-          const tasks = await tasksApi.getAll(header._id);
-          const match = tasks.find(
-            (t) =>
-              t.name.trim().toLowerCase() === step.name.trim().toLowerCase(),
-          );
-          if (match) await tasksApi.remove(match._id);
-        }
+        const match = await findStepTask(step.name);
+        if (match) await tasksApi.remove(match._id);
       }
       await goalsApi.update(goal._id, {
         steps: steps.filter((_, i) => i !== index),
@@ -206,33 +240,58 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
 
   /* ── Step transitions ──
    * A step is under progress exactly while its daily task lives under the
-   * "One Step At A Time" header. Start creates the task (header reused when
-   * one exists, created otherwise — same find-or-create pattern as event
-   * scheduling) and the habit is kept for life; Pause removes the task and
-   * shelves the step. Deleting the task from the todo pauses the step too
-   * (see utils/goalSync). */
+   * "One Step At A Time" header. Start creates the task on the weekdays the
+   * user picked (header reused when one exists, created otherwise — same
+   * find-or-create pattern as event scheduling) and the habit is kept for
+   * life; Pause removes the task and shelves the step. Deleting the task from
+   * the todo pauses the step too (see utils/goalSync). */
 
   const findOneStepHeader = async () => {
     const all = await headersApi.getAll();
-    return all.find(
-      (h) => h.name.trim().toLowerCase() === ONE_STEP_HEADER.toLowerCase(),
+    return all.find((h) => isOneStepHeaderName(h.name));
+  };
+
+  /** The started step's task under "One Step At A Time", matched by name. */
+  const findStepTask = async (stepName: string) => {
+    const header = await findOneStepHeader();
+    if (!header) return null;
+    const tasks = await tasksApi.getAll(header._id);
+    return (
+      tasks.find(
+        (t) => t.name.trim().toLowerCase() === stepName.trim().toLowerCase(),
+      ) ?? null
     );
   };
 
-  const updateStepStatus = async (
+  const patchStep = async (
     goal: Goal,
     stepIndex: number,
-    status: GoalStepStatus,
+    patch: Partial<GoalStep>,
   ) => {
     const steps = sortSteps(goal.steps).map((s, i) =>
-      i === stepIndex ? { ...s, status } : s,
+      i === stepIndex ? { ...s, ...patch } : s,
     );
     // Re-sort so the step joins its new group (a started step rises to the
     // under-progress block, a paused one drops back to the backlog)
     await goalsApi.update(goal._id, { steps: sortSteps(steps) });
   };
 
-  const handleStartStep = async (goal: Goal, stepIndex: number) => {
+  const updateStepStatus = (
+    goal: Goal,
+    stepIndex: number,
+    status: GoalStepStatus,
+  ) => patchStep(goal, stepIndex, { status });
+
+  /**
+   * Begin a step on the chosen weekdays. The task's ECD is set from `days`
+   * even when the task already exists, so a re-start can't leave the todo on
+   * an older schedule than the goal claims.
+   */
+  const handleStartStep = async (
+    goal: Goal,
+    stepIndex: number,
+    days: DayOfWeek[],
+  ) => {
     const step = sortSteps(goal.steps)[stepIndex];
     setBusyStep(`${goal._id}:${stepIndex}`);
     try {
@@ -240,22 +299,55 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
         (await findOneStepHeader()) ??
         (await headersApi.create({ name: ONE_STEP_HEADER }));
       const existing = await tasksApi.getAll(header._id);
-      const alreadyThere = existing.some(
+      const alreadyThere = existing.find(
         (t) => t.name.trim().toLowerCase() === step.name.trim().toLowerCase(),
       );
-      if (!alreadyThere) {
+      if (alreadyThere) {
+        await tasksApi.update(alreadyThere._id, { ecd: daysToEcd(days) });
+      } else {
         await tasksApi.create({
           name: step.name,
           headerId: header._id,
           notes: `Step towards "${goal.name}"`,
-          ecd: DAILY_ECD,
+          ecd: daysToEcd(days),
         });
       }
-      await updateStepStatus(goal, stepIndex, "under_progress");
+      await patchStep(goal, stepIndex, { status: "under_progress", days });
       await loadGoals();
+      setDaysTarget(null);
       setError(null);
       setNotice(
-        `Started "${step.name}" — under progress as a daily habit in "${ONE_STEP_HEADER}".`,
+        `Started "${step.name}" — under progress every ${days.join(", ")} in "${ONE_STEP_HEADER}".`,
+      );
+      onTasksChanged();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusyStep(null);
+    }
+  };
+
+  /**
+   * Reschedule a step already under progress: the goal keeps the new days and
+   * its task's ECD is rewritten to match, so the streak starts counting the
+   * new set from the next nightly archive run.
+   */
+  const handleChangeDays = async (
+    goal: Goal,
+    stepIndex: number,
+    days: DayOfWeek[],
+  ) => {
+    const step = sortSteps(goal.steps)[stepIndex];
+    setBusyStep(`${goal._id}:${stepIndex}`);
+    try {
+      const task = await findStepTask(step.name);
+      if (task) await tasksApi.update(task._id, { ecd: daysToEcd(days) });
+      await patchStep(goal, stepIndex, { days });
+      await loadGoals();
+      setDaysTarget(null);
+      setError(null);
+      setNotice(
+        `"${step.name}" is now due every ${days.join(", ")} — its streak counts those days.`,
       );
       onTasksChanged();
     } catch (err) {
@@ -270,14 +362,8 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
     const step = sortSteps(goal.steps)[stepIndex];
     setBusyStep(`${goal._id}:${stepIndex}`);
     try {
-      const header = await findOneStepHeader();
-      if (header) {
-        const tasks = await tasksApi.getAll(header._id);
-        const match = tasks.find(
-          (t) => t.name.trim().toLowerCase() === step.name.trim().toLowerCase(),
-        );
-        if (match) await tasksApi.remove(match._id);
-      }
+      const match = await findStepTask(step.name);
+      if (match) await tasksApi.remove(match._id);
       await updateStepStatus(goal, stepIndex, "pending");
       await loadGoals();
       setError(null);
@@ -338,7 +424,7 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
               {goal.steps.length > 0 && (
                 <span
                   className="goals-panel__progress"
-                  title={`${underProgressCount} of ${goal.steps.length} habits in daily practice (building or lifelong)`}
+                  title={`${underProgressCount} of ${goal.steps.length} habits in practice, each on the weekdays it was started with`}
                 >
                   {underProgressCount}/{goal.steps.length} under progress
                 </span>
@@ -405,6 +491,8 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
               {steps.map((step, i) => {
                 const busy = busyStep === `${goal._id}:${i}`;
                 const started = step.status !== "pending";
+                const days = stepDays(step);
+                const streak = streaks?.[step.name.trim().toLowerCase()];
                 // Moves stay inside the step's own group — mirrors the todo's
                 // done/undone barrier
                 const canMoveUp =
@@ -426,7 +514,7 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
                         onClick={() =>
                           started
                             ? handlePauseStep(goal, i)
-                            : handleStartStep(goal, i)
+                            : setDaysTarget({ goal, index: i, mode: "start" })
                         }
                         disabled={busy}
                         aria-label={
@@ -437,7 +525,7 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
                         title={
                           started
                             ? "Not in progress anymore — removes the daily task and moves the step back to the backlog"
-                            : `Under progress from now on — adds a daily task under "${ONE_STEP_HEADER}"`
+                            : `Under progress from now on — pick its days and it becomes a task under "${ONE_STEP_HEADER}"`
                         }
                       >
                         {started && (
@@ -459,18 +547,57 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
                             {step.name}
                           </span>
                           {/* Same slot the todo uses for the ECD badge. A
-                              started step is a 7-day recurring task there, so
-                              it gets the recurring styling too. */}
+                              started step is a recurring task there, so it
+                              gets the recurring styling and the same day list
+                              its task card shows. */}
                           <span
                             className={`task-card__ecd goals-panel__step-status${started ? " task-card__ecd--recurring" : ""}`}
                           >
-                            [ {started ? "↻ Daily" : "Not started"} ]
+                            [ {started ? `↻ ${daysLabel(days)}` : "Not started"}{" "}
+                            ]
                           </span>
+                          {/* Streak over the step's own days — a habit set to
+                              Mon/Wed/Fri isn't broken by an untouched Tuesday,
+                              because no result is archived for a day the task
+                              wasn't due. */}
+                          {started && streak && (
+                            <span
+                              className="goals-panel__step-streak"
+                              title={`Current streak: ${streak.current} scheduled ${streak.current === 1 ? "day" : "days"} in a row (best ${streak.longest}). Counts only ${daysLabel(days)}.`}
+                            >
+                              🔥 {streak.current}
+                            </span>
+                          )}
                         </span>
                       </span>
 
                       {/* Same action cluster the todo puts on a task */}
                       <div className="task-card__actions">
+                        {/* Only a started step has a schedule to change; a
+                            pending one is asked for its days when it starts.
+                            The todo can't do it — EditNotesModal locks the ECD
+                            of goal-managed tasks, so this is the only way in. */}
+                        {started && (
+                          <button
+                            className="task-card__action-btn"
+                            onClick={() =>
+                              setDaysTarget({ goal, index: i, mode: "edit" })
+                            }
+                            disabled={busy}
+                            aria-label={`Change days for step ${step.name}`}
+                            title="Change which days this habit runs on"
+                          >
+                            <svg
+                              viewBox="0 0 16 16"
+                              className="task-card__action-icon"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1a1.75 1.75 0 0 1 1.75 1.75v10.5A1.75 1.75 0 0 1 13 16H3a1.75 1.75 0 0 1-1.75-1.75V3.75A1.75 1.75 0 0 1 3 2h1V.75A.75.75 0 0 1 4.75 0zM3 3.5a.25.25 0 0 0-.25.25V6h10.5V3.75A.25.25 0 0 0 13 3.5H3zm10.25 4H2.75v6.75c0 .138.112.25.25.25h10a.25.25 0 0 0 .25-.25V7.5z"
+                              />
+                            </svg>
+                          </button>
+                        )}
                         <button
                           className="task-card__action-btn"
                           onClick={() => handleMoveStep(goal, i, 1)}
@@ -540,9 +667,10 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
       {goals.length === 0 && (
         <p className="empty-message">
           No goals yet — add one! A goal (e.g. "Improve Health") lists the small
-          habits that get you there, built one step at a time: start a step and
-          it's under progress as a daily habit — for life — then start the next
-          when it sticks. Pause anytime to shelve one.
+          habits that get you there, built one step at a time: start a step,
+          pick the weekdays it runs on and it's under progress — for life —
+          then start the next when it sticks. Its streak counts only those
+          days. Pause anytime to shelve one.
         </p>
       )}
 
@@ -551,6 +679,26 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
         <GoalModal
           onConfirm={handleSaveGoal}
           onCancel={() => setAddGoalOpen(false)}
+        />
+      )}
+
+      {daysTarget && (
+        <StepDaysModal
+          goalName={daysTarget.goal.name}
+          stepName={sortSteps(daysTarget.goal.steps)[daysTarget.index].name}
+          initialDays={stepDays(
+            sortSteps(daysTarget.goal.steps)[daysTarget.index],
+          )}
+          mode={daysTarget.mode}
+          busy={
+            busyStep === `${daysTarget.goal._id}:${daysTarget.index}`
+          }
+          onConfirm={(days) =>
+            daysTarget.mode === "start"
+              ? handleStartStep(daysTarget.goal, daysTarget.index, days)
+              : handleChangeDays(daysTarget.goal, daysTarget.index, days)
+          }
+          onCancel={() => setDaysTarget(null)}
         />
       )}
 

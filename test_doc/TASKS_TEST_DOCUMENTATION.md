@@ -538,7 +538,7 @@ These tests verify task isolation between different headers.
 
 ### 10. Tasks - Goal-Managed Tasks (3 tests)
 
-These tests verify that daily habit tasks under the "One Step At A Time" header — linked to their goal step by name — have name and schedule locked in the edit modal, while notes stay editable.
+These tests verify that habit tasks under the "One Step At A Time" header — linked to their goal step by name — have name and schedule locked in the edit modal, while notes stay editable. The goal owns the weekday schedule, so the static schedule line is read off the task's ECD: the whole week reads "Every day", anything narrower lists the days.
 
 #### Test: "should lock name and schedule for One Step At A Time tasks"
 
@@ -548,8 +548,8 @@ These tests verify that daily habit tasks under the "One Step At A Time" header 
   2. Open the task's edit modal
 - **Expected Output**:
   - The name input has the `readonly` attribute
-  - No ECD mode buttons render; a static "↻ Every day, for life" line shows instead
-  - The hint "Daily habit managed by its goal — name and schedule are locked." is visible
+  - No ECD mode buttons render; a static "↻ Every day, for life" line shows instead (a habit started on fewer days would list them, e.g. "↻ Mon, Wed, Fri, for life")
+  - The hint "Habit managed by its goal — name and schedule are locked. Change its days in the Goals view." is visible
 
 #### Test: "should still allow editing notes on a goal-managed task"
 

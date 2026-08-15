@@ -55,15 +55,23 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   same way: a `+` on the goal heading opens an add-step dialog that appends
   one step, just as `+` on a todo header adds a task. A step is either
   paused (unchecked, `[ Not started ]`) or **under progress** (checked,
-  `[ ↻ Daily ]`); the checkbox toggles between them. **Start** puts it under
-  progress: a daily recurring task is created under a todo header named
-  "One Step At A Time" (reused if it already exists) and kept for life.
-  **Pause** takes it out of progress: the daily task is removed and the step
-  returns to the backlog. The badge (e.g. "1/4 under progress") rises on
+  `[ ↻ Daily ]` / `[ ↻ Mon, Wed, Fri ]`); the checkbox toggles between them.
+  **Start** opens a day picker (whole week by default, with Weekdays/Weekends
+  presets, at least one day required) and puts the step under progress: a
+  recurring task on those weekdays is created under a todo header named
+  "One Step At A Time" (reused if it already exists) and kept for life. An
+  under-progress row carries a **days control** to reschedule the habit later
+  — the only way in, since the todo locks a goal-managed task's schedule —
+  which rewrites the task's ECD to match. Each under-progress row also shows a
+  **streak badge** (`🔥 N`) from `GET /insights/stats`: the nightly archive
+  only records a result on the days the habit is due, so the streak counts
+  scheduled days only and an untouched Tuesday can't break a Mon/Wed/Fri
+  habit. **Pause** takes the step out of progress: the task is removed (its
+  days are kept for the next start) and the step returns to the backlog. The badge (e.g. "1/4 under progress") rises on
   Start and falls on Pause. Goals are ordered with move up/down arrows on the
   goal heading (a server-side contiguous priority, like headers and
   projects), and each step has its own move up/down and delete — deleting an
-  under-progress step removes its daily task too, so the todo never keeps an
+  under-progress step removes its task too, so the todo never keeps an
   orphan habit. Under-progress steps always sort above the pending backlog
   (starting a step lifts it into the top group) and the move arrows never
   cross that boundary, mirroring the todo's undone-above-done barrier. The two views stay in sync both ways: deleting the daily task
@@ -148,12 +156,12 @@ src/
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
 │   ├── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
 │   ├── LifeEventsPanel/  LifeEventModal/                # Life Events view
-│   ├── GoalsPanel/  GoalModal/  AddStepModal/           # Goals view
+│   ├── GoalsPanel/  GoalModal/  AddStepModal/  StepDaysModal/  # Goals view
 │   ├── ProjectsPanel/  ProjectModal/  ProjectTaskModal/ # Projects view
 │   ├── AffirmationsPanel/  AffirmationModal/            # Affirmations view
 │   └── CallsPanel/  CallModal/                          # Calls view
 ├── utils/ecd.ts               # ECD due-today/date-key helpers
-├── utils/goalSync.ts          # goal step ↔ todo sync helpers
+├── utils/goalSync.ts          # goal step ↔ todo sync + habit-day helpers
 ├── utils/projectSync.ts       # project task ↔ todo sync helpers
 └── utils/lifeEventSync.ts     # life event ↔ todo sync helpers
 ```

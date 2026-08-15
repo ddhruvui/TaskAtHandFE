@@ -2,9 +2,11 @@
 
 ## Overview
 
-This document describes the end-to-end (E2E) tests for the Goals functionality in the Task At Hand application. A goal is a long-term aim (like "Improve Health") broken into small steps/habits ("Wake up at 6", "Have 1 fruit a day") built **one step at a time**. A step is either **paused/pending** (unchecked box, `[ Not started ]` badge) or **under progress** (checked box, `[ ↻ Daily ]` badge): starting a step creates a daily recurring task under a todo header named "One Step At A Time" and the habit is kept for life; pausing removes that task. The sync works both ways — deleting the daily task (or the whole header) from the todo pauses the matching step(s).
+This document describes the end-to-end (E2E) tests for the Goals functionality in the Task At Hand application. A goal is a long-term aim (like "Improve Health") broken into small steps/habits ("Wake up at 6", "Have 1 fruit a day") built **one step at a time**. A step is either **paused/pending** (unchecked box, `[ Not started ]` badge) or **under progress** (checked box, `[ ↻ Daily ]` or `[ ↻ Mon, Wed, Fri ]` badge): starting a step opens a day picker and creates a recurring task on the chosen weekdays under a todo header named "One Step At A Time", kept for life; pausing removes that task. The sync works both ways — deleting the daily task (or the whole header) from the todo pauses the matching step(s).
 
 Step rows render with the todo's own row markup (`.task-card*` classes from `TaskCard.css`), so the checkbox toggles the step lifecycle and the status badge sits in the slot the todo uses for the ECD. Steps are added one at a time from a `+` button on the goal heading — the same gesture as adding a task to a header — and each row carries move up/down and delete, just like a todo task. Goals themselves are ordered by a server-side contiguous `priority` and moved with arrows on the heading. There is deliberately **no** Edit control on a goal heading: a goal's name and starting steps are fixed at creation.
+
+An under-progress row also carries a **days control** (the only way to reschedule the habit, since the todo locks a goal-managed task's ECD) and a **streak badge** (`🔥 N`) read from `GET /insights/stats`. The nightly archive only records a result on days the task's ECD covers, so the streak counts scheduled days only — a Mon/Wed/Fri habit is not broken by an untouched Tuesday.
 
 ## Test File Location
 
@@ -12,7 +14,7 @@ Step rows render with the todo's own row markup (`.task-card*` classes from `Tas
 
 ## Purpose
 
-These tests verify that users can create and delete goals, reorder goals and their steps, add and delete steps one at a time from the goal rows, that Start/Pause correctly create and remove the daily task under the "One Step At A Time" header, and that todo-side deletions flow back into the goal (step paused, badge lowered).
+These tests verify that users can create and delete goals, reorder goals and their steps, add and delete steps one at a time from the goal rows, that Start/Pause correctly create and remove the task under the "One Step At A Time" header, that the day picker drives both the step badge and its task's `day_of_week` ECD, that the streak badge reflects the archived results for those days, and that todo-side deletions flow back into the goal (step paused, badge lowered).
 
 ---
 
@@ -215,10 +217,10 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 
 #### Test: "should start a step and add it as a daily task under the One Step At A Time header"
 
-- **Description**: Starting a pending step puts it under progress and promotes it into the todo as a daily habit
-- **Steps**: Seed a goal with two pending steps; click Start on "Wake up at 6"; switch back to the todo view
+- **Description**: Starting a pending step puts it under progress and promotes it into the todo as a habit on every day
+- **Steps**: Seed a goal with two pending steps; click Start on "Wake up at 6" and confirm the day picker's default; switch back to the todo view
 - **Expected Output**:
-  - A notice 'Started "Wake up at 6" — under progress as a daily habit…' appears
+  - A notice 'Started "Wake up at 6" — under progress every Sun, Mon, Tue, Wed, Thu, Fri, Sat…' appears
   - The step row shows a checked box with the `[ ↻ Daily ]` badge and a Pause action
   - The badge rises immediately to "1/2 under progress"
   - The todo has a "One Step At A Time" header containing the task "Wake up at 6"
@@ -269,6 +271,103 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 
 ---
 
+### 7. Goals - Habit days (10 tests)
+
+These tests verify the day picker that Start opens, and the schedule it writes onto both the step and its todo task.
+
+#### Test: "should start a step only on the days picked in the modal"
+
+- **Description**: The picked weekdays become the step's schedule and its task's ECD
+- **Steps**: Seed a goal with one pending step; click Start; select Mon/Wed/Fri; confirm
+- **Expected Output**:
+  - The step badge reads `[ ↻ Mon, Wed, Fri ]` instead of `[ ↻ Daily ]`
+  - A notice 'Started "Gym" — under progress every Mon, Wed, Fri' appears
+  - The task's ECD is `{ type: "day_of_week", value: ["Mon", "Wed", "Fri"] }` (week order)
+
+#### Test: "should show the picked days on the habit's todo task too"
+
+- **Description**: The todo card shows the same day list the goal row does
+- **Steps**: Start a step on Sat/Sun; switch to the todo view
+- **Expected Output**: The task card's ECD badge reads `[ ↻ Sun, Sat ]` — Sunday-first week order, matching what the backend stores
+
+#### Test: "should default the picker to every day"
+
+- **Description**: The picker opens with the whole week selected, preserving the pre-existing behavior of Start
+- **Steps**: Click Start; inspect the picker; confirm without changing anything
+- **Expected Output**:
+  - The hint reads "Due every Sun, Mon, Tue, Wed, Thu, Fri, Sat" and all seven toggles are `aria-pressed="true"`
+  - The resulting badge collapses back to `[ ↻ Daily ]`
+
+#### Test: "should offer weekday and weekend presets"
+
+- **Description**: The presets set the selection in one click
+- **Steps**: Click Start; click "Weekdays"; confirm
+- **Expected Output**: The badge reads `[ ↻ Mon, Tue, Wed, Thu, Fri ]`
+
+#### Test: "should not let a step start with no day selected"
+
+- **Description**: A habit needs at least one day to run on
+- **Steps**: Click Start; toggle all seven days off
+- **Expected Output**: The hint reads "Pick at least one day…" and the confirm button is disabled
+
+#### Test: "should leave the step pending when the picker is cancelled"
+
+- **Description**: Cancelling the picker starts nothing
+- **Steps**: Click Start; click Cancel
+- **Expected Output**: The picker closes, the badge stays `[ Not started ]`, the count stays "0/1 under progress", and no task exists under "One Step At A Time"
+
+#### Test: "should not offer a days control on a pending step"
+
+- **Description**: Only a started step has a schedule to change; a pending one is asked for its days when it starts
+- **Steps**: Seed a goal with one pending step and open the Goals view
+- **Expected Output**: No "Change days for step Gym" button exists on the row
+
+#### Test: "should change a started step's days and rewrite its task ECD"
+
+- **Description**: Rescheduling a running habit updates the goal and the todo together
+- **Steps**: Start a step on Mon/Wed/Fri; click its days control; select Tue/Thu; save
+- **Expected Output**:
+  - The badge reads `[ ↻ Tue, Thu ]` and a notice '"Gym" is now due every Tue, Thu' appears
+  - The task's ECD is `{ type: "day_of_week", value: ["Tue", "Thu"] }`
+
+#### Test: "should keep the chosen days after a reload"
+
+- **Description**: The schedule is persisted on the goal, not held in component state
+- **Steps**: Start a step on Mon/Wed/Fri; reload; reopen the Goals view
+- **Expected Output**: The badge still reads `[ ↻ Mon, Wed, Fri ]`
+
+#### Test: "should restore the chosen days when a paused step is started again"
+
+- **Description**: Pausing shelves the step but keeps its schedule, so the picker reopens on it
+- **Steps**: Start a step on Mon/Wed/Fri; pause it; click Start again
+- **Expected Output**: The picker hint reads "Due every Mon, Wed, Fri", and confirming restores the `[ ↻ Mon, Wed, Fri ]` badge
+
+---
+
+### 8. Goals - Habit streak (3 tests)
+
+These tests verify the `🔥 N` badge on an under-progress row. Streaks come from the nightly archive (`GET /insights/stats`), which only records a result on days the task's ECD covers, so these tests run the cron once via `runCron()` to produce yesterday's outcome. Step names are unique per test because the archive is not wiped between tests and habits are matched by name.
+
+#### Test: "should show a zero streak for a habit missed yesterday"
+
+- **Description**: An untouched habit scores a miss and shows a zero streak
+- **Steps**: Start a step on every day; run the cron; reload and reopen the Goals view
+- **Expected Output**: The row's streak badge reads "🔥 0"
+
+#### Test: "should count a day the habit was completed"
+
+- **Description**: A completed day is counted into the streak
+- **Steps**: Start a step on every day; tick its task done in the todo (waiting for the done write to land); run the cron; reload and reopen the Goals view
+- **Expected Output**: The row's streak badge reads "🔥 1"
+
+#### Test: "should not show a streak on a pending step"
+
+- **Description**: A step that has never started has no habit history to show
+- **Steps**: Seed a goal with one pending step and open the Goals view
+- **Expected Output**: No `.goals-panel__step-streak` element exists on the row
+
+---
+
 ## Test Helpers Used
 
 - `cleanDatabase()`: Removes all headers/tasks to start fresh
@@ -277,6 +376,9 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 - `createHeader()` / `createTask()`: Seed the "One Step At A Time" header and a daily task the way Start would
 - `deleteTaskViaUI()` / `deleteHeaderViaUI()`: Exercise the todo-side delete flows that trigger the goal sync
 - `getHeaders()`: Reads headers via API (used to assert header reuse)
+- `getTasks()`: Reads a header's tasks via API (used to assert the habit's `day_of_week` ECD)
+- `getTask()` / `toggleTaskDone()`: Find and tick a habit's task in the todo view
+- `runCron()`: Triggers `POST /cron/run` so yesterday's habit result is archived and a streak exists to read
 - `getTaskNamesInHeader()`: Lists task names under a header in the todo view
 - `waitForPageLoad()`: Ensures the page is fully loaded before testing
 
@@ -292,7 +394,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 
 ## Summary
 
-These 32 tests comprehensively verify that:
+These 45 tests comprehensively verify that:
 
 1. ✅ Goals can be created (with or without steps) with proper validation
 2. ✅ Steps can be added one at a time from the goal heading's `+`, exactly as tasks are added to a header — appended in order, validated against blank names, submitted on Enter and discarded on Escape
@@ -304,5 +406,8 @@ These 32 tests comprehensively verify that:
 8. ✅ Goals can be safely deleted with confirmation, without touching todo tasks
 9. ✅ Starting a step puts it under progress and creates its daily task under "One Step At A Time" (header reused, never duplicated); pausing removes the task and lowers the badge
 10. ✅ The sync works both ways: deleting the daily task — or the whole header — from the todo pauses the matching step(s)
+11. ✅ Start opens a day picker defaulting to the whole week, with weekday/weekend presets, that refuses an empty selection and starts nothing when cancelled; the chosen days drive both the step badge and its task's `day_of_week` ECD, survive a reload and are remembered across a pause
+12. ✅ An under-progress step can be rescheduled from its own row (the only way in, since the todo locks a goal-managed task's ECD), rewriting the goal and the task together
+13. ✅ The `🔥 N` streak badge on an under-progress row reflects the archived results for that habit — 0 after a missed day, 1 after a completed one — and never appears on a pending step
 
 The tests ensure the "one step at a time" habit-building flow works end to end against the real backend.
