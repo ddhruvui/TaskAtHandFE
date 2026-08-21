@@ -19,10 +19,13 @@ import * as tasksApi from "./api/tasks";
 import * as vacationsApi from "./api/vacations";
 import { getEcdDateKey, formatDateKey, todayDateKey } from "./utils/ecd";
 import {
+  fetchOneStepStreaks,
   isOneStepHeaderName,
   pauseStepsMatchingTask,
   pauseAllStartedSteps,
+  streakFor,
 } from "./utils/goalSync";
+import type { StreakMap } from "./utils/goalSync";
 import {
   syncProjectTasksForTodoDone,
   syncProjectTasksForTodoEdit,
@@ -62,6 +65,11 @@ function App() {
   const [vacationStatus, setVacationStatus] = useState<VacationStatus | null>(
     null,
   );
+
+  // Habit streaks for the tasks under "One Step At A Time", keyed by name —
+  // the same badge the Goals view puts on the step each of them belongs to.
+  // Null while it is loading and after a failed fetch, which just hides them.
+  const [streaks, setStreaks] = useState<StreakMap | null>(null);
 
   // Panel views are mutually exclusive — activating one deactivates the rest,
   // so the clicked tab is always the one shown (byDateMode is a todo-list
@@ -111,6 +119,15 @@ function App() {
     }
   }, []);
 
+  /**
+   * Habit streaks, refreshed alongside the todo. Only the nightly archive
+   * moves these numbers, so ticking a habit off today does not change the
+   * badge until the cron has scored the day.
+   */
+  const refreshStreaks = useCallback(async () => {
+    setStreaks(await fetchOneStepStreaks());
+  }, []);
+
   /* ── Load all headers and their tasks ── */
   const loadAll = useCallback(async () => {
     try {
@@ -132,7 +149,8 @@ function App() {
   useEffect(() => {
     loadAll();
     refreshVacationStatus();
-  }, [loadAll, refreshVacationStatus]);
+    refreshStreaks();
+  }, [loadAll, refreshVacationStatus, refreshStreaks]);
 
   /* ── Reload tasks for a single header ── */
   const reloadHeaderTasks = useCallback(async (headerId: string) => {
@@ -910,6 +928,11 @@ function App() {
                           : undefined
                       }
                       goalManaged={oneStepHeaderIds.has(header._id)}
+                      streak={
+                        oneStepHeaderIds.has(header._id)
+                          ? streakFor(streaks, task.name)
+                          : undefined
+                      }
                       onToggleDone={handleToggleDone(header._id)}
                       onEdit={handleEditTask(header._id)}
                       onMoveUp={handleMoveTaskUp(header._id)}
@@ -964,6 +987,11 @@ function App() {
                             isFirst
                             isLast
                             goalManaged={oneStepHeaderIds.has(task.headerId)}
+                            streak={
+                              oneStepHeaderIds.has(task.headerId)
+                                ? streakFor(streaks, task.name)
+                                : undefined
+                            }
                             onToggleDone={handleToggleDone(task.headerId)}
                             onEdit={handleEditTask(task.headerId)}
                             onMoveUp={handleMoveTaskUp(task.headerId)}

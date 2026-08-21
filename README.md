@@ -67,7 +67,10 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   **streak badge** (`🔥 N`) from `GET /insights/stats`: the nightly archive
   only records a result on the days the habit is due, so the streak counts
   scheduled days only and an untouched Tuesday can't break a Mon/Wed/Fri
-  habit. **Pause** takes the step out of progress: the task is removed (its
+  habit. **The habit's task in the todo shows the same badge** (in the todo
+  list and in By Date), so the streak is visible where the habit is actually
+  ticked off, not only in the Goals view. Only the nightly run moves the
+  number — ticking a habit off today shows up tomorrow. **Pause** takes the step out of progress: the task is removed (its
   days are kept for the next start) and the step returns to the backlog. The badge (e.g. "1/4 under progress") rises on
   Start and falls on Pause. Goals are ordered with move up/down arrows on the
   goal heading (a server-side contiguous priority, like headers and

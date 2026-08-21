@@ -163,6 +163,30 @@
   }
 }
 
+/* ─── Habit streak badge ───
+   Days in a row a habit under "One Step At A Time" was completed, counted
+   over the days its ECD covers. Rendered here and, from the same source, on
+   the matching step row in the Goals view (.goals-panel__step-streak). */
+.task-card__streak {
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid #bc4c00;
+  border-radius: 999px;
+  color: #bc4c00;
+  white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  .task-card__streak {
+    border-color: #db6d28;
+    color: #db6d28;
+  }
+}
+
 /* ─── Arrow separator ─── */
 .task-card__arrow {
   font-size: 13px;

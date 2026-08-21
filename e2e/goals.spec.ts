@@ -1062,4 +1062,76 @@ test.describe("Goals - Habit streak", () => {
       ),
     ).toHaveCount(0);
   });
+
+  test("should show the same streak on the habit's task in the todo", async ({
+    page,
+  }) => {
+    await createGoal("Improve Health", [{ name: "Streak todo habit" }]);
+    await openGoalsView(page);
+    await startStep(page, "Streak todo habit");
+
+    // Tick it off in the todo, then let the nightly run score the day
+    await page.locator(".goals-toggle-btn").click();
+    await expect(getTask(page, "Streak todo habit")).toBeVisible();
+    await toggleTaskDone(page, "Streak todo habit");
+    await expect(getTask(page, "Streak todo habit")).toHaveClass(
+      /task-card--done/,
+    );
+    await runCron();
+
+    await page.reload();
+    await waitForPageLoad(page);
+
+    // The habit's card under "One Step At A Time" carries the badge…
+    await expect(
+      getTask(page, "Streak todo habit").locator(".task-card__streak"),
+    ).toHaveText("🔥 1");
+
+    // …reading the same as the step it belongs to in the Goals view
+    await openGoalsView(page);
+    await expect(
+      stepRow(page, "Streak todo habit").locator(".goals-panel__step-streak"),
+    ).toHaveText("🔥 1");
+  });
+
+  test("should show the habit's streak in the By Date view too", async ({
+    page,
+  }) => {
+    await createGoal("Improve Health", [{ name: "Streak bydate habit" }]);
+    await openGoalsView(page);
+    await startStep(page, "Streak bydate habit");
+
+    await page.locator(".goals-toggle-btn").click();
+    await expect(getTask(page, "Streak bydate habit")).toBeVisible();
+    await toggleTaskDone(page, "Streak bydate habit");
+    await expect(getTask(page, "Streak bydate habit")).toHaveClass(
+      /task-card--done/,
+    );
+    await runCron();
+
+    await page.reload();
+    await waitForPageLoad(page);
+    // Done tasks are dropped from By Date, so untick it first — the streak is
+    // the archive's, not today's checkbox
+    await toggleTaskDone(page, "Streak bydate habit");
+    await expect(getTask(page, "Streak bydate habit")).not.toHaveClass(
+      /task-card--done/,
+    );
+    await page.locator(".bydate-toggle-btn").click();
+
+    await expect(
+      getTask(page, "Streak bydate habit").locator(".task-card__streak"),
+    ).toHaveText("🔥 1");
+  });
+
+  test("should not show a streak on an ordinary task", async ({ page }) => {
+    const header = await createHeader("Work");
+    await createTask({ name: "Ordinary task", headerId: header._id });
+    await page.reload();
+    await waitForPageLoad(page);
+
+    await expect(
+      getTask(page, "Ordinary task").locator(".task-card__streak"),
+    ).toHaveCount(0);
+  });
 });

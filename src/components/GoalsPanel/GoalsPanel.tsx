@@ -3,14 +3,16 @@ import type { DayOfWeek, Goal, GoalStep, GoalStepStatus } from "../../types";
 import * as goalsApi from "../../api/goals";
 import * as headersApi from "../../api/headers";
 import * as tasksApi from "../../api/tasks";
-import * as insightsApi from "../../api/insights";
 import {
   ONE_STEP_HEADER,
   daysLabel,
   daysToEcd,
+  fetchOneStepStreaks,
   isOneStepHeaderName,
   stepDays,
+  streakFor,
 } from "../../utils/goalSync";
+import type { StreakMap } from "../../utils/goalSync";
 import { GoalModal } from "../GoalModal";
 import { AddStepModal } from "../AddStepModal";
 import { StepDaysModal } from "../StepDaysModal";
@@ -21,9 +23,6 @@ import { ConfirmModal } from "../ConfirmModal";
 // on TaskCard being mounted elsewhere in the tree.
 import "../TaskCard/TaskCard.css";
 import "./GoalsPanel.css";
-
-/** Current/best streak of a started step, keyed by lower-cased step name. */
-type StreakMap = Record<string, { current: number; longest: number }>;
 
 /**
  * Under-progress steps sort above the pending backlog (stable within each
@@ -81,30 +80,12 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
   }, []);
 
   /**
-   * Habit streaks for the started steps, from the same archive stats the
-   * Insights view reads. The archive only records a result on days the task's
-   * ECD covers, so a streak here counts scheduled days: a Mon/Wed/Fri habit
-   * survives an untouched Tuesday.
-   *
-   * Habits are matched by name under the "One Step At A Time" header — the
-   * same case-insensitive link the rest of the goal↔todo sync uses. Failure is
-   * silent: stats are decoration on this view, not the reason it exists.
+   * Habit streaks for the started steps — the same map the todo builds for its
+   * "One Step At A Time" cards, so both views show a habit the same number.
+   * A failure leaves it null and simply hides the badges.
    */
   const loadStreaks = useCallback(async () => {
-    try {
-      const stats = await insightsApi.getStats();
-      const map: StreakMap = {};
-      for (const habit of stats.habits) {
-        if (!habit.headerName || !isOneStepHeaderName(habit.headerName)) continue;
-        map[habit.taskName.trim().toLowerCase()] = {
-          current: habit.currentStreak,
-          longest: habit.longestStreak,
-        };
-      }
-      setStreaks(map);
-    } catch {
-      setStreaks(null);
-    }
+    setStreaks(await fetchOneStepStreaks());
   }, []);
 
   useEffect(() => {
@@ -492,7 +473,7 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
                 const busy = busyStep === `${goal._id}:${i}`;
                 const started = step.status !== "pending";
                 const days = stepDays(step);
-                const streak = streaks?.[step.name.trim().toLowerCase()];
+                const streak = streakFor(streaks, step.name);
                 // Moves stay inside the step's own group — mirrors the todo's
                 // done/undone barrier
                 const canMoveUp =
@@ -562,7 +543,7 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
                               wasn't due. */}
                           {started && streak && (
                             <span
-                              className="goals-panel__step-streak"
+                              className="task-card__streak goals-panel__step-streak"
                               title={`Current streak: ${streak.current} scheduled ${streak.current === 1 ? "day" : "days"} in a row (best ${streak.longest}). Counts only ${daysLabel(days)}.`}
                             >
                               🔥 {streak.current}

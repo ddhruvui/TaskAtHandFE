@@ -74,26 +74,9 @@
 }
 
 /* Habit streak, counted over the step's own weekdays (see GoalsPanel's
-   loadStreaks). Sits next to the day badge in the todo's ECD slot. */
-.goals-panel__step-streak {
-  flex-shrink: 0;
-  margin-left: 6px;
-  padding: 1px 7px;
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  border: 1px solid #bc4c00;
-  border-radius: 999px;
-  color: #bc4c00;
-  white-space: nowrap;
-}
-
-@media (prefers-color-scheme: dark) {
-  .goals-panel__step-streak {
-    border-color: #db6d28;
-    color: #db6d28;
-  }
-}
+   loadStreaks). Sits next to the day badge in the todo's ECD slot and is
+   styled by the todo's own .task-card__streak, which the row carries too —
+   .goals-panel__step-streak stays as the panel's e2e hook. */
 
 /* Empty state under a goal heading */
 .goals-panel__no-steps {

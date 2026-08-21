@@ -20,6 +20,13 @@ export interface TaskCardProps {
    * and done stay editable) to keep the goal↔todo link from drifting.
    */
   goalManaged?: boolean;
+  /**
+   * Habit streak for this task, when it has one under "One Step At A Time" —
+   * the same `🔥 N` badge the Goals view puts on the matching step, so a habit
+   * reads the same from either side. Absent for ordinary tasks, and for a
+   * habit the nightly archive has no results for yet.
+   */
+  streak?: { current: number; longest: number };
   onToggleDone: (id: string) => void;
   onEdit: (id: string, payload: EditPayload) => void;
   onMoveUp: (id: string) => void;

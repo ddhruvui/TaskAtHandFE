@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Task } from "../../types";
 import type { TaskCardProps } from "./TaskCard.types";
 import { EditNotesModal } from "../EditNotesModal";
+import { daysLabel } from "../../utils/goalSync";
 import "./TaskCard.css";
 
 function getOrdinal(n: number): string {
@@ -63,6 +64,7 @@ export default function TaskCard({
   prevTaskDone,
   nextTaskDone,
   goalManaged,
+  streak,
   onToggleDone,
   onEdit,
   onMoveUp,
@@ -71,6 +73,10 @@ export default function TaskCard({
 }: TaskCardProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const { label: ecdLabel, recurring: ecdRecurring } = resolveEcd(task);
+  // The days the streak is measured over, worded as the Goals view words them
+  // (a seven-day habit reads "Daily"). Habits always carry a day_of_week ECD.
+  const streakDays =
+    task.ecd?.type === "day_of_week" ? daysLabel(task.ecd.value) : null;
 
   // Not-done tasks must stay above done tasks
   const canMoveUp = !isFirst && !(task.done && prevTaskDone === false);
@@ -110,6 +116,17 @@ export default function TaskCard({
               >
                 [ {ecdLabel} ]
               </span>
+              {/* Habit streak, same badge the Goals view shows on the step
+                  this task belongs to — counted over the days the task is
+                  due, so an untouched off-day never breaks it. */}
+              {streak && (
+                <span
+                  className="task-card__streak"
+                  title={`Current streak: ${streak.current} scheduled ${streak.current === 1 ? "day" : "days"} in a row (best ${streak.longest}).${streakDays ? ` Counts only ${streakDays}.` : ""}`}
+                >
+                  🔥 {streak.current}
+                </span>
+              )}
               {task.notes && <span className="task-card__arrow">=&gt;</span>}
             </span>
             {task.notes && (

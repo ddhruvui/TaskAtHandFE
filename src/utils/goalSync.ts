@@ -9,6 +9,7 @@
  */
 
 import * as goalsApi from "../api/goals";
+import * as insightsApi from "../api/insights";
 import type { DayOfWeek, ECD, GoalStep } from "../types";
 
 /** Todo header that holds the habits currently under progress. */
@@ -56,6 +57,45 @@ export function daysToEcd(days: DayOfWeek[]): ECD {
  */
 export function daysLabel(days: DayOfWeek[]): string {
   return days.length === WEEK_DAYS.length ? "Daily" : days.join(", ");
+}
+
+/** Current/best streak of a habit, keyed by its lower-cased task/step name. */
+export type StreakMap = Record<string, { current: number; longest: number }>;
+
+/**
+ * Habit streaks for everything under "One Step At A Time", from the same
+ * archive stats the Insights view reads. The archive only records a result on
+ * days the task's ECD covers, so a streak counts scheduled days: a Mon/Wed/Fri
+ * habit survives an untouched Tuesday.
+ *
+ * Habits are keyed by name — the same case-insensitive link the rest of the
+ * goal↔todo sync uses — so the goals view and the todo can look the same
+ * streak up from either side. Returns null on failure: streaks are decoration
+ * on both views, never a reason to show an error.
+ */
+export async function fetchOneStepStreaks(): Promise<StreakMap | null> {
+  try {
+    const stats = await insightsApi.getStats();
+    const map: StreakMap = {};
+    for (const habit of stats.habits) {
+      if (!habit.headerName || !isOneStepHeaderName(habit.headerName)) continue;
+      map[habit.taskName.trim().toLowerCase()] = {
+        current: habit.currentStreak,
+        longest: habit.longestStreak,
+      };
+    }
+    return map;
+  } catch {
+    return null;
+  }
+}
+
+/** A habit's entry in a `StreakMap`, looked up the way the map is keyed. */
+export function streakFor(
+  streaks: StreakMap | null,
+  name: string,
+): { current: number; longest: number } | undefined {
+  return streaks?.[name.trim().toLowerCase()];
 }
 
 function asPending(step: GoalStep): GoalStep {
