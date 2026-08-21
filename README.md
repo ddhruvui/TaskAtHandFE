@@ -27,6 +27,7 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   - **Projects** — long term projects built step by step (see below)
   - **Affirmations** — short lines to read daily (see below)
   - **Calls** — people to call biweekly or monthly (see below)
+  - **Vacation** — days off, where missed work isn't procrastination (see below)
 
   The panel toggles (everything except By Date) are mutually exclusive:
   clicking one opens that panel and deactivates whichever was open, and
@@ -120,9 +121,34 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   (with confirmation). Nothing to do with headers or tasks — call people never
   appear in the task views. The backend cron resets the called state for
   biweekly calls on the 15th and for all calls on the last day of the month
+- **Vacation view** — periods the user booked off. Each vacation is a start
+  and an end date, **both inclusive** (the day you leave and the day you get
+  back are both vacation days) and both required, which is what lets a trip be
+  booked months ahead. Ranges can't overlap; a trip can be edited afterwards
+  (forgot to book it, came home early) or deleted. Rows show the length, whether
+  the trip is past/upcoming/on now, and expand to a **re-date list**: the undone
+  one-time dated tasks that fall inside the window, each with "Pick a new date"
+  defaulting to the first day back. Those moves are sent with `vacationMove`, so
+  they're never counted as postponement — needed because a trip booked in
+  advance is re-dated before it starts. Repeating tasks aren't listed: they can't
+  be moved without changing their schedule, so the backend excuses those days
+  instead. **An active vacation shows a banner in every view** (except the Vacation view itself, which has its own fuller one) (booking time off
+  and forgetting is the failure mode this feature actually has)
+- **What vacation changes** — it's a lens on the history, not a pause button:
+  the cron runs unchanged, and anything ticked off while away still counts. What
+  changes is how the archive is read — a missed day on vacation is *paused*, not
+  missed (out of completion rates and per-weekday miss counts), slippage has the
+  days away subtracted from it, postpones and deletions are labelled rather than
+  flagged, and a call period is only excused when a trip swallowed ≥80% of it.
+  **Streaks restart on return rather than spanning the break.** While away, the
+  Insights numbers freeze at the day before departure and coach reports are
+  skipped entirely; the first report back opens with a restart plan
 - **Insights view** — powered by the backend's archive and insights endpoints:
-  - Habit cards: completion %, current/best streak, and a hit/miss dot row of
-    recent scheduled days (habits = tasks scheduled by day of week)
+  - Habit cards: completion %, current/best streak, the **all-time** number of
+    times the habit has been done, and a dot row of recent scheduled days
+    (habits = tasks scheduled by day of week). The dots have three states —
+    hit, miss, and a hollow **paused** pip for a vacation day, which is neither.
+    A card also names how many vacation days were excluded
   - Task stats: one-time tasks completed, how many landed on or before their
     planned date (finishing early or on the day counts as on time), the average
     slip past the planned date when some ran late, and the most-rescheduled
@@ -131,14 +157,18 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
     insights, procrastination flags, calls to make, suggestions) with a
     "Generate now" button — the "Calls to make" section appears only for
     reports generated after the Calls feature. The backend generates a report
-    on its own **once a week, on Friday**; "Generate now" is not limited by that
+    on its own **once per day**; "Generate now" is not limited by that, except
+    while on vacation, when reports are paused and the button is disabled
+  - A vacation notice when relevant: that the numbers are frozen and as of
+    which day, a welcome-back line after a trip, or how many vacation days in
+    the period were excluded from the rates
 
 ## Project Structure
 
 ```
 src/
 ├── App.tsx                    # Main app: header/task views + mode toggles
-├── types.ts                   # Shared types (Task, Header, ECD, Insight*, HabitStat)
+├── types.ts                   # Shared types (Task, Header, ECD, Insight*, HabitStat, Vacation*)
 ├── api/
 │   ├── client.ts              # fetch wrapper (VITE_API_BASE_URL)
 │   ├── headers.ts / tasks.ts  # CRUD calls
@@ -148,6 +178,7 @@ src/
 │   ├── projects.ts            # /projects CRUD (long term projects)
 │   ├── affirmations.ts        # /affirmations CRUD (short daily lines)
 │   ├── calls.ts               # /calls CRUD (people to call biweekly/monthly)
+│   ├── vacations.ts           # /vacations CRUD + /status + the re-date task list
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
@@ -159,7 +190,8 @@ src/
 │   ├── GoalsPanel/  GoalModal/  AddStepModal/  StepDaysModal/  # Goals view
 │   ├── ProjectsPanel/  ProjectModal/  ProjectTaskModal/ # Projects view
 │   ├── AffirmationsPanel/  AffirmationModal/            # Affirmations view
-│   └── CallsPanel/  CallModal/                          # Calls view
+│   ├── CallsPanel/  CallModal/                          # Calls view
+│   └── VacationPanel/  VacationModal/                   # Vacation view
 ├── utils/ecd.ts               # ECD due-today/date-key helpers
 ├── utils/goalSync.ts          # goal step ↔ todo sync + habit-day helpers
 ├── utils/projectSync.ts       # project task ↔ todo sync helpers

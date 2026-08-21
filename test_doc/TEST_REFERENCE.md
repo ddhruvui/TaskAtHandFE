@@ -42,6 +42,7 @@ Validates frontend wrapper methods for the Tasks collection:
 | update calls PUT `/tasks/:id` with partial body | Task update payload is passed as expected |
 | remove calls DELETE `/tasks/:id` without a body when no reason is given | Delete request maps to correct endpoint/method with no body |
 | remove sends the reason in the body when deleting an undone task | `remove(id, reason)` serializes `{ reason }` as the DELETE body |
+| passes vacationMove through on update | The Vacation panel's re-date flow sends `{ ecd, vacationMove: true }`, which is what stops a planned move being read as procrastination |
 
 ### `src/api/events.test.ts`
 
@@ -113,6 +114,20 @@ Validates frontend wrapper methods for the Calls collection (5 tests):
 | update calls PUT `/calls/:id` with partial body | Name + frequency update payload is passed as expected |
 | update calls PUT `/calls/:id` with a done-only body | `{ done }` toggle payload is passed as expected |
 | remove calls DELETE `/calls/:id` | Delete request maps to correct endpoint and method |
+
+### `src/api/vacations.test.ts`
+
+Validates frontend wrapper methods for the Vacations collection (7 tests):
+
+| Test | What it checks |
+| --- | --- |
+| getAll calls GET `/vacations` and returns the list | Wrapper maps to the correct endpoint |
+| getStatus calls GET `/vacations/status` | The banner payload — `onVacation` and the active trip's day counts |
+| getTasks calls GET `/vacations/:id/tasks` | The re-date list endpoint |
+| create POSTs both dates and the note | `{ startDate, endDate, note }` is serialized; both dates are mandatory |
+| update PUTs only the fields it was given | A partial edit (the came-home-early case) sends only what changed |
+| remove DELETEs and returns the deleted id | Delete request maps to correct endpoint and method |
+| propagates the backend's overlap rejection | An overlapping range rejects rather than resolving — overlaps would double-count a day |
 
 ### `src/api/insights.test.ts`
 

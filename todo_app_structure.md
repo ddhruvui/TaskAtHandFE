@@ -256,6 +256,80 @@ a project is backfilled, and a header pointing at a deleted project has its
 
 ---
 
+### Vacation (a period off, where missed work is not procrastination)
+
+```json
+{
+  "_id": "uuid",
+  "startDate": "YYYY-MM-DD (first vacation day, inclusive)",
+  "endDate": "YYYY-MM-DD (last vacation day, inclusive)",
+  "note": "string (optional, default \"\")",
+  "createdAt": "ISO 8601 datetime",
+  "updatedAt": "ISO 8601 datetime"
+}
+```
+
+**Rules:**
+
+- **Both dates are mandatory and both are inclusive** — the day a vacation
+  starts and the day it ends are vacation days. There is no open-ended
+  "away since Tuesday" state: a required end date is what lets a trip be
+  booked months in advance, and coming home early is an edit.
+- Ranges **may not overlap**. `vacationDaysBetween` sums each range's overlap
+  with a span independently, so a day covered twice would be subtracted twice
+  from a task's slippage.
+- `endDate` must be on or after `startDate`; a one-day vacation is legal.
+- Ranges may be created, edited and deleted freely, including retroactively —
+  the forgot-to-book-it case and the home-early case are both edits.
+- **These documents are never pruned.** Archive events carry no vacation flag
+  of their own, so every rule below is re-derived from these ranges at read
+  time. Deleting a range silently turns a forgiven fortnight back into two
+  weeks of missed habits.
+- Listed oldest `startDate` first.
+
+**What vacation changes — and what it deliberately does not:**
+
+Vacation is a **lens on the history, not a pause button**. Every cron step
+runs exactly as it always does: habits still reset each morning, done one-off
+tasks are still deleted, life events are still added, priorities are still
+re-sorted. The app stays fully usable while the user is away, and anything
+they tick off still counts. What changes is how the archive is *read*:
+
+| Signal | Vacation rule |
+| ------ | ------------- |
+| Missed habit day (`habit_result`) | **Paused** — out of the completion-rate denominator, out of `missedByDow`, out of `byHeader.missed`. Still breaks the streak (see below). |
+| Missed recurring cycle (`task_result`) | Paused, same as a habit. |
+| Late completion (`task_completed`) | `adjustedSlippageDays` = raw slippage minus the vacation days between `plannedFor` and `doneAt`. Every on-time/late count uses the adjusted number; the raw `slippageDays` is kept alongside. |
+| Postpone (`task_rescheduled`) | Excluded from both reason buckets and counted as `vacationMoves` when it happened during a trip **or** carries `vacationMove: true`. |
+| Deletion (`task_deleted`) | Still counted, but flagged `duringVacation` so the coach does not read a holiday clear-out as avoidance. |
+| Missed call period (`call_result`) | Exempt **only** when ≥80% of the period was vacation. A short trip does not excuse a fortnight of not ringing someone. |
+
+**Streaks restart, they do not span.** A vacation day the user did not act on
+is neither a hit nor a miss, but it *does* end the run — so a 10-day streak,
+a week away, then 3 clean days reads as a current streak of 3 with a best of
+10, at a completion rate of 100% over 13 scheduled days. A habit the user
+**did** tick off while away is an ordinary win that keeps the run alive: the
+asymmetry is deliberate, and it is the whole feature. Vacation removes the
+penalty, never the credit.
+
+**The display freeze.** While a vacation is active, the stats window ends the
+day *before* it started (`vacation.frozenAt` reports that day), so a streak or
+a rate does not visibly decay over a holiday. It is a display freeze only —
+work done mid-trip is archived as usual and appears the day the user is back.
+Both `GET /insights/stats` and the nightly snapshot inherit it, because both
+go through `insightsService.buildStats`.
+
+**The AI report is skipped entirely** on a vacation day — the nightly run
+reports `insightSkipped: "vacation"`, and `POST /insights/generate` answers
+409. On the first report after a trip the model is told the user has
+*returned from an N-day break* and asked for a short restart plan instead of
+an inventory of everything that lapsed.
+
+The date arithmetic all lives in `src/utils/vacation.js` and is shared by the
+live stats and the permanent monthly fold, which must agree.
+
+---
+
 ### Goal (habit backlog, built one step at a time)
 
 ```json
@@ -412,6 +486,63 @@ them.
 
 ---
 
+### ArchiveSummary (permanent monthly roll-ups)
+
+One document per calendar month (`ArchiveSummary`, or `ArchiveSummary-Test` in
+test mode), written by cron step 10 as raw events age out of the retention
+window. This is the only place history older than `ARCHIVE_RETENTION_DAYS`
+still exists — and it holds **monthly totals only**, never per-day detail.
+
+Counters live in arrays keyed by name rather than objects, because task and
+call names are free text and may contain `.`, which Mongo rejects in a field
+name.
+
+```json
+{
+  "month": "2026-07",
+  "days": ["2026-07-01", "2026-07-02"],
+  "eventCount": 412,
+  "vacationDays": 4,
+  "habits": [
+    { "taskName": "Meditate", "headerName": "Health", "scheduled": 22, "completed": 19, "paused": 4 }
+  ],
+  "recurring": [
+    { "taskName": "Pay rent", "headerName": "Admin", "ecdType": "day_of_month", "scheduled": 1, "completed": 1, "paused": 0 }
+  ],
+  "calls": [
+    { "callName": "Grandma", "frequency": "biweekly", "scheduled": 2, "completed": 1, "exempt": 0 }
+  ],
+  "oneTimeTasks": { "completed": 14, "onTime": 11, "late": 3 },
+  "reschedules": { "total": 5, "pushedLater": 4, "pushedLaterNoReason": 2, "vacationMoves": 1 },
+  "deletions": { "count": 2, "withReason": 1, "duringVacation": 0 },
+  "byHeader": [
+    { "headerName": "Health", "completed": 19, "missed": 3, "paused": 4, "reschedules": 1, "deleted": 0 }
+  ],
+  "firstAt": "2026-07-01T00:00:03Z",
+  "lastAt": "2026-07-31T23:59:00Z",
+  "updatedAt": "2026-08-30T00:00:04Z"
+}
+```
+
+- `days` is the **idempotency guard**: a source day already listed is never
+  counted again, which is what makes a repeated cron run safe
+- `oneTimeTasks.onTime` uses the same rule as the live stats — finished on or
+  before the planned day is a win, only a later completion is late, and the
+  days the user was away come out of the gap first
+- **Vacation rules are applied at fold time, and they have to be.** The live
+  stats re-derive "was this a vacation day?" on every read, but these totals
+  outlive the events they came from — once step 10 deletes the raw days,
+  nothing can re-derive them. `paused`, `exempt`, `vacationMoves`,
+  `duringVacation` and `vacationDays` are the surviving trace of a break.
+  A month folded before a vacation range is corrected keeps the old reading;
+  correcting a trip more than `ARCHIVE_RETENTION_DAYS` late is not retroactive.
+- Summaries written before vacation existed are normalized on read
+  (`withDefaults`), so a missing counter can never become `NaN`
+- Calls are deliberately absent from `byHeader`; they have no header
+- Read it at `GET /archive/summary`, oldest month first
+
+---
+
 ### Insight (AI reports)
 
 The `Insights` collection stores one AI coaching report per generation:
@@ -420,8 +551,9 @@ The `Insights` collection stores one AI coaching report per generation:
 {
   "generatedAt": "ISO 8601 datetime",
   "periodDays": 28,
-  "model": "claude-sonnet-4-6",
+  "model": "gemini-3.7-flash",
   "stats": "exact computed stats the report was based on",
+  "vacation": "the vacation context those stats were computed under (onVacation, frozenAt, vacationDaysInWindow, justReturnedFrom)",
   "report": {
     "summary": "string",
     "habitsOnTrack": ["string"],
@@ -435,9 +567,9 @@ The `Insights` collection stores one AI coaching report per generation:
 }
 ```
 
-Reports are generated **once a week, on Friday (UTC)**, at the end of that
-night's cron run (when `ANTHROPIC_API_KEY` is set), and on demand via
-`POST /insights/generate`, which ignores the weekly gate. The previous report is
+Reports are generated **once per UTC day**, at the end of that
+night's cron run (when `GEMINI_API_KEY` is set), and on demand via
+`POST /insights/generate`, which ignores the daily gate. The previous report is
 fed into the next generation so suggestions build on each other. Tasks
 scheduled by `day_of_week` are treated as **habits**; everything else is a
 task. Calls feed in two ways: `call_result` archive events become a `calls`
@@ -447,6 +579,15 @@ stats array (per person: `scheduled`, `completed`, `completionRate`,
 `callReminders` is required in newly generated reports (empty array when no
 calls are set up) but absent from reports stored before the feature — clients
 must tolerate its absence.
+
+**No report is written on a vacation day at all** — not by the cron, and not by
+`POST /insights/generate`, which answers 409. A gap in `generatedAt` that lines
+up with a `Vacations` range is expected, not a failure. On the first report
+after a trip the model is told the user has *returned from an N-day break*
+(from `vacation.justReturnedFrom`) and asked for a short restart plan rather
+than an inventory of everything that lapsed; it is also instructed never to
+read a vacation day as procrastination, and to treat `reschedules.vacationMoves`
+as planning rather than postponement.
 
 Manually deleting an **undone** task logs a `task_deleted` archive event with
 the user's stated `reason`. These feed insights as a `deletions` stats block
@@ -476,12 +617,21 @@ of the last cron run:
 
 This is the AI-free half of insights. Cron **step 9** recomputes it every
 night from `TaskArchive` — pure arithmetic, no Anthropic call, no
-`ANTHROPIC_API_KEY` needed — so habit streaks and completion rates are current
+`GEMINI_API_KEY` needed — so habit streaks and completion rates are current
 the morning after the day they were earned, even though the coaching narrative
-in `Insights` is only written on Fridays. The document is replaced in place
+in `Insights` is written once per day. The document is replaced in place
 (never appended to): the history it is derived from lives in `TaskArchive`, so
 any past snapshot can be recomputed. Read it via `GET /insights/stats/latest`;
 `GET /insights/stats` still computes live on request.
+
+Both paths go through `insightsService.buildStats`, so the stored numbers and
+the live ones can never disagree — including the vacation display freeze.
+While the user is away the snapshot stores the same as-of-departure figures
+night after night and resumes moving the day they are back; `stats.vacation`
+carries `onVacation`, `frozenAt`, `vacationDaysInWindow` and
+`justReturnedFrom`. Each habit also carries `lifetimeCompleted`, its all-time
+completion count (permanent monthly summaries plus everything not yet folded
+into them — the two sets are disjoint, so they add without double-counting).
 
 ---
 
@@ -499,6 +649,14 @@ outcome is only knowable at the following midnight:
 - For every `day_of_week` task scheduled **yesterday**: log a `habit_result` event with `completed = task.done` and the task's `doneAt`
 - For every `day_of_month` / `day_of_year` task due **yesterday**: log a `task_result` event the same way
 - Idempotent: tasks already archived for that `dueDate` are skipped, so manual cron runs don't double-log
+
+> **Vacation changes nothing in steps 0–11.** Vacation is a lens on the
+> history, not a pause button: habits still reset, done one-off tasks are
+> still deleted, life events are still added, priorities are still re-sorted,
+> and outcomes are still archived. The run reports `onVacation` so the two
+> things that *do* change are explicable — the AI report is skipped
+> (`insightSkipped: "vacation"`) and the step 9 snapshot is frozen at the day
+> before departure by `buildStats`.
 
 #### Step 1 — Mark undone: `day_of_year` _(runs daily)_
 
@@ -625,26 +783,65 @@ each period boundary:
   completion rates and streaks, missed-by-weekday, on-time vs late one-time
   tasks, reschedules, deletions, per-header rollups, per-person call results —
   and replace the single document in `InsightStats` (`computedAt` = now)
-- **Runs on every cron run, needs no `ANTHROPIC_API_KEY`, and is not affected
+- **Runs on every cron run, needs no `GEMINI_API_KEY`, and is not affected
   by `skipInsights`** (that flag exists to avoid the paid API call; this step
   is arithmetic). Streak counts therefore stay current nightly while the AI
-  narrative is weekly
+  narrative is refreshed daily
 - Runs after step 8 so the night's `call_result` events are already archived,
-  and before the report so Friday's prompt and the snapshot agree
+  and before the report so the day's prompt and the snapshot agree
 - The window ends at the **real current time**, not the run's `date` override,
   because archive events are stamped with their real insertion time
 - A failure never fails the cron run (logged, `statsRefreshed: false` in stats)
 
-#### Final step — Generate the weekly AI insight report
+#### Step 10 — Summarise, then prune the archive _(every night)_
 
-- After step 8, when `ANTHROPIC_API_KEY` is set (and not in test mode):
-  - **Once per week, on Friday — not nightly.** The cron runs every night, but the analysis costs an Anthropic call, so it only fires when today is **Friday (UTC)** and no report has been generated yet on that Friday (so a second cron run the same day, e.g. a manual `POST /cron/run`, doesn't pay for a second call). On any other day, or on a Friday already reported on, the run records `insightGenerated: false` and `insightSkipped: "not-due"` and moves on. A report generated on some other day — e.g. an on-demand `POST /insights/generate` on a Wednesday — does **not** consume that week's Friday run.
+- `TaskArchive` is append-only and used to grow without bound, while only the
+  last 28 days were ever read. Events older than `ARCHIVE_RETENTION_DAYS`
+  (default **30**) are folded into `ArchiveSummary` — one document per calendar
+  month, kept forever — and then deleted
+- **The cutoff is a UTC day boundary**, so only whole days are ever pruned. A
+  day split across two runs would be counted by one and dropped by the other
+- **The fold is idempotent per source day**: each month's summary records the
+  days already folded in, so a run that summarised a batch but died before
+  deleting it counts nothing twice on the next pass
+- Like step 9, the window is measured from the **real current time**, not the
+  run's `date` override — archive events carry real insertion times, so a run
+  pretending to be next year must not treat this week's events as ancient
+- Retention is **clamped up to the insights window** (28 days): a smaller
+  `ARCHIVE_RETENTION_DAYS` is logged and ignored, because pruning inside the
+  window would starve the nightly snapshot of the events it reads
+- Reports `archiveEventsPruned`, `archiveEventsFolded`,
+  `archiveMonthsSummarised` and `archiveCutoff` (the UTC day events had to
+  predate, or `null` when nothing was old enough)
+- **Per-day detail is not recoverable once pruned** — only the monthly totals
+  survive, readable at `GET /archive/summary`
+
+#### Step 11 — Trim stored insight reports _(every night)_
+
+- The report is daily, so `Insights` fills seven times faster than it used to,
+  at roughly 8 KB a report. Only the newest `INSIGHT_RETENTION_COUNT`
+  (default **100**) are kept
+- 100 is not arbitrary: it is `Insight.MAX_HISTORY`, the ceiling
+  `GET /insights/history?limit=` enforces, so a report past it cannot be read
+  through the API by any route
+- **No roll-up, unlike step 10.** A report is prose *derived from*
+  `TaskArchive`, and those numbers survive permanently in `ArchiveSummary` —
+  an aged-out report costs a piece of writing, not a fact
+- `INSIGHT_RETENTION_COUNT` can raise the window but is **floored** at
+  `MAX_HISTORY`: trimming inside the API's own ceiling would make
+  `?limit=100` unservable. A smaller value is logged and ignored
+- Reports `insightReportsPruned`
+
+#### Final step — Generate the AI insight report
+
+- After step 8, when `GEMINI_API_KEY` is set (and not in test mode):
+  - **Once per UTC day.** The cron runs every night and the report fires with it, provided no report has been generated yet that day (so a second cron run the same day, e.g. a manual `POST /cron/run`, doesn't pay for a second call). On a day already reported on, the run records `insightGenerated: false` and `insightSkipped: "not-due"` and moves on. An on-demand `POST /insights/generate` **does** consume that day's run — a manual report at noon means the nightly run skips.
   - Compute exact stats over the last 28 days of `TaskArchive` events (habit completion rates, streaks, missed-by-weekday, task slippage, reschedule counts, per-person call completion and miss streaks)
   - Fetch the live call list and include it as `currentCalls` in the prompt payload
-  - Send stats + recent events + the previous report to `claude-sonnet-4-6` with a structured-output schema
+  - Send stats + recent events + the previous report to `gemini-3.7-flash` with a structured-output schema
   - Store the result in the `Insights` collection
 - Failures here never fail the cron run (logged, `insightGenerated: false` in stats)
-- `POST /insights/generate` ignores the weekly gate — an explicit user request always generates a fresh report
+- `POST /insights/generate` ignores the daily gate — an explicit user request always generates a fresh report, and consumes that day's scheduled run
 
 ---
 
@@ -1096,6 +1293,93 @@ Deletes a call.
 
 ---
 
+### Vacations
+
+#### `GET /vacations`
+
+Returns every stored vacation, oldest `startDate` first.
+
+**Response `200`** — array of vacations
+
+#### `GET /vacations/status`
+
+Whether today (UTC) is a vacation day, plus what is coming and what just
+ended. This is the banner payload — clients should not re-derive it.
+
+**Response `200`**
+
+```json
+{
+  "today": "2026-09-07",
+  "onVacation": true,
+  "active": {
+    "_id": "uuid",
+    "startDate": "2026-09-03",
+    "endDate": "2026-09-15",
+    "note": "Kerala trip",
+    "totalDays": 13,
+    "dayOfVacation": 5,
+    "daysRemaining": 8
+  },
+  "upcoming": [],
+  "justReturnedFrom": null
+}
+```
+
+`justReturnedFrom` reports a vacation that ended within the last **3 days**
+(a grace window, so one missed cron night does not cost the user the report
+that helps them restart).
+
+#### `GET /vacations/:id/tasks`
+
+The undone one-time `date` tasks scheduled inside the vacation, oldest date
+first, each with a denormalized `headerName`. This is the re-date list the
+Vacation panel works through.
+
+Recurring tasks are deliberately **absent**: a `day_of_week`, `day_of_month`
+or `day_of_year` task cannot be moved without permanently rewriting its
+schedule, so those days are exempted instead.
+
+**Response `200`** — array of tasks · **`404`** — vacation not found
+
+#### `POST /vacations`
+
+Books a vacation. Both dates are required and both are inclusive.
+
+```json
+{ "startDate": "2026-09-03", "endDate": "2026-09-15", "note": "Kerala trip" }
+```
+
+**Response `201`** — the created vacation
+
+**Response `400`** — a malformed date, `endDate` before `startDate`, or a
+range overlapping an existing one
+
+#### `PUT /vacations/:id`
+
+Corrects a vacation's `startDate`, `endDate` and/or `note` — the
+forgot-to-book-it case and the home-early case. The **resulting** range is
+validated, not just the fields sent, and the row being edited is not treated
+as overlapping itself.
+
+**Response `200`** — updated vacation · **`400`** — validation · **`404`** — not found
+
+#### `DELETE /vacations/:id`
+
+Deletes a vacation, and with it the forgiveness it granted: archive events
+carry no vacation flag of their own, so the days it covered become ordinary
+days again.
+
+**Response `200`**
+
+```json
+{
+  "deleted": "uuid"
+}
+```
+
+---
+
 ### Goals
 
 #### `GET /goals`
@@ -1271,7 +1555,7 @@ Manually triggers the cron job. Accepts optional `date` (run as if it were that 
 7. Reorder priorities per header
 8. Reset done calls _(if today is the 15th: biweekly only; if today is the last day of the month: all)_
 9. Refresh the `InsightStats` snapshot — streaks, rates, on-time counts _(every night; no AI, no API key needed)_
-10. Generate the weekly AI insight report _(only on Fridays (UTC) and only once per Friday, when `ANTHROPIC_API_KEY` is set and the request did not pass `skipInsights: true` — not a numbered step)_
+11. Generate the AI insight report _(once per UTC day, when `GEMINI_API_KEY` is set and the request did not pass `skipInsights: true` — not a numbered step)_
 
 **Response `200`**
 
@@ -1294,8 +1578,8 @@ Manually triggers the cron job. Accepts optional `date` (run as if it were that 
 }
 ```
 
-On a night the weekly report is not due (any day that is not Friday, or a
-Friday already reported on), the same response carries
+On a night the report is not due (a day already reported on), the same
+response carries
 `"insightGenerated": false` plus `"insightSkipped": "not-due"`.
 
 ---
@@ -1333,6 +1617,7 @@ Returns metadata about the last cron run.
 ```json
 {
   "lastRanAt": "2026-03-26T00:00:00Z",
+  "onVacation": false,
   "tasksDeleted": 2,
   "tasksMarkedUndone": 5,
   "tasksClamped": 1,
@@ -1357,6 +1642,7 @@ Returns metadata about the last cron run. Alias for `GET /cron/status`.
 ```json
 {
   "lastRanAt": "2026-03-26T00:00:00Z",
+  "onVacation": false,
   "tasksDeleted": 2,
   "tasksMarkedUndone": 5,
   "tasksClamped": 1,
@@ -1410,7 +1696,7 @@ is a win and is never reported as a slip.
 
 The stats snapshot written by the nightly cron (step 9): the same body as
 `GET /insights/stats` plus `computedAt`, without recomputing it. Refreshed
-every night regardless of the weekly AI cadence, so streaks are never more
+every night regardless of the AI report, so streaks are never more
 than a day old. `404` if the cron has not run yet.
 
 #### `GET /insights/latest`
@@ -1423,11 +1709,11 @@ Recent AI reports, newest first.
 
 #### `POST /insights/generate`
 
-Generates a fresh AI report now, on any day — the cron's Friday-only gate does
-not apply to this explicit request, and a report generated here does not
-consume that week's Friday run. Optional body `{ "days": 28 }`. Returns `201`
+Generates a fresh AI report now — the cron's once-per-day gate does
+not apply to this explicit request. A report generated here **does** consume
+that day's scheduled run, so the nightly cron will then skip. Optional body `{ "days": 28 }`. Returns `201`
 with the stored report, `404` if the archive is empty, `503` if
-`ANTHROPIC_API_KEY` is not configured.
+`GEMINI_API_KEY` is not configured.
 
 ---
 

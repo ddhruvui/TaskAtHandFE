@@ -84,3 +84,26 @@ describe("tasksApi", () => {
     });
   });
 });
+
+describe("tasksApi vacationMove", () => {
+  beforeEach(() => {
+    apiFetchMock.mockReset();
+  });
+
+  it("passes vacationMove through on update", async () => {
+    apiFetchMock.mockResolvedValue({});
+
+    await tasksApi.update("t1", {
+      ecd: { type: "date", value: "2026-09-16" },
+      vacationMove: true,
+    });
+
+    expect(apiFetchMock).toHaveBeenCalledWith("/tasks/t1", {
+      method: "PUT",
+      body: JSON.stringify({
+        ecd: { type: "date", value: "2026-09-16" },
+        vacationMove: true,
+      }),
+    });
+  });
+});

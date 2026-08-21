@@ -68,6 +68,46 @@
   opacity: 0.55;
 }
 
+/* A vacation day the user didn't act on: neither a hit nor a miss. Hollow so
+   it reads as "nothing happened here" rather than a failure — which is exactly
+   what it is, and also why the streak restarts after it. */
+.insights-dot--paused {
+  background: transparent;
+  border: 1.5px dashed #8b949e;
+  box-sizing: border-box;
+}
+
+/* ── Vacation notices ── */
+.insights-vacation-note {
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
+  border-left-width: 4px;
+  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.insights-vacation-hint {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: #57606a;
+}
+
+.insights-habit-card__lifetime {
+  font-size: 12px;
+  color: #57606a;
+  margin-bottom: 2px;
+}
+
+.insights-habit-card__paused {
+  font-size: 12px;
+  color: #57606a;
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
 /* ── Task stats ── */
 
 .insights-task-stats ul {

@@ -143,19 +143,75 @@ export interface Call {
   updatedAt: string; // ISO 8601 timestamp
 }
 
+// ── Vacation (booked time off) ──────────────────────────────────────────────
+
+/**
+ * A period the user booked off. Both dates are **inclusive** — the day it
+ * starts and the day it ends are vacation days — and both are mandatory.
+ *
+ * Vacation is a lens on the history, not a pause button: the backend cron runs
+ * unchanged and anything ticked off while away still counts. What changes is
+ * how the archive is read (paused days, adjusted slippage, exempt call
+ * periods). See API_REFERENCE.md.
+ */
+export interface Vacation {
+  _id: string;
+  startDate: string; // "YYYY-MM-DD", inclusive
+  endDate: string; // "YYYY-MM-DD", inclusive
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The banner payload from GET /vacations/status — never re-derive it client-side. */
+export interface VacationStatus {
+  today: string; // "YYYY-MM-DD" UTC
+  onVacation: boolean;
+  active:
+    | (Vacation & {
+        totalDays: number;
+        dayOfVacation: number;
+        daysRemaining: number;
+      })
+    | null;
+  upcoming: Vacation[];
+  /** A vacation that ended in the last 3 days — drives the "welcome back" copy. */
+  justReturnedFrom: {
+    startDate: string;
+    endDate: string;
+    days: number;
+    daysAgo: number;
+  } | null;
+}
+
+/** A task inside a vacation window, as returned by GET /vacations/:id/tasks. */
+export interface VacationTask extends Task {
+  headerName: string | null;
+}
+
 // ── Insights (archive stats + AI reports) ───────────────────────────────────
 
 export interface HabitStat {
   taskName: string;
   headerName: string | null;
   scheduledDays: string[];
-  scheduled: number;
+  scheduled: number; // Excludes paused (vacation) days
   completed: number;
+  /** Scheduled days a booked vacation excused. Optional: older backends omit it. */
+  pausedDays?: number;
+  /** All-time completions — monthly summaries plus the raw window. Ignores `periodDays`. */
+  lifetimeCompleted?: number;
   completionRate: number; // 0-100
+  /** Restarts after a break rather than spanning it — an unfilled vacation day ends the run. */
   currentStreak: number;
   longestStreak: number;
-  missedByDow: Record<string, number>;
-  recentResults: { dueDate: string; completed: boolean }[];
+  missedByDow: Record<string, number>; // Vacation misses excluded
+  recentResults: {
+    dueDate: string;
+    completed: boolean;
+    /** The day fell inside a vacation. `!completed && vacation` renders as paused. */
+    vacation?: boolean;
+  }[];
 }
 
 export interface InsightStats {
@@ -183,7 +239,9 @@ export interface InsightStats {
       headerName: string | null;
       plannedFor: string | null;
       doneAt: string | null;
-      slippageDays: number | null; // negative = finished early
+      slippageDays: number | null; // negative = finished early (raw)
+      /** Slippage minus the vacation days in the gap — what onTime actually uses. */
+      adjustedSlippageDays?: number | null;
       onTime?: boolean | null;
     }[];
   };
@@ -194,13 +252,39 @@ export interface InsightStats {
     pushedLater: number;
     pushedLaterWithReason: number;
     pushedLaterNoReason: number;
+    /** Moves made because of a booked vacation — never procrastination. */
+    vacationMoves?: number;
     reasons: string[];
   }[];
   byHeader: Record<
     string,
-    { completed: number; missed: number; reschedules: number }
+    {
+      completed: number;
+      missed: number;
+      paused?: number;
+      reschedules: number;
+    }
   >;
   calls: CallStat[];
+  /**
+   * Vacation context for the whole payload. Optional: older backends omit it.
+   *
+   * `frozenAt` non-null means these numbers are **as of that day**, not today —
+   * while a vacation is active the window ends the day before it started so a
+   * streak or a rate does not visibly decay over a holiday.
+   */
+  vacation?: {
+    onVacation: boolean;
+    active: (Vacation & { totalDays: number }) | null;
+    frozenAt: string | null;
+    vacationDaysInWindow: number;
+    justReturnedFrom: {
+      startDate: string;
+      endDate: string;
+      days: number;
+      daysAgo: number;
+    } | null;
+  };
 }
 
 export interface CallStat {
@@ -209,8 +293,14 @@ export interface CallStat {
   scheduled: number;
   completed: number;
   completionRate: number; // 0-100
+  /** Periods a vacation swallowed (>=80% of the period). Excluded from `scheduled`. */
+  exemptPeriods?: number;
   currentMissStreak: number;
-  recentResults: { dueDate: string; completed: boolean }[];
+  recentResults: {
+    dueDate: string;
+    completed: boolean;
+    exempt?: boolean;
+  }[];
 }
 
 export interface InsightReport {

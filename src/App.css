@@ -223,7 +223,30 @@
   border-color: #0b7285 !important;
 }
 
+/* ─── Vacation toggle button active state ─── */
+.vacation-toggle-btn--active {
+  background: #bf8700 !important;
+  border-color: #bf8700 !important;
+  color: #ffffff !important;
+}
+
+.vacation-toggle-btn--active:hover {
+  background: #a97a00 !important;
+  border-color: #a97a00 !important;
+}
+
 @media (prefers-color-scheme: dark) {
+  .vacation-toggle-btn--active {
+    background: #d4a72c !important;
+    border-color: #d4a72c !important;
+    color: #ffffff !important;
+  }
+
+  .vacation-toggle-btn--active:hover {
+    background: #e3b341 !important;
+    border-color: #e3b341 !important;
+  }
+
   .calls-toggle-btn--active {
     background: #22b8cf !important;
     border-color: #22b8cf !important;
@@ -317,4 +340,44 @@
   .readme {
     padding: 16px 12px;
   }
+}
+
+/* ── Vacation banner ──
+   Rendered above the view toggles in every view. An active vacation silently
+   changes how insights read the archive, so it must never be invisible: the
+   failure mode this feature has is booking time off and forgetting. */
+.app-vacation-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
+  border-left-width: 4px;
+  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.app-vacation-banner__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-vacation-banner__btn {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--accent, #aa3bff);
+  background: none;
+  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.app-vacation-banner__btn:hover {
+  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
 }

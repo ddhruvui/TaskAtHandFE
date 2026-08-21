@@ -16,4 +16,5 @@ export * as projectsApi from "./projects";
 export * as lifeEventsApi from "./lifeevents";
 export * as affirmationsApi from "./affirmations";
 export * as callsApi from "./calls";
+export * as vacationsApi from "./vacations";
 export { apiFetch } from "./client";

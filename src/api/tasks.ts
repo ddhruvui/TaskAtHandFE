@@ -72,6 +72,11 @@ export interface UpdateTaskBody {
   reason?: string; // Optional postpone reason; archived on the task_rescheduled
   // event when the ecd change pushes a one-time date later. Ignored otherwise
   // and never stored on the task. Absence/blank is treated as procrastination.
+  vacationMove?: boolean; // Set by the Vacation panel when it moves a task out
+  // of a booked trip. Archived on the task_rescheduled event and excluded from
+  // every procrastination signal. Required rather than inferred: a trip booked
+  // in advance is re-dated before it starts, so the event's own timestamp falls
+  // outside every vacation range. Never stored on the task.
 }
 
 export interface DeleteTaskResponse {

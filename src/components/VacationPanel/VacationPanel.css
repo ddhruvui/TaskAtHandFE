@@ -1,0 +1,163 @@
+.vacation-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Status banner ──
+   A forgotten vacation is the most likely real-world failure of this feature,
+   so an active one is always visible rather than only in the toolbar. */
+.vacation-panel__banner {
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
+  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.vacation-panel__banner--active {
+  border-left-width: 4px;
+}
+
+/* ── Toolbar ── */
+.vacation-panel__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+/* ── Vacation list ── */
+.vacation-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.vacation-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border, #e5e4e7);
+}
+
+.vacation-panel__row:last-child {
+  border-bottom: none;
+}
+
+.vacation-panel__row--past {
+  opacity: 0.6;
+}
+
+.vacation-panel__row--active {
+  border-left: 3px solid var(--accent, #aa3bff);
+  padding-left: 10px;
+}
+
+.vacation-panel__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.vacation-panel__dates {
+  font-weight: 600;
+  color: var(--text-h, #08060d);
+}
+
+.vacation-panel__meta {
+  font-size: 0.8rem;
+  color: var(--text, #6b6375);
+}
+
+/* ── Row controls ── */
+.vacation-panel__link-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--accent, #aa3bff);
+  background: none;
+  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.vacation-panel__link-btn:hover {
+  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+}
+
+.vacation-panel__icon-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text, #6b6375);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.vacation-panel__icon-btn:hover {
+  border-color: var(--border, #e5e4e7);
+  color: var(--text-h, #08060d);
+}
+
+.vacation-panel__icon-btn--danger:hover {
+  color: #cf222e;
+  border-color: #cf222e;
+}
+
+/* ── The re-date list, expanded under a row ── */
+.vacation-panel__tasks {
+  flex: 1 0 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--code-bg, #f4f3ec);
+}
+
+.vacation-panel__tasks-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text, #6b6375);
+}
+
+.vacation-panel__tasks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vacation-panel__task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vacation-panel__task-name {
+  font-weight: 600;
+  color: var(--text-h, #08060d);
+}
+
+.vacation-panel__task-meta {
+  flex: 1 1 auto;
+  font-size: 0.8rem;
+  color: var(--text, #6b6375);
+}

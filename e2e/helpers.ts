@@ -76,9 +76,7 @@ export async function createTask(params: {
  * Fetch raw TaskArchive events, optionally filtered by type (e.g. "task_deleted").
  */
 export async function getArchiveEvents(type?: string) {
-  const url = type
-    ? `${API_BASE}/archive?type=${type}`
-    : `${API_BASE}/archive`;
+  const url = type ? `${API_BASE}/archive?type=${type}` : `${API_BASE}/archive`;
   return fetch(url).then((r) => r.json());
 }
 
@@ -217,6 +215,48 @@ export async function runCron() {
     body: JSON.stringify({ skipInsights: true }),
   });
   return res.json();
+}
+
+/**
+ * Clean all vacations from the database
+ */
+export async function cleanVacations() {
+  const vacations = await fetch(`${API_BASE}/vacations`).then((r) => r.json());
+  for (const vacation of vacations) {
+    await fetch(`${API_BASE}/vacations/${vacation._id}`, { method: "DELETE" });
+  }
+}
+
+/**
+ * Create a vacation via API. Both dates are inclusive.
+ */
+export async function createVacation(
+  startDate: string,
+  endDate: string,
+  note = "",
+) {
+  const res = await fetch(`${API_BASE}/vacations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ startDate, endDate, note }),
+  });
+  return res.json();
+}
+
+/**
+ * All vacations via API
+ */
+export async function getVacations() {
+  return fetch(`${API_BASE}/vacations`).then((r) => r.json());
+}
+
+/**
+ * Archive events of a type, via API — used to assert the vacationMove flag.
+ */
+export async function getRescheduleEvents() {
+  return fetch(`${API_BASE}/archive?type=task_rescheduled`).then((r) =>
+    r.json(),
+  );
 }
 
 /**

@@ -56,9 +56,43 @@ export function InsightsPanel() {
   const hasArchiveData = stats !== null && stats.eventCount > 0;
   const report = insight?.report;
 
+  const vacation = stats?.vacation;
+  const onVacation = vacation?.onVacation === true;
+
   return (
     <div className="insights-panel">
       {error && <p className="empty-message">Insights error: {error}</p>}
+
+      {/* ── Vacation notice ──
+          Without this the numbers below look broken: a frozen window explains
+          why nothing moved, and excluded days explain a denominator that
+          shrank. */}
+      {vacation?.onVacation && (
+        <div className="insights-vacation-note" role="status">
+          <strong>You're on vacation.</strong> These numbers are as of{" "}
+          {vacation.frozenAt ?? "before you left"} and stay put until you're
+          back — days off aren't counted against you, and coach reports are
+          paused. Anything you do tick off still counts and will show up when
+          you return.
+        </div>
+      )}
+      {!vacation?.onVacation && vacation?.justReturnedFrom && (
+        <div className="insights-vacation-note" role="status">
+          <strong>Welcome back.</strong> You were away{" "}
+          {vacation.justReturnedFrom.days} day
+          {vacation.justReturnedFrom.days === 1 ? "" : "s"} — those days don't
+          count as misses, and habit streaks start fresh from here.
+        </div>
+      )}
+      {!vacation?.onVacation &&
+        vacation !== undefined &&
+        vacation.vacationDaysInWindow > 0 && (
+          <p className="insights-vacation-hint">
+            {vacation.vacationDaysInWindow} vacation day
+            {vacation.vacationDaysInWindow === 1 ? "" : "s"} in this period are
+            excluded from the rates below.
+          </p>
+        )}
 
       {/* ── Habit stats ── */}
       <section className="readme-section">
@@ -68,7 +102,10 @@ export function InsightsPanel() {
         {stats && stats.habits.length > 0 ? (
           <div className="insights-habit-grid">
             {stats.habits.map((h) => (
-              <div key={`${h.taskName}-${h.headerName}`} className="insights-habit-card">
+              <div
+                key={`${h.taskName}-${h.headerName}`}
+                className="insights-habit-card"
+              >
                 <div className="insights-habit-card__title">
                   {h.taskName}
                   <span className="insights-habit-card__header">
@@ -82,17 +119,38 @@ export function InsightsPanel() {
                     {h.longestStreak})
                   </span>
                 </div>
+                {/* All-time count, deliberately separate from the windowed
+                    figures above — it ignores the reporting period entirely. */}
+                {h.lifetimeCompleted !== undefined && (
+                  <div className="insights-habit-card__lifetime">
+                    Done <strong>{h.lifetimeCompleted}</strong> time
+                    {h.lifetimeCompleted === 1 ? "" : "s"} all-time
+                  </div>
+                )}
+                {h.pausedDays !== undefined && h.pausedDays > 0 && (
+                  <div className="insights-habit-card__paused">
+                    {h.pausedDays} vacation day
+                    {h.pausedDays === 1 ? "" : "s"} excluded
+                  </div>
+                )}
                 <div
                   className="insights-habit-card__dots"
                   title="Recent scheduled days, oldest → newest"
                 >
-                  {h.recentResults.map((r) => (
-                    <span
-                      key={r.dueDate}
-                      className={`insights-dot ${r.completed ? "insights-dot--hit" : "insights-dot--miss"}`}
-                      title={`${r.dueDate}: ${r.completed ? "done" : "missed"}`}
-                    />
-                  ))}
+                  {h.recentResults.map((r) => {
+                    // Three states, not two: a vacation day the user didn't act
+                    // on is neither a hit nor a miss. Drawing it as a miss would
+                    // make the excluded day look like a failure; dropping it
+                    // would make the streak restart look like a bug.
+                    const paused = !r.completed && r.vacation;
+                    return (
+                      <span
+                        key={r.dueDate}
+                        className={`insights-dot ${r.completed ? "insights-dot--hit" : paused ? "insights-dot--paused" : "insights-dot--miss"}`}
+                        title={`${r.dueDate}: ${r.completed ? "done" : paused ? "on vacation — not counted" : "missed"}`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -130,7 +188,9 @@ export function InsightsPanel() {
                   <>
                     {" "}
                     · average slip of{" "}
-                    <strong>{stats.oneTimeTasks.avgSlippageDays} days</strong>{" "}
+                    <strong>
+                      {stats.oneTimeTasks.avgSlippageDays} days
+                    </strong>{" "}
                     past the planned date
                   </>
                 )}
@@ -164,11 +224,13 @@ export function InsightsPanel() {
           <button
             className="readme-heading__add-btn insights-generate-btn"
             onClick={handleGenerate}
-            disabled={generating || !hasArchiveData}
+            disabled={generating || !hasArchiveData || onVacation}
             title={
-              hasArchiveData
-                ? "Generate a fresh AI report"
-                : "No archive data to analyze yet"
+              onVacation
+                ? "Paused while you're on vacation"
+                : hasArchiveData
+                  ? "Generate a fresh AI report"
+                  : "No archive data to analyze yet"
             }
           >
             {generating ? "Generating…" : "Generate now"}
@@ -183,10 +245,18 @@ export function InsightsPanel() {
             <p className="insights-report__summary">{report.summary}</p>
 
             {report.habitsOnTrack.length > 0 && (
-              <ReportList title="On track" items={report.habitsOnTrack} tone="good" />
+              <ReportList
+                title="On track"
+                items={report.habitsOnTrack}
+                tone="good"
+              />
             )}
             {report.habitsSlipping.length > 0 && (
-              <ReportList title="Slipping" items={report.habitsSlipping} tone="bad" />
+              <ReportList
+                title="Slipping"
+                items={report.habitsSlipping}
+                tone="bad"
+              />
             )}
             {report.taskInsights.length > 0 && (
               <ReportList title="Tasks" items={report.taskInsights} />
@@ -202,13 +272,18 @@ export function InsightsPanel() {
               <ReportList title="Calls to make" items={report.callReminders} />
             )}
             {report.suggestions.length > 0 && (
-              <ReportList title="Suggestions" items={report.suggestions} tone="good" />
+              <ReportList
+                title="Suggestions"
+                items={report.suggestions}
+                tone="good"
+              />
             )}
           </div>
         ) : (
           <p className="empty-message">
-            No AI report yet — one is generated automatically every Friday, or
-            click "Generate now".
+            {onVacation
+              ? "Coach reports are paused while you're on vacation — the next one lands after you're back, with a plan for restarting."
+              : 'No AI report yet — one is generated automatically each day, or click "Generate now".'}
           </p>
         )}
       </section>
@@ -226,7 +301,9 @@ function ReportList({
   tone?: "good" | "bad";
 }) {
   return (
-    <div className={`insights-report__block insights-report__block--${tone ?? "neutral"}`}>
+    <div
+      className={`insights-report__block insights-report__block--${tone ?? "neutral"}`}
+    >
       <h3>{title}</h3>
       <ul>
         {items.map((item, i) => (

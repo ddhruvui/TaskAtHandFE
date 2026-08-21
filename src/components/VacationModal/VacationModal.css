@@ -1,0 +1,173 @@
+.vacation-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  animation: vacation-fade-in 0.15s ease;
+}
+
+@keyframes vacation-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vacation-scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Same local-variable + dark-mode block every modal in this app uses. */
+.vacation-modal {
+  --m-bg: #ffffff;
+  --m-border: #d0d7de;
+  --m-text: #1f2328;
+  --m-text-muted: #656d76;
+  --m-accent: #0c8599;
+  --m-accent-hover: #0b7285;
+  --m-danger: #cf222e;
+  --m-radius: 6px;
+
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  padding: 24px 28px;
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(31, 35, 40, 0.15);
+  animation: vacation-scale-in 0.18s ease;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
+    Arial, sans-serif;
+  font-size: 14px;
+  color: var(--m-text);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .vacation-modal {
+    --m-bg: #161b22;
+    --m-border: #30363d;
+    --m-text: #e6edf3;
+    --m-text-muted: #8b949e;
+    --m-accent: #22b8cf;
+    --m-accent-hover: #3bc9db;
+    --m-danger: #f85149;
+  }
+}
+
+.vacation-modal__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--m-text);
+}
+
+.vacation-modal__hint {
+  margin: -8px 0 0;
+  font-size: 12px;
+  color: var(--m-text-muted);
+}
+
+.vacation-modal__note-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--m-text);
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+}
+
+.vacation-modal__note-input:focus {
+  outline: 2px solid var(--m-accent);
+  outline-offset: -1px;
+}
+
+/* Two calendars side by side; they stack on narrow screens. */
+.vacation-modal__dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.vacation-modal__date-field {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.vacation-modal__date-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--m-text-muted);
+}
+
+.vacation-modal__summary {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--m-text);
+}
+
+.vacation-modal__error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--m-danger);
+}
+
+.vacation-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.vacation-modal__btn {
+  padding: 7px 16px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--m-text);
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  cursor: pointer;
+}
+
+.vacation-modal__btn:hover:not(:disabled) {
+  border-color: var(--m-accent);
+}
+
+.vacation-modal__btn--primary {
+  color: #fff;
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+}
+
+.vacation-modal__btn--primary:hover:not(:disabled) {
+  background: var(--m-accent-hover);
+  border-color: var(--m-accent-hover);
+}
+
+.vacation-modal__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

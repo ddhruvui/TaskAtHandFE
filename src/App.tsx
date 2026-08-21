@@ -11,10 +11,12 @@ import { GoalsPanel } from "./components/GoalsPanel";
 import { ProjectsPanel } from "./components/ProjectsPanel";
 import { AffirmationsPanel } from "./components/AffirmationsPanel";
 import { CallsPanel } from "./components/CallsPanel";
-import type { Header, Task } from "./types";
+import { VacationPanel } from "./components/VacationPanel";
+import type { Header, Task, VacationStatus } from "./types";
 import type { EditPayload } from "./components/TaskCard/TaskCard.types";
 import * as headersApi from "./api/headers";
 import * as tasksApi from "./api/tasks";
+import * as vacationsApi from "./api/vacations";
 import { getEcdDateKey, formatDateKey, todayDateKey } from "./utils/ecd";
 import {
   isOneStepHeaderName,
@@ -51,6 +53,15 @@ function App() {
   const [projectsMode, setProjectsMode] = useState(false);
   const [affirmationsMode, setAffirmationsMode] = useState(false);
   const [callsMode, setCallsMode] = useState(false);
+  const [vacationMode, setVacationMode] = useState(false);
+
+  // Vacation status is app-level, not panel-level, on purpose: the most likely
+  // real-world failure of this feature is booking time off and forgetting, then
+  // wondering months later why the insights went quiet. The banner below makes
+  // an active vacation visible from every view.
+  const [vacationStatus, setVacationStatus] = useState<VacationStatus | null>(
+    null,
+  );
 
   // Panel views are mutually exclusive — activating one deactivates the rest,
   // so the clicked tab is always the one shown (byDateMode is a todo-list
@@ -63,6 +74,7 @@ function App() {
     setProjectsMode,
     setAffirmationsMode,
     setCallsMode,
+    setVacationMode,
   ];
   const togglePanelMode = (setter: (typeof panelModeSetters)[number]) => {
     panelModeSetters.forEach((s) => {
@@ -86,6 +98,19 @@ function App() {
     name?: string;
   } | null>(null);
 
+  /**
+   * Vacation status, refreshed on load and after the Vacation panel changes
+   * anything. A failure is swallowed: the banner is context, never a reason to
+   * show the user an error over their todo list.
+   */
+  const refreshVacationStatus = useCallback(async () => {
+    try {
+      setVacationStatus(await vacationsApi.getStatus());
+    } catch {
+      setVacationStatus(null);
+    }
+  }, []);
+
   /* ── Load all headers and their tasks ── */
   const loadAll = useCallback(async () => {
     try {
@@ -106,7 +131,8 @@ function App() {
 
   useEffect(() => {
     loadAll();
-  }, [loadAll]);
+    refreshVacationStatus();
+  }, [loadAll, refreshVacationStatus]);
 
   /* ── Reload tasks for a single header ── */
   const reloadHeaderTasks = useCallback(async (headerId: string) => {
@@ -438,6 +464,35 @@ function App() {
         {actionError && (
           <p className="empty-message">Action failed: {actionError}</p>
         )}
+
+        {/* Shown in every view *except* the Vacation panel, which carries its
+            own fuller banner: booking time off and forgetting is the failure
+            mode this feature actually has, but two banners stacked on the same
+            screen is just noise. */}
+        {vacationStatus?.onVacation &&
+          vacationStatus.active &&
+          !vacationMode && (
+            <div className="app-vacation-banner" role="status">
+              <span className="app-vacation-banner__text">
+                <strong>On vacation</strong> — day{" "}
+                {vacationStatus.active.dayOfVacation} of{" "}
+                {vacationStatus.active.totalDays}
+                {vacationStatus.active.note
+                  ? ` · ${vacationStatus.active.note}`
+                  : ""}
+                . Missed days aren't counted against you.
+              </span>
+              <button
+                className="app-vacation-banner__btn"
+                onClick={() => {
+                  if (!vacationMode) togglePanelMode(setVacationMode);
+                }}
+                aria-label="Manage vacation"
+              >
+                Manage
+              </button>
+            </div>
+          )}
         {/* View-mode toggle buttons at the top */}
         <div
           style={{
@@ -637,6 +692,29 @@ function App() {
             </svg>
             Calls
           </button>
+          <button
+            className={`readme-heading__add-btn vacation-toggle-btn${vacationMode ? " vacation-toggle-btn--active" : ""}`}
+            onClick={() => togglePanelMode(setVacationMode)}
+            aria-label={vacationMode ? "Hide vacations" : "Show vacations"}
+            aria-pressed={vacationMode}
+            title={
+              vacationMode
+                ? "Vacation on — days off, where missed work isn't procrastination"
+                : "Manage vacations (days off, where missed work isn't procrastination)"
+            }
+            style={{
+              width: "auto",
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+              <path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-1.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm5.657-8.157a.75.75 0 0 1 0 1.06l-1.061 1.061a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0ZM8 0a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0V.75A.75.75 0 0 1 8 0ZM3.404 2.343a.75.75 0 0 1 1.06 0l1.06 1.061a.75.75 0 1 1-1.06 1.06L3.404 3.404a.75.75 0 0 1 0-1.06ZM16 8a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 16 8Zm-13 0a.75.75 0 0 1-.75.75H.75a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 3 8Zm10.657 5.657a.75.75 0 0 1-1.06 0l-1.061-1.06a.75.75 0 0 1 1.06-1.061l1.061 1.06a.75.75 0 0 1 0 1.06Zm-9.193-1.06a.75.75 0 0 1 0 1.06l-1.06 1.06a.75.75 0 1 1-1.061-1.06l1.06-1.06a.75.75 0 0 1 1.061 0ZM8 13a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 8 13Z" />
+            </svg>
+            Vacation
+          </button>
         </div>
 
         {/* Add Header on its own row, todo view only */}
@@ -646,7 +724,8 @@ function App() {
           !goalsMode &&
           !projectsMode &&
           !affirmationsMode &&
-          !callsMode && (
+          !callsMode &&
+          !vacationMode && (
             <div
               style={{
                 marginBottom: "24px",
@@ -701,6 +780,23 @@ function App() {
           !projectsMode &&
           !affirmationsMode &&
           !callsMode &&
+          vacationMode && (
+            <VacationPanel
+              onTasksChanged={async () => {
+                await loadAll();
+                await refreshVacationStatus();
+              }}
+            />
+          )}
+
+        {!insightsMode &&
+          !eventsMode &&
+          !lifeEventsMode &&
+          !goalsMode &&
+          !projectsMode &&
+          !affirmationsMode &&
+          !callsMode &&
+          !vacationMode &&
           !byDateMode &&
           headers.map((header, idx) => {
             const visibleTasks = header.tasks;
@@ -836,6 +932,7 @@ function App() {
           !projectsMode &&
           !affirmationsMode &&
           !callsMode &&
+          !vacationMode &&
           !byDateMode &&
           headers.length === 0 && (
             <p className="empty-message">No headers yet — add one!</p>
@@ -848,6 +945,7 @@ function App() {
           !projectsMode &&
           !affirmationsMode &&
           !callsMode &&
+          !vacationMode &&
           byDateMode && (
             <>
               {byDateSections.map((section, sectionIdx) => (
