@@ -4,7 +4,7 @@
 
 This document describes the end-to-end (E2E) tests for the On-call view in the Task At Hand application. An on-call shift is a date plus a local start–end time and a type — **primary** (the default, drawn solid red) or **secondary** (a dashed red outline). On-call is **recorded separately and never affects tasks**: the backend cron, archive, stats and insights never read it, apart from cron step 12 deleting shifts that have ended.
 
-The view shows a Monday–Sunday timeline of shift bars (an overnight shift is split across the two days) above a list of upcoming shifts. Shifts are added through a dialog whose quick-add field takes the shorthand `M/D start-end`, with a trailing `s` for secondary. A shift that is running right now shows a banner in every view.
+The view is one **agenda** of upcoming shifts with the off-call gaps between them — "Not on call from Mon 11/16 22:00 to Tue 11/24 09:00 · 7d 11h" — instead of paging through weeks. Back-to-back or overlapping shifts are one stretch of cover (no gap inside it); when no shift is running the agenda opens with "Not on call now · until …", and it closes with "Nothing scheduled after …". Gap wording comes from `formatMoment`/`formatSpan` in `src/utils/oncall.ts`, which the spec imports so assertions follow the app. Shifts are added through a dialog whose quick-add field takes the shorthand `M/D start-end`, with a trailing `s` for secondary. A shift that is running right now shows a banner in every view.
 
 ## Test File Location
 
@@ -12,7 +12,7 @@ The view shows a Monday–Sunday timeline of shift bars (an overnight shift is s
 
 ## Purpose
 
-These tests verify that users can open the On-call view, add shifts with the quick-add shorthand (primary by default, secondary with `s`), see overnight shifts on the timeline, get the backend's overlap rejection surfaced, edit and delete shifts, see a running shift from every view, and that none of this ever touches the todo.
+These tests verify that users can open the On-call view, add shifts with the quick-add shorthand (primary by default, secondary with `s`), see overnight shifts marked "+1", read the off-call gaps between shifts, get the backend's overlap rejection surfaced, edit and delete shifts, see a running shift from every view, and that none of this ever touches the todo.
 
 ---
 
@@ -46,13 +46,45 @@ These tests verify that users can open the On-call view, add shifts with the qui
 - **Steps**: Type `M/D 10-18 s` in quick add, click Add
 - **Expected Output**: The Secondary radio is checked; the row has the secondary class and a "secondary" pill
 
-#### Test: "an overnight shift shows +1 and two bars on the timeline"
+#### Test: "an overnight shift shows +1 and frees up the next morning"
 
-- **Description**: A shift past midnight is one record drawn as two bars
-- **Steps**: Create a `22:00`–`06:00` primary shift via the API (on a day that is not Sunday), open the view and move to its week if needed
-- **Expected Output**: The row shows "+1"; the timeline has two primary bars
+- **Description**: A shift past midnight is one record that ends on the next day
+- **Steps**: Create a `22:00`–`06:00` primary shift two days out via the API, open the view
+- **Expected Output**: The row shows "+1"; the closing line reads "Nothing scheduled after" the next day's 06:00 (e.g. "Thu 11/12 06:00")
 
-### 3. Validation, editing and deleting (3 tests)
+### 3. Agenda and gaps (5 tests)
+
+#### Test: "shows the gap between shifts as 'Not on call from … to …'"
+
+- **Description**: The time between two shifts is spelled out instead of paged through by week
+- **Steps**: Create `09:00`–`22:00` in two days and `09:00`–`17:00` in ten days via the API, open the view
+- **Expected Output**: Two `.oncall-panel__gap` rows (the "now" gap and the one between); the second reads "Not on call", "from <day+2> 22:00 to <day+10> 09:00" and "7d 11h"; the agenda order is now-gap, shift, gap, shift
+
+#### Test: "opens with 'Not on call now' when no shift is running"
+
+- **Description**: The user's current free time leads the agenda
+- **Steps**: Create a shift three days out, open the view
+- **Expected Output**: The first agenda item has `oncall-panel__gap--now` and reads "Not on call now" "until <day+3> 09:00"
+
+#### Test: "back-to-back shifts leave no gap between them"
+
+- **Description**: Cover that runs unbroken across two shifts has no gap inside it
+- **Steps**: Create `09:00`–`17:00` primary and `17:00`–`22:00` secondary on the same day, open the view
+- **Expected Output**: Two shift rows and a single gap — the "now" one
+
+#### Test: "a running shift opens the agenda without a 'now' gap"
+
+- **Description**: While on call the agenda starts with the running shift
+- **Steps**: Create a `00:00`–`24:00` shift for today, open the view
+- **Expected Output**: The first item is the shift row with `oncall-panel__row--active` and the "now" pill; no `oncall-panel__gap--now`
+
+#### Test: "has no week paging"
+
+- **Description**: The week timeline and its ‹ › arrows are gone
+- **Steps**: Create a shift, open the view
+- **Expected Output**: No "Next week" / "Previous week" buttons
+
+### 4. Validation, editing and deleting (3 tests)
 
 #### Test: "shows an overlap error from the server"
 
@@ -72,7 +104,7 @@ These tests verify that users can open the On-call view, add shifts with the qui
 - **Steps**: Click the shift's delete button and confirm
 - **Expected Output**: No rows remain and the API returns an empty list
 
-### 4. Banner and isolation (2 tests)
+### 5. Banner and isolation (2 tests)
 
 #### Test: "a running shift shows the banner in every view"
 
@@ -90,14 +122,15 @@ These tests verify that users can open the On-call view, add shifts with the qui
 
 ## Summary
 
-These 10 tests verify that:
+These 15 tests verify that:
 
 1. ✅ The On-call view toggles like every other panel and shows a helpful empty state
 2. ✅ The quick-add shorthand creates a **primary** shift by default and a **secondary** one with `s`
-3. ✅ Overnight shifts are one record drawn as two bars, marked "+1"
-4. ✅ The backend's overlap rejection is shown to the user
-5. ✅ Shifts can be retyped and deleted
-6. ✅ A running shift is visible from every view
-7. ✅ On-call never changes a task
+3. ✅ Overnight shifts are one record, marked "+1", ending the next morning
+4. ✅ The agenda spells out the off-call gaps ("Not on call from … to …", with the span), opens with "Not on call now" when free, keeps back-to-back cover unbroken, and has no week paging
+5. ✅ The backend's overlap rejection is shown to the user
+6. ✅ Shifts can be retyped and deleted
+7. ✅ A running shift is visible from every view
+8. ✅ On-call never changes a task
 
 The tests run against the real backend (`USE_TEST_DB=true`).

@@ -231,7 +231,15 @@ test.describe("View Modes - Panel switching", () => {
     // once had no --active CSS rule, so it never visually highlighted.
     const background = (btn: typeof lifeEventsBtn) =>
       btn.evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(await background(lifeEventsBtn)).not.toBe(await background(eventsBtn));
+    // Polled: the nav items fade their background (a short CSS
+    // transition), so a single read right after the click can catch both
+    // mid-fade.
+    await expect
+      .poll(
+        async () =>
+          (await background(lifeEventsBtn)) !== (await background(eventsBtn)),
+      )
+      .toBe(true);
   });
 
   test("should keep by date mode active across panel toggling", async ({

@@ -1,166 +1,175 @@
-/* ─── GitHub README–style task list row ─── */
+/* ═══════════════════════════════════════════════════════════════════════
+   Task row. Shared on purpose: GoalsPanel and ProjectsPanel import this file
+   and render their step/task rows with the same .task-card* markup, so the
+   three lists read as one product. Restyle them together.
+
+   Row:   [○ checkbox] [name                         ] [↑ ↓ ✎ 🗑]
+                       [date chip · 🔥 streak · notes]
+   ═══════════════════════════════════════════════════════════════════════ */
 
 .task-card {
-  --gh-bg: #ffffff;
-  --gh-bg-secondary: #f6f8fa;
-  --gh-border: #d0d7de;
-  --gh-border-muted: #eaeef2;
-  --gh-text: #1f2328;
-  --gh-text-muted: #656d76;
-  --gh-accent: #1a7f37;
-  --gh-danger: #cf222e;
-  --gh-danger-bg: #fff8f8;
-  --gh-action-hover: #f3f4f6;
-  --gh-radius-sm: 6px;
-  --gh-code-bg: #f6f8fa;
-  --gh-code-border: #d0d7de;
-  --gh-code-font:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
-    monospace;
-
+  position: relative;
+  padding: 11px 10px 11px 16px;
+  border-top: 1px solid var(--border);
   background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--gh-border-muted);
-  border-radius: 0;
-  padding: 10px 4px;
-  width: 100%;
-  box-sizing: border-box;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
-    Arial, sans-serif;
-  font-size: 14px;
-  color: var(--gh-text);
+  color: var(--text);
+  font-size: var(--text-base);
+  transition: background var(--duration-fast) var(--ease);
 }
 
 .task-card:first-child {
-  padding-top: 4px;
+  border-top: 0;
 }
 
-.task-card:last-child {
-  border-bottom: none;
-  padding-bottom: 4px;
+.task-card:hover,
+.task-card:focus-within {
+  background: var(--surface-hover);
 }
 
-.task-card:hover {
-  background: var(--gh-action-hover);
-  border-radius: var(--gh-radius-sm);
-}
-
-.task-card--done {
-  opacity: 0.6;
-}
-
-/* ─── Dark mode ─── */
-@media (prefers-color-scheme: dark) {
-  .task-card {
-    --gh-bg: #0d1117;
-    --gh-bg-secondary: #161b22;
-    --gh-border: #30363d;
-    --gh-border-muted: #21262d;
-    --gh-text: #e6edf3;
-    --gh-text-muted: #8b949e;
-    --gh-accent: #3fb950;
-    --gh-danger: #f85149;
-    --gh-danger-bg: #1f0a0a;
-    --gh-action-hover: #21262d;
-    --gh-code-bg: #161b22;
-    --gh-code-border: #30363d;
-  }
-}
-
-/* ─── Row ─── */
+/* ── Row ── */
 .task-card__header {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 0;
+  gap: 12px;
 }
 
-/* ─── Checkbox ─── */
+/* ── Checkbox: a ring that fills with the accent when done ── */
 .task-card__checkbox {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--gh-radius-sm);
-  border: 2px solid var(--gh-border);
-  cursor: pointer;
   display: grid;
   place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
   padding: 0;
-  background: var(--gh-bg);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  cursor: pointer;
   transition:
-    background 0.15s,
-    border-color 0.15s;
+    background var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
 .task-card__checkbox:hover {
-  border-color: var(--gh-accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .task-card__checkbox--checked {
-  background: var(--gh-accent);
-  border-color: var(--gh-accent);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .task-card__check-icon {
-  width: 10px;
-  height: 10px;
-  fill: #fff;
+  width: 12px;
+  height: 12px;
   display: block;
+  fill: none;
+  stroke: var(--text-on-accent);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-/* ─── Task name + notes body ─── */
+/* ── Body: name over a meta line ── */
 .task-card__body {
   flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Legacy wrapper some rows still use around name + chip */
+.task-card__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
   min-width: 0;
 }
 
-/* ─── Name + ECD + arrow group (never wraps) ─── */
-.task-card__label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  line-height: 1.4;
-}
-
-/* ─── Task name ─── */
 .task-card__name {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--gh-text);
-  white-space: nowrap;
-  flex-shrink: 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 .task-card__name--done {
+  color: var(--text-subtle);
   text-decoration: line-through;
-  color: var(--gh-text-muted);
+  text-decoration-color: color-mix(in srgb, var(--text-subtle), transparent 40%);
 }
 
-/* ─── ECD badge ─── */
+.task-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+/* ── Due chip ── */
 .task-card__ecd {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
   font-weight: 500;
-  color: var(--gh-text-muted);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
 
-/* Recurring ECD badge (ecdDayOfWeek / ecdDayOfMonth) */
-.task-card__ecd--recurring {
-  color: #0969da;
+.task-card:hover .task-card__ecd:not([class*="--"]) {
+  background: var(--surface);
 }
 
-@media (prefers-color-scheme: dark) {
-  .task-card__ecd--recurring {
-    color: #58a6ff;
-  }
+/* Recurring (weekly / monthly / yearly) */
+.task-card__ecd--recurring {
+  background: var(--info-soft);
+  color: var(--info-text);
+}
+
+.task-card__ecd--today {
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.task-card__ecd--overdue {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+/* Undated: just quiet text, no chip */
+.task-card__ecd--none {
+  height: auto;
+  padding: 0;
+  background: none;
+  color: var(--text-subtle);
+  font-weight: 400;
+}
+
+.task-card__ecd-flag {
+  font-weight: 650;
+}
+
+.task-card--done .task-card__ecd {
+  background: transparent;
+  padding: 0;
+  height: auto;
+  color: var(--text-subtle);
 }
 
 /* ─── Habit streak badge ───
@@ -168,79 +177,100 @@
    over the days its ECD covers. Rendered here and, from the same source, on
    the matching step row in the Goals view (.goals-panel__step-streak). */
 .task-card__streak {
-  flex-shrink: 0;
-  margin-left: 6px;
-  padding: 1px 7px;
-  font-size: 11px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  font-size: var(--text-xs);
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
-  border: 1px solid #bc4c00;
-  border-radius: 999px;
-  color: #bc4c00;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Header tag (By Date view) */
+.task-card__header-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-subtle);
   white-space: nowrap;
 }
 
-@media (prefers-color-scheme: dark) {
-  .task-card__streak {
-    border-color: #db6d28;
-    color: #db6d28;
-  }
+.task-card__header-tag::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--border-strong);
 }
 
-/* ─── Arrow separator ─── */
-.task-card__arrow {
-  font-size: 13px;
-  color: var(--gh-text-muted);
-  flex-shrink: 0;
-  user-select: none;
-}
-
-/* ─── Inline notes text ─── */
+/* ── Notes ── */
 .task-card__notes-text {
-  font-size: 13px;
-  color: var(--gh-text);
-  line-height: 1.4;
-  white-space: normal;
-  word-break: break-word;
+  flex: 1 1 220px;
   min-width: 0;
-  flex: 1;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .task-card__notes-text--empty {
-  color: var(--gh-text-muted);
+  color: var(--text-subtle);
   font-style: italic;
 }
 
-/* ─── Action buttons (right cluster) ─── */
+/* Legacy "=>" separator, superseded by the meta line */
+.task-card__arrow {
+  display: none;
+}
+
+/* ── Actions: quiet until the row is hovered or focused ── */
 .task-card__actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   flex-shrink: 0;
-  margin-left: auto;
+  margin: -4px 0 -4px auto;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+@media (hover: hover) {
+  .task-card__actions {
+    opacity: 0;
+  }
+
+  .task-card:hover .task-card__actions,
+  .task-card:focus-within .task-card__actions {
+    opacity: 1;
+  }
 }
 
 .task-card__action-btn {
-  width: 28px;
-  height: 28px;
-  border: 1px solid transparent;
-  border-radius: var(--gh-radius-sm);
-  cursor: pointer;
   display: grid;
   place-items: center;
+  width: 28px;
+  height: 28px;
   padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--gh-text-muted);
+  color: var(--text-subtle);
+  cursor: pointer;
   transition:
-    background 0.12s,
-    border-color 0.12s,
-    color 0.12s;
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .task-card__action-btn:hover:not(:disabled) {
-  background: var(--gh-action-hover);
-  border-color: var(--gh-border);
-  color: var(--gh-text);
+  background: color-mix(in srgb, var(--surface-hover), var(--text) 6%);
+  color: var(--text);
 }
 
 .task-card__action-btn:disabled {
@@ -249,11 +279,11 @@
 }
 
 .task-card__action-btn--danger:hover:not(:disabled) {
-  background: var(--gh-danger-bg);
-  border-color: var(--gh-danger);
-  color: var(--gh-danger);
+  background: var(--danger-soft);
+  color: var(--danger-text);
 }
 
+/* Fill-based glyphs still used by some rows */
 .task-card__action-icon {
   width: 14px;
   height: 14px;
@@ -263,4 +293,19 @@
 
 .task-card__action-icon--flip {
   transform: rotate(180deg);
+}
+
+@media (max-width: 640px) {
+  .task-card {
+    padding: 12px 6px 12px 12px;
+  }
+
+  .task-card__header {
+    gap: 10px;
+  }
+
+  .task-card__action-btn {
+    width: 30px;
+    height: 30px;
+  }
 }

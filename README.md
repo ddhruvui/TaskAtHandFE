@@ -5,6 +5,19 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
 
 ## Features
 
+- **Look & feel** — a calm, content-first design system (see
+  [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)): a grouped **sidebar** (Tasks, By date,
+  Insights · Plan: Projects, Goals, Events · Life: Life events, Calls,
+  Affirmations · Time off: Vacation, On-call) with open/due counts and live
+  on-call / vacation dots; every view opens with a page title and one-line
+  description. Below 900px the sidebar turns into a sticky top bar with a
+  sideways-scrolling nav, and dialogs open as bottom sheets. **Light / dark /
+  system theme** from the button next to the brand (remembered per browser).
+  Task rows show a round checkbox, the name, and a meta line with a date chip
+  — green **Today** and red **Overdue** flags (in words, not just colour),
+  blue for recurring — plus streak and notes; row and section actions appear
+  on hover (always visible on touch). Dialogs share one shell: Escape closes
+  from anywhere, focus returns to the button that opened them
 - **Headers & Tasks** — create, rename, reorder, and delete headers; add tasks
   with notes and an optional ECD (one-time date, or recurring by day of week /
   month / year); toggle done, edit, reorder, delete. Deleting an **undone**
@@ -13,13 +26,14 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   dated task (editing it to a later date) offers an optional reason field — a
   reason-less postpone is treated as procrastination, a valid reason as a
   legitimate deferral by the AI coach
-- **Adding things** — every view's add action is an icon-only **"+"** button in
-  the right-aligned toolbar at the top of that view (hover or a screen reader
-  gives the full name, e.g. "Add header", "Add project")
-- **View modes** (toolbar toggles):
-  - **By Date** — undone tasks grouped by calendar date: today first, then
-    past dates, then future dates, with thick dividers between the present,
-    past and future sections
+- **Adding things** — every view's add action is an icon-only accent **"+"**
+  button at the right of that view's page header (hover or a screen reader
+  gives the full name, e.g. "Add header", "Add project"); an empty header's
+  "No tasks yet — add one!" row also adds a task
+- **View modes** (sidebar items; clicking the open one returns to Tasks):
+  - **By Date** — undone tasks grouped by calendar date under Today, Overdue
+    and Upcoming labels (today first, then past dates, then future dates,
+    with dividers between the sections); each task is tagged with its header
   - **Insights** — habit stats and the AI coach (see below)
   - **Events** — manage reusable task bundles (see below)
   - **Life Events** — annual dates the cron adds to the todo (see below)
@@ -153,11 +167,13 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   Insights numbers freeze at the day before departure and coach reports are
   skipped entirely; the first report back opens with a restart plan
 - **On-call view** — on-call shifts (date, start–end, primary or secondary),
-  **recorded separately: they never change a task**. A week timeline (Mon–Sun,
-  ‹ › to move between weeks, weekly primary/secondary hours) draws each shift as
-  a bar — **primary solid red, secondary a dashed red outline** — with an
-  overnight shift split across the two days and a line marking now. Below it,
-  the upcoming shifts with edit/delete. The add dialog takes the shorthand
+  **recorded separately: they never change a task**. One agenda of the upcoming
+  shifts (edit/delete on hover, **primary with a solid red edge, secondary a
+  dashed one**, overnight shifts marked "+1") with the **off-call gaps spelled
+  out between them** — "Not on call from Mon 11/16 22:00 to Tue 11/24 09:00 ·
+  7d 11h" — instead of paging week by week. Back-to-back or overlapping shifts
+  count as one stretch of cover; when you're free right now it opens with
+  "Not on call now · until …", and it ends with "Nothing scheduled after …". The add dialog takes the shorthand
   `11/16 9-22` (add `s` for secondary; `22-6` runs past midnight; `24` is a
   legal end) and fills the date/time fields, which stay editable; Primary is
   the default. Overlapping shifts are rejected by the backend. Ended shifts
@@ -188,7 +204,10 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
 
 ```
 src/
-├── App.tsx                    # Main app: header/task views + mode toggles
+├── App.tsx                    # Main app: shell (sidebar nav, page header, banners), header/task views
+├── index.css                  # Design tokens (light-dark() colour pairs, type, radius, shadow, motion)
+├── styles/ui.css              # Shared primitives: buttons, fields, chips, segmented, section card, modal, page header
+├── hooks/useTheme.ts          # Light / dark / system colour-theme preference
 ├── types.ts                   # Shared types (Task, Header, ECD, Insight*, HabitStat, Vacation*, OnCallShift)
 ├── api/
 │   ├── client.ts              # fetch wrapper (VITE_API_BASE_URL)
@@ -204,7 +223,9 @@ src/
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
-│   ├── AddButton/             # Shared icon-only "+" toolbar button (all views)
+│   ├── AddButton/             # Shared icon-only "+" button (every view's primary action)
+│   ├── Modal/                 # Shared dialog shell (role=dialog, Escape, focus restore, scroll lock)
+│   ├── Icon/                  # Shared stroke icon set
 │   ├── DatePicker/            # EcdCalendar — shared ECD date/recurrence picker
 │   ├── InsightsPanel/         # Insights view (stats + AI report)
 │   ├── EventsPanel/  EventModal/  ScheduleEventModal/   # Events view
@@ -214,12 +235,12 @@ src/
 │   ├── AffirmationsPanel/  AffirmationModal/            # Affirmations view
 │   ├── CallsPanel/  CallModal/                          # Calls view
 │   ├── VacationPanel/  VacationModal/                   # Vacation view
-│   └── OnCallPanel/  OnCallModal/                       # On-call view (week timeline)
+│   └── OnCallPanel/  OnCallModal/                       # On-call view (agenda with off-call gaps)
 ├── utils/ecd.ts               # ECD due-today/date-key helpers
 ├── utils/goalSync.ts          # goal step ↔ todo sync + habit-day helpers
 ├── utils/projectSync.ts       # project task ↔ todo sync helpers
 ├── utils/lifeEventSync.ts     # life event ↔ todo sync helpers
-└── utils/oncall.ts            # on-call shift maths, quick-add parser, week timeline
+└── utils/oncall.ts            # on-call shift maths, quick-add parser, agenda + gap wording
 ```
 
 ## Setup & Run
@@ -234,9 +255,12 @@ Build: `npm run build` · Preview: `npm run preview`
 
 ## Testing
 
-Playwright end-to-end tests live in `e2e/`; Vitest unit tests live alongside
-the API modules in `src/api/*.test.ts`. Both are documented in
-`test_doc/` (`TEST_REFERENCE.md` and the `*_TEST_DOCUMENTATION.md` files).
+Playwright end-to-end tests live in `e2e/` (`e2e/ui.spec.ts` covers the app
+shell and design-system behaviour: navigation, theme, due flags, dialogs,
+phone layout); Vitest unit tests live alongside the code they test
+(`src/api/*.test.ts`, `src/utils/*.test.ts`, `src/hooks/useTheme.test.ts`,
+`src/components/Modal/Modal.test.tsx`). Both are documented in `test_doc/`
+(`TEST_REFERENCE.md` and the `*_TEST_DOCUMENTATION.md` files).
 
 ```bash
 # Unit tests (Vitest)

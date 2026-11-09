@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { LifeEvent } from "../../types";
+import { Modal } from "../Modal";
+import { Icon } from "../Icon";
 import "./LifeEventModal.css";
 
 // Max day per month (1-indexed); Feb 29 is allowed — the backend cron fires
@@ -64,75 +66,109 @@ export default function LifeEventModal({
   }
 
   return (
-    <div className="life-event-modal__overlay" onClick={onCancel}>
-      <div className="life-event-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="life-event-modal__title">
-          {lifeEvent ? "Edit Life Event" : "Add Life Event"}
-        </h3>
+    <Modal
+      onClose={onCancel}
+      className="life-event-modal"
+      overlayClassName="life-event-modal__overlay"
+      labelledBy="life-event-modal-title"
+    >
+      <h3
+        id="life-event-modal-title"
+        className="ui-modal__title life-event-modal__title"
+      >
+        {lifeEvent ? "Edit Life Event" : "Add Life Event"}
+      </h3>
 
+      <div className="field life-event-modal__name">
+        <label htmlFor="life-event-modal-name" className="field__label">
+          Name
+        </label>
         <input
+          id="life-event-modal-name"
           ref={nameRef}
-          className="life-event-modal__name-input"
+          className="input life-event-modal__name-input"
           type="text"
           placeholder="Life event… (e.g. Wife's birthday)"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
-            if (e.key === "Escape") onCancel();
           }}
         />
+      </div>
 
-        <div className="life-event-modal__date" aria-label="Annual date">
-          <label className="life-event-modal__date-field">
-            Month
-            <select
-              className="life-event-modal__select"
-              value={month}
-              onChange={(e) => handleMonthChange(Number(e.target.value))}
-            >
-              {MONTH_NAMES.map((label, idx) => (
-                <option key={label} value={idx + 1}>
-                  {label}
-                </option>
-              ))}
-            </select>
+      <div className="life-event-modal__when">
+        <div
+          className="life-event-modal__date"
+          role="group"
+          aria-label="Annual date"
+        >
+          <label className="field life-event-modal__date-field life-event-modal__date-field--month">
+            <span className="field__label">Month</span>
+            <span className="life-event-modal__select-wrap">
+              <select
+                className="input life-event-modal__select"
+                value={month}
+                onChange={(e) => handleMonthChange(Number(e.target.value))}
+              >
+                {MONTH_NAMES.map((label, idx) => (
+                  <option key={label} value={idx + 1}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <Icon
+                name="chevron-down"
+                size={14}
+                className="life-event-modal__select-icon"
+              />
+            </span>
           </label>
-          <label className="life-event-modal__date-field">
-            Day
-            <select
-              className="life-event-modal__select"
-              value={day}
-              onChange={(e) => setDay(Number(e.target.value))}
-            >
-              {Array.from({ length: maxDay }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+          <label className="field life-event-modal__date-field life-event-modal__date-field--day">
+            <span className="field__label">Day</span>
+            <span className="life-event-modal__select-wrap">
+              <select
+                className="input life-event-modal__select"
+                value={day}
+                onChange={(e) => setDay(Number(e.target.value))}
+              >
+                {Array.from({ length: maxDay }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <Icon
+                name="chevron-down"
+                size={14}
+                className="life-event-modal__select-icon"
+              />
+            </span>
           </label>
         </div>
-        <p className="life-event-modal__hint">
+        <p className="field__hint life-event-modal__hint">
+          <Icon name="repeat" size={13} className="life-event-modal__hint-icon" />
           Repeats every year — it lands in your todo on the day.
         </p>
-
-        <div className="life-event-modal__actions">
-          <button
-            className="life-event-modal__btn life-event-modal__btn--cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="life-event-modal__btn life-event-modal__btn--confirm"
-            onClick={handleSubmit}
-            disabled={!name.trim()}
-          >
-            {lifeEvent ? "Save" : "Add"}
-          </button>
-        </div>
       </div>
-    </div>
+
+      <div className="ui-modal__actions life-event-modal__actions">
+        <button
+          type="button"
+          className="btn btn--secondary life-event-modal__btn life-event-modal__btn--cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn--primary life-event-modal__btn life-event-modal__btn--confirm"
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+        >
+          {lifeEvent ? "Save" : "Add"}
+        </button>
+      </div>
+    </Modal>
   );
 }

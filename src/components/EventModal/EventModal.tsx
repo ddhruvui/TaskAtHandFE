@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { EventTemplate } from "../../types";
+import { Modal } from "../Modal";
 import "./EventModal.css";
 
 interface EventModalProps {
@@ -37,59 +38,72 @@ export default function EventModal({
   }
 
   return (
-    <div className="event-modal__overlay" onClick={onCancel}>
-      <div className="event-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="event-modal__title">
-          {event ? "Edit Event" : "Add Event"}
-        </h3>
+    <Modal
+      onClose={onCancel}
+      className="event-modal"
+      overlayClassName="event-modal__overlay"
+      labelledBy="event-modal-title"
+    >
+      <h3 id="event-modal-title" className="ui-modal__title event-modal__title">
+        {event ? "Edit Event" : "Add Event"}
+      </h3>
 
+      <div className="field event-modal__name">
+        <label htmlFor="event-modal-name" className="field__label">
+          Name
+        </label>
         <input
+          id="event-modal-name"
           ref={nameRef}
-          className="event-modal__name-input"
+          className="input event-modal__name-input"
           type="text"
           placeholder="Event name… (e.g. Burger Night)"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
-            if (e.key === "Escape") onCancel();
           }}
         />
-
-        <div className="event-modal__tasks">
-          <span className="event-modal__tasks-label">Tasks</span>
-          <textarea
-            className="event-modal__textarea"
-            value={tasksText}
-            onChange={(e) => setTasksText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") onCancel();
-            }}
-            placeholder={"One task per line…\nProcure onion\nProcure bun"}
-            rows={6}
-          />
-          <p className="event-modal__hint">
-            One task per line — {parsedTasks.length} task
-            {parsedTasks.length === 1 ? "" : "s"}
-          </p>
-        </div>
-
-        <div className="event-modal__actions">
-          <button
-            className="event-modal__btn event-modal__btn--cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="event-modal__btn event-modal__btn--confirm"
-            onClick={handleSubmit}
-            disabled={!name.trim() || parsedTasks.length === 0}
-          >
-            {event ? "Save" : "Add"}
-          </button>
-        </div>
       </div>
-    </div>
+
+      <div className="field event-modal__tasks">
+        <label
+          htmlFor="event-modal-tasks"
+          className="field__label event-modal__tasks-label"
+        >
+          Tasks
+        </label>
+        <textarea
+          id="event-modal-tasks"
+          className="textarea event-modal__textarea"
+          value={tasksText}
+          onChange={(e) => setTasksText(e.target.value)}
+          placeholder={"One task per line…\nProcure onion\nProcure bun"}
+          rows={6}
+        />
+        <p className="field__hint event-modal__hint">
+          One task per line — {parsedTasks.length} task
+          {parsedTasks.length === 1 ? "" : "s"}
+        </p>
+      </div>
+
+      <div className="ui-modal__actions event-modal__actions">
+        <button
+          type="button"
+          className="btn btn--secondary event-modal__btn event-modal__btn--cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn--primary event-modal__btn event-modal__btn--confirm"
+          onClick={handleSubmit}
+          disabled={!name.trim() || parsedTasks.length === 0}
+        >
+          {event ? "Save" : "Add"}
+        </button>
+      </div>
+    </Modal>
   );
 }

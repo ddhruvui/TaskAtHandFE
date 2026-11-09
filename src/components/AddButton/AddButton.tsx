@@ -1,3 +1,4 @@
+import { Icon } from "../Icon";
 import "./AddButton.css";
 
 interface AddButtonProps {
@@ -6,18 +7,19 @@ interface AddButtonProps {
   onClick: () => void;
 }
 
-/* Shared icon-only "+" toolbar button used on every view (todo and panels).
-   Render it inside a right-aligned toolbar row. Nothing shows but the plus,
-   so ariaLabel carries the meaning the visible label used to. */
+/* Shared icon-only "+" toolbar button used on every view (todo and panels):
+   the view's primary action, so it is the one solid accent button on the
+   page. Render it inside the view's right-aligned toolbar. Nothing shows but
+   the plus, so ariaLabel carries the meaning (it is also the tooltip). */
 export default function AddButton({ ariaLabel, onClick }: AddButtonProps) {
   return (
     <button
-      className="readme-heading__add-btn add-button"
+      className="add-button"
       onClick={onClick}
       aria-label={ariaLabel}
       title={ariaLabel}
     >
-      +
+      <Icon name="plus" size={18} strokeWidth={2.4} />
     </button>
   );
 }

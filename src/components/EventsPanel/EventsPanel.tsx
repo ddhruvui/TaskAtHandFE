@@ -7,6 +7,7 @@ import { EventModal } from "../EventModal";
 import { ScheduleEventModal } from "../ScheduleEventModal";
 import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
+import { Icon } from "../Icon";
 import { formatDateKey } from "../../utils/ecd";
 import "./EventsPanel.css";
 
@@ -167,14 +168,9 @@ export default function EventsPanel({
 
   return (
     <div className="events-panel">
-      <div className="events-panel__toolbar">
-        <div className="events-panel__title">
-          <span className="events-panel__title-dot" aria-hidden="true" />
-          <h2 className="events-panel__title-text">Events</h2>
-          {events.length > 0 && (
-            <span className="events-panel__title-count">{events.length}</span>
-          )}
-        </div>
+      {/* The page header (App.tsx) carries the view title; .page-actions
+          lifts this "+" into that header row. */}
+      <div className="events-panel__toolbar page-actions">
         <AddButton
           ariaLabel="Add event"
           onClick={() => setEventModalState({ mode: "add" })}
@@ -183,40 +179,39 @@ export default function EventsPanel({
 
       {error && (
         <p
-          className="events-panel__banner events-panel__banner--error"
+          className="alert alert--danger events-panel__banner events-panel__banner--error"
           role="alert"
         >
-          Action failed: {error}
+          <Icon name="alert" />
+          <span className="events-panel__banner-text">
+            Action failed: {error}
+          </span>
         </p>
       )}
       {notice && (
-        <p className="events-panel__banner events-panel__notice" role="status">
-          <svg
-            className="events-panel__banner-icon"
-            viewBox="0 0 16 16"
-            width="16"
-            height="16"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z" />
-          </svg>
+        <p
+          className="alert events-panel__banner events-panel__notice"
+          role="status"
+        >
+          <Icon name="check" className="events-panel__banner-icon" />
           <span className="events-panel__banner-text">{notice}</span>
           {onViewTodo && (
             <button
               type="button"
-              className="events-panel__notice-link"
+              className="btn btn--sm btn--ghost events-panel__notice-link"
               onClick={onViewTodo}
             >
               View in todo
             </button>
           )}
           <button
-            className="events-panel__notice-dismiss"
+            type="button"
+            className="icon-btn events-panel__notice-dismiss"
             onClick={() => setNotice(null)}
             aria-label="Dismiss notice"
+            title="Dismiss"
           >
-            ✕
+            <Icon name="x" size={14} />
           </button>
         </p>
       )}
@@ -239,16 +234,9 @@ export default function EventsPanel({
                     aria-expanded={isOpen}
                     aria-controls={listId}
                   >
-                    <svg
-                      className="events-panel__chevron"
-                      viewBox="0 0 16 16"
-                      width="14"
-                      height="14"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z" />
-                    </svg>
+                    <span className="events-panel__chevron" aria-hidden="true">
+                      <Icon name="chevron-right" size={16} />
+                    </span>
                     <span className="events-panel__event-text">
                       <span className="events-panel__event-title">
                         <h3 className="events-panel__event-name">
@@ -267,61 +255,36 @@ export default function EventsPanel({
                   </button>
 
                   <div className="events-panel__event-actions">
-                    <button
-                      className="events-panel__icon-btn"
-                      onClick={() =>
-                        setEventModalState({ mode: "edit", event })
-                      }
-                      aria-label={`Edit event ${event.name}`}
-                      title="Edit event"
-                    >
-                      <svg
-                        viewBox="0 0 16 16"
-                        width="14"
-                        height="14"
-                        fill="currentColor"
-                        aria-hidden="true"
+                    <div className="events-panel__event-tools">
+                      <button
+                        type="button"
+                        className="icon-btn events-panel__icon-btn"
+                        onClick={() =>
+                          setEventModalState({ mode: "edit", event })
+                        }
+                        aria-label={`Edit event ${event.name}`}
+                        title="Edit event"
                       >
-                        <path
-                          fillRule="evenodd"
-                          d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      className="events-panel__icon-btn events-panel__icon-btn--danger"
-                      onClick={() => setDeleteTarget(event)}
-                      aria-label={`Delete event ${event.name}`}
-                      title="Delete event"
-                    >
-                      <svg
-                        viewBox="0 0 16 16"
-                        width="14"
-                        height="14"
-                        fill="currentColor"
-                        aria-hidden="true"
+                        <Icon name="pencil" size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn icon-btn--danger events-panel__icon-btn events-panel__icon-btn--danger"
+                        onClick={() => setDeleteTarget(event)}
+                        aria-label={`Delete event ${event.name}`}
+                        title="Delete event"
                       >
-                        <path
-                          fillRule="evenodd"
-                          d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
-                        />
-                      </svg>
-                    </button>
+                        <Icon name="trash" size={15} />
+                      </button>
+                    </div>
                     <button
-                      className="events-panel__schedule-btn"
+                      type="button"
+                      className="btn btn--soft btn--sm events-panel__schedule-btn"
                       onClick={() => setScheduleState({ event })}
                       aria-label={`Add ${event.name} to todo`}
                       title="Add to todo"
                     >
-                      <svg
-                        viewBox="0 0 16 16"
-                        width="13"
-                        height="13"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z" />
-                      </svg>
+                      <Icon name="plus" size={14} strokeWidth={2.4} />
                       <span className="events-panel__schedule-btn-label">
                         Add to todo
                       </span>
@@ -341,14 +304,16 @@ export default function EventsPanel({
                         </span>
                         <span className="events-panel__task-name">{task}</span>
                         <button
-                          className="events-panel__task-add-btn"
+                          type="button"
+                          className="btn btn--ghost btn--sm events-panel__task-add-btn"
                           onClick={() =>
                             setScheduleState({ event, initialSelected: [task] })
                           }
                           aria-label={`Add "${task}" to todo`}
                           title="Add this task to todo"
                         >
-                          + Add
+                          <Icon name="plus" size={13} strokeWidth={2.4} />
+                          Add
                         </button>
                       </li>
                     ))}
@@ -364,12 +329,6 @@ export default function EventsPanel({
         <p className="empty-message">
           No events yet — add one! An event is a reusable bundle of tasks (e.g.
           "Burger Night") you can drop into your todo for any date.
-        </p>
-      )}
-      {events.length > 0 && (
-        <p className="events-panel__hint">
-          An event is a reusable bundle of tasks you can drop into your todo for
-          any date.
         </p>
       )}
 

@@ -1,195 +1,131 @@
-/* Events view — accordion list in the app's GitHub palette.
-   Purple is the Events identity color (same as .events-toggle-btn--active),
-   green is the primary/confirm action, red only appears on delete hover. */
-.events-panel {
-  --ev-accent: #8250df;
-  --ev-accent-bg: #fbefff;
-  --ev-accent-text: #6e40c9;
-  --ev-primary: #1a7f37;
-  --ev-primary-hover: #157a32;
-  --ev-primary-bg: rgba(26, 127, 55, 0.08);
-  --ev-danger: #cf222e;
-  --ev-danger-bg: #fff8f8;
-  --ev-row-hover: #f3f4f6;
+/* ═══════════════════════════════════════════════════════════════════════
+   Events view — one section card per event, as an accordion.
 
+   Head:  [› chevron] [name  2 tasks          ] [✎ 🗑] [+ Add to todo]
+                      [preview when collapsed ]
+   Rows:  [① ] [task name                     ] [+ Add]
+
+   Card, buttons, icon buttons and alerts come from styles/ui.css
+   (.readme-section, .btn, .icon-btn, .alert); this file only lays out what
+   is specific to the accordion. Edit/delete and the per-task "Add" stay
+   quiet until hovered or focused on pointer devices, like TaskCard.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.events-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .events-panel {
-    --ev-accent: #a371f7;
-    --ev-accent-bg: rgba(163, 113, 247, 0.15);
-    --ev-accent-text: #d2a8ff;
-    --ev-primary: #238636;
-    --ev-primary-hover: #2ea043;
-    --ev-primary-bg: rgba(63, 185, 80, 0.1);
-    --ev-danger: #f85149;
-    --ev-danger-bg: rgba(248, 81, 73, 0.1);
-    --ev-row-hover: #161b22;
-  }
-}
-
-/* ── Toolbar: title on the left, shared "+" on the right ── */
-.events-panel__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--rm-heading-border, #d0d7de);
-}
-
-.events-panel__title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.events-panel__title-dot {
-  width: 10px;
-  height: 10px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--ev-accent);
-}
-
-.events-panel__title-text {
-  margin: 0;
-  font-size: 1.5em;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--rm-text, #1f2328);
-}
-
-.events-panel__title-count {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  background: var(--ev-accent-bg);
-  color: var(--ev-accent-text);
 }
 
 /* ── Banners (success notice + action error) ── */
 .events-panel__banner {
-  display: flex;
   align-items: center;
-  gap: 10px;
   margin: 0;
-  padding: 8px 12px;
-  font-size: 13px;
-  border: 1px solid;
-  border-radius: 6px;
-}
-
-.events-panel__banner-icon {
-  flex-shrink: 0;
+  padding: 6px 6px 6px 14px;
 }
 
 .events-panel__banner-text {
   flex: 1;
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.events-panel__banner > .ui-icon,
+.events-panel__banner > svg {
+  margin-top: 0;
 }
 
 .events-panel__notice {
-  border-color: var(--ev-primary);
-  color: var(--ev-primary);
-  background: var(--ev-primary-bg);
+  border-color: color-mix(in srgb, var(--success), transparent 70%);
+  background: var(--success-soft);
+  color: var(--success-text);
 }
 
 .events-panel__banner--error {
-  border-color: var(--ev-danger);
-  color: var(--ev-danger);
-  background: var(--ev-danger-bg);
+  min-height: 42px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .events-panel__notice {
-    border-color: #3fb950;
-    color: #3fb950;
-  }
-}
-
-.events-panel__notice-link {
-  padding: 0;
-  font: inherit;
-  font-weight: 600;
-  border: none;
-  background: transparent;
+.btn.events-panel__notice-link {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
-  cursor: pointer;
 }
 
-.events-panel__notice-dismiss {
-  padding: 0 4px;
-  font-size: 12px;
-  font-family: inherit;
-  border: none;
-  background: transparent;
+.btn.events-panel__notice-link:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success-soft), var(--success) 14%);
   color: inherit;
-  cursor: pointer;
 }
 
-/* ── Accordion list ── */
+.icon-btn.events-panel__notice-dismiss {
+  width: 28px;
+  height: 28px;
+  color: inherit;
+}
+
+.icon-btn.events-panel__notice-dismiss:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success-soft), var(--success) 14%);
+  color: inherit;
+}
+
+/* ── Accordion list: each event is its own section card ── */
 .events-panel__list {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--rm-border, #d0d7de);
-  border-radius: 6px;
-  overflow: hidden;
+  gap: 12px;
 }
 
-/* .readme-section stays on each event as the e2e hook; reset its spacing */
+/* .readme-section stays on each event as the e2e hook; the list's gap
+   spaces the cards instead of the section's own margin. */
 .readme-section.events-panel__event {
   margin: 0;
-  border-top: 1px solid var(--rm-border, #d0d7de);
-}
-
-.readme-section.events-panel__event:first-child {
-  border-top: none;
 }
 
 .events-panel__event-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 52px;
-  padding: 8px 12px 8px 8px;
-  box-sizing: border-box;
+  min-height: 56px;
+  padding: 8px 10px 8px 8px;
+  transition: background var(--duration-fast) var(--ease);
+}
+
+.events-panel__event-head:hover {
+  background: var(--surface-hover);
+}
+
+.events-panel__event--open .events-panel__event-head {
+  border-bottom: 1px solid var(--border);
 }
 
 .events-panel__toggle {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 4px;
-  font: inherit;
-  text-align: left;
-  border: none;
-  border-radius: 6px;
+  padding: 6px 4px 6px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
   background: transparent;
   color: inherit;
+  text-align: left;
   cursor: pointer;
-}
-
-.events-panel__toggle:hover .events-panel__event-name {
-  color: var(--ev-accent-text);
 }
 
 .events-panel__chevron {
   flex-shrink: 0;
-  color: var(--rm-text-muted, #656d76);
-  transition: transform 0.15s ease;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-subtle);
+  transition:
+    transform var(--duration) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.events-panel__toggle:hover .events-panel__chevron {
+  color: var(--text);
 }
 
 .events-panel__event--open .events-panel__chevron {
@@ -206,17 +142,18 @@
 
 .events-panel__event-title {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
   min-width: 0;
+  min-height: 20px;
 }
 
 .events-panel__event-name {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  min-width: 0;
+  font-size: var(--text-md);
+  font-weight: 650;
   line-height: 1.3;
-  color: var(--rm-text, #1f2328);
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -224,93 +161,46 @@
 
 .events-panel__event-count {
   flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  height: 18px;
-  padding: 0 7px;
-  border: 1px solid var(--rm-border, #d0d7de);
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--rm-text-muted, #656d76);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .events-panel__event-preview {
-  font-size: 13px;
-  color: var(--rm-text-muted, #656d76);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* ── Row actions ── */
+/* ── Head actions: edit/delete quiet until hover, "Add to todo" always on ── */
 .events-panel__event-actions {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-.events-panel__icon-btn {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--rm-text-muted, #656d76);
-  cursor: pointer;
-  transition:
-    background 0.12s,
-    border-color 0.12s,
-    color 0.12s;
-}
-
-.events-panel__icon-btn:hover {
-  background: var(--ev-row-hover);
-  border-color: var(--rm-border, #d0d7de);
-  color: var(--rm-text, #1f2328);
-}
-
-.events-panel__icon-btn--danger:hover {
-  background: var(--ev-danger-bg);
-  border-color: var(--ev-danger);
-  color: var(--ev-danger);
-}
-
-.events-panel__schedule-btn {
-  height: 30px;
+.events-panel__event-tools {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-left: 4px;
-  padding: 0 12px;
-  font: inherit;
-  white-space: nowrap;
-  border: 1px solid var(--ev-primary);
-  border-radius: 6px;
-  background: var(--ev-primary);
-  color: #ffffff;
-  cursor: pointer;
-  transition: background 0.12s;
+  gap: 1px;
+  transition: opacity var(--duration-fast) var(--ease);
 }
 
-.events-panel__schedule-btn:hover {
-  background: var(--ev-primary-hover);
-  border-color: var(--ev-primary-hover);
-}
-
-.events-panel__schedule-btn-label {
-  font-size: 13px;
-  font-weight: 600;
+.events-panel__schedule-btn .ui-icon {
+  margin-left: -2px;
 }
 
 /* ── Expanded task list ── */
 .events-panel__task-list {
   list-style: none;
   margin: 0;
-  padding: 0 16px 12px 44px;
+  padding: 0;
   display: flex;
   flex-direction: column;
 }
@@ -319,92 +209,96 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 34px;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
-  border-radius: 0;
-  transition: background 0.12s;
+  min-height: 44px;
+  padding: 7px 10px 7px 16px;
+  border-top: 1px solid var(--border);
+  transition: background var(--duration-fast) var(--ease);
 }
 
-.events-panel__task-row:last-child {
-  border-bottom-color: transparent;
+.events-panel__task-row:first-child {
+  border-top: 0;
 }
 
-.events-panel__task-row:hover {
-  background: var(--ev-row-hover);
-  border-radius: 6px;
-  border-bottom-color: transparent;
+.events-panel__task-row:hover,
+.events-panel__task-row:focus-within {
+  background: var(--surface-hover);
 }
 
+/* Step number in the checkbox column, so rows line up with the todo's */
 .events-panel__task-num {
-  width: 20px;
   flex-shrink: 0;
-  font-size: 12px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--ev-accent-text);
+  color: var(--text-muted);
 }
 
 .events-panel__task-name {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
-  color: var(--rm-text, #1f2328);
-}
-
-/* Per-task add: revealed on row hover/focus; always shown on touch screens */
-.events-panel__task-add-btn {
-  flex-shrink: 0;
-  height: 24px;
-  padding: 0 8px;
-  font-family: inherit;
-  font-size: 12px;
+  font-size: var(--text-base);
   font-weight: 500;
-  border: 1px solid var(--rm-border, #d0d7de);
-  border-radius: 6px;
-  background: var(--rm-bg, #ffffff);
-  color: var(--rm-text, #1f2328);
-  cursor: pointer;
-  opacity: 0;
+  line-height: 1.45;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.btn.events-panel__task-add-btn {
+  flex-shrink: 0;
+  gap: 4px;
+  margin: -4px 0;
   transition:
-    opacity 0.12s,
-    border-color 0.12s;
+    opacity var(--duration-fast) var(--ease),
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
-.events-panel__task-row:hover .events-panel__task-add-btn,
-.events-panel__task-add-btn:focus-visible {
-  opacity: 1;
+.btn.events-panel__task-add-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 
-.events-panel__task-add-btn:hover {
-  border-color: var(--ev-primary);
-  color: var(--ev-primary);
-}
-
-@media (hover: none) {
+/* Secondary actions reveal on hover/focus where hover exists; touch screens
+   always show them. */
+@media (hover: hover) {
+  .events-panel__event-tools,
   .events-panel__task-add-btn {
+    opacity: 0;
+  }
+
+  .events-panel__event-head:hover .events-panel__event-tools,
+  .events-panel__event-head:focus-within .events-panel__event-tools,
+  .events-panel__task-row:hover .events-panel__task-add-btn,
+  .events-panel__task-row:focus-within .events-panel__task-add-btn {
     opacity: 1;
   }
 }
 
-.events-panel__hint {
-  margin: 0;
-  font-size: 13px;
-  color: var(--rm-text-muted, #656d76);
-}
-
-/* ── Narrow screens: action buttons drop under the title ── */
-@media (max-width: 560px) {
+/* ── Narrow screens: when the name would get squeezed, the actions drop to
+   their own line under it (right-aligned) instead of truncating it ── */
+@media (max-width: 640px) {
   .events-panel__event-head {
     flex-wrap: wrap;
+    row-gap: 2px;
+    padding: 6px 8px 6px 4px;
+  }
+
+  .events-panel__toggle {
+    flex: 1 1 200px;
   }
 
   .events-panel__event-actions {
-    width: 100%;
-    justify-content: flex-end;
+    margin-left: auto;
   }
 
-  .events-panel__task-list {
-    padding-left: 16px;
+  .events-panel__task-row {
+    padding: 6px 6px 6px 12px;
   }
 }

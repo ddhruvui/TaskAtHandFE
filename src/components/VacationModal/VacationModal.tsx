@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { Vacation } from "../../types";
 import { EcdCalendar } from "../DatePicker";
+import { Modal } from "../Modal";
 import "./VacationModal.css";
 
 interface VacationModalProps {
@@ -69,66 +70,87 @@ export default function VacationModal({
     ) + 1;
 
   return (
-    <div className="vacation-modal__overlay" onClick={onCancel}>
-      <div className="vacation-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="vacation-modal__title">
+    <Modal
+      onClose={onCancel}
+      className="vacation-modal"
+      overlayClassName="vacation-modal__overlay"
+      labelledBy="vacation-modal-title"
+    >
+      <div>
+        <h3
+          id="vacation-modal-title"
+          className="ui-modal__title vacation-modal__title"
+        >
           {vacation ? "Edit Vacation" : "Book Vacation"}
         </h3>
 
-        <p className="vacation-modal__hint">
+        <p className="ui-modal__description vacation-modal__hint">
           Both days count — the day you leave and the day you get back are both
           vacation days.
         </p>
+      </div>
 
+      <label className="field vacation-modal__note-field">
+        <span className="field__label">Note</span>
         <input
           ref={noteRef}
-          className="vacation-modal__note-input"
+          className="input vacation-modal__note-input"
           type="text"
           placeholder="Note… (optional, e.g. Kerala trip)"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
-            if (e.key === "Escape") onCancel();
           }}
         />
+      </label>
 
-        <div className="vacation-modal__dates">
-          <div className="vacation-modal__date-field">
-            <span className="vacation-modal__date-label">First day</span>
-            <EcdCalendar
-              mode="date"
-              value={startDate}
-              onChange={handleStartChange}
-            />
-          </div>
-          <div className="vacation-modal__date-field">
-            <span className="vacation-modal__date-label">Last day</span>
-            <EcdCalendar mode="date" value={endDate} onChange={setEndDate} />
-          </div>
+      <div className="vacation-modal__dates">
+        <div className="field vacation-modal__date-field">
+          <span className="field__label vacation-modal__date-label">
+            First day
+          </span>
+          <EcdCalendar
+            mode="date"
+            value={startDate}
+            onChange={handleStartChange}
+          />
         </div>
-
-        <p className="vacation-modal__summary">
-          {totalDays > 0
-            ? `${totalDays} day${totalDays === 1 ? "" : "s"} off`
-            : "The last day can't be before the first day."}
-        </p>
-
-        {formError && <p className="vacation-modal__error">{formError}</p>}
-
-        <div className="vacation-modal__actions">
-          <button className="vacation-modal__btn" onClick={onCancel}>
-            Cancel
-          </button>
-          <button
-            className="vacation-modal__btn vacation-modal__btn--primary"
-            onClick={handleSubmit}
-            disabled={endDate < startDate}
-          >
-            {vacation ? "Save" : "Book"}
-          </button>
+        <div className="field vacation-modal__date-field">
+          <span className="field__label vacation-modal__date-label">
+            Last day
+          </span>
+          <EcdCalendar mode="date" value={endDate} onChange={setEndDate} />
         </div>
       </div>
-    </div>
+
+      <p
+        className={`vacation-modal__summary${totalDays > 0 ? "" : " vacation-modal__summary--invalid"}`}
+      >
+        {totalDays > 0
+          ? `${totalDays} day${totalDays === 1 ? "" : "s"} off`
+          : "The last day can't be before the first day."}
+      </p>
+
+      {formError && (
+        <p className="ui-modal__error vacation-modal__error">{formError}</p>
+      )}
+
+      <div className="ui-modal__actions vacation-modal__actions">
+        <button
+          className="btn btn--secondary vacation-modal__btn"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn btn--primary vacation-modal__btn vacation-modal__btn--primary"
+          onClick={handleSubmit}
+          disabled={endDate < startDate}
+        >
+          {vacation ? "Save" : "Book"}
+        </button>
+      </div>
+    </Modal>
   );
 }

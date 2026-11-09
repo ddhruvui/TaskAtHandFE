@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the end-to-end (E2E) tests for the **By Date** view mode in the Task At Hand application — undone tasks grouped by calendar date, ordered today first, then past dates, then future dates, with thick dividers between the present, past and future sections — and for **panel-toggle exclusivity**: activating one panel toggle (Insights, Events, Life Events, Goals, Projects, Affirmations, Calls) deactivates the others, while By Date remains an independent todo-list filter.
+This document describes the end-to-end (E2E) tests for the **By Date** view mode in the Task At Hand application — undone tasks grouped by calendar date, ordered today first, then past dates, then future dates, with dividers between the present, past and future sections (labelled Today / Overdue / Upcoming — those labels are covered in `UI_TEST_DOCUMENTATION.md`) — and for **panel-toggle exclusivity**: activating one panel toggle — a sidebar nav item (Insights, Events, Life Events, Goals, Projects, Affirmations, Calls, Vacation, On-call) — deactivates the others, while By Date remains an independent todo-list filter.
 
 ## Test File Location
 

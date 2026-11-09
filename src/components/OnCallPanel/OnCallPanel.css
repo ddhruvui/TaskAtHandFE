@@ -1,264 +1,242 @@
-/* On-call view — option B: week timeline over a list of upcoming shifts.
-   Primary = solid red, secondary = dashed outline in the same red family,
-   so the two differ by shape as well as weight. */
+/* ═══════════════════════════════════════════════════════════════════════
+   On-call view: one agenda card — shift rows with the "Not on call" gaps
+   between them. Chips, icon buttons and the section card come from
+   styles/ui.css; this file lays out the rows.
+
+   Each row has a 3px marker on its left edge: solid On-call hue for a
+   primary shift, dashed for secondary, dotted grey for a gap — they differ
+   by shape as well as colour (status is never colour-only).
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .oncall-panel {
-  --oc-red: #cf222e;
-  --oc-red-text: #a40e26;
-  --oc-red-soft: rgba(207, 34, 46, 0.08);
-  --oc-red-border: rgba(207, 34, 46, 0.55);
-  --oc-track: #f6f8fa;
+  --oc-hue: var(--hue-oncall);
+  --oc-tint: color-mix(in srgb, var(--hue-oncall), transparent 88%);
+  --oc-dash: color-mix(in srgb, var(--hue-oncall), transparent 30%);
 
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .oncall-panel {
-    --oc-red: #da3633;
-    --oc-red-text: #ff7b72;
-    --oc-red-soft: rgba(248, 81, 73, 0.12);
-    --oc-red-border: rgba(248, 81, 73, 0.6);
-    --oc-track: #161b22;
-  }
+.oncall-panel > .readme-section {
+  margin-bottom: 0;
 }
 
-/* ── Toolbar: week navigation + totals, add button right-aligned ── */
-.oncall-panel__toolbar {
-  display: flex;
+.oncall-panel__error {
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.oncall-panel__week-nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 0.9rem;
-  color: var(--rm-text, #1f2328);
-}
-
-.oncall-panel__nav-btn {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  font: inherit;
-  font-size: 1rem;
-  line-height: 1;
-  color: var(--rm-text-muted, #656d76);
-  background: none;
-  border: 1px solid var(--rm-border, #d0d7de);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.oncall-panel__nav-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.oncall-panel__week-label {
-  font-weight: 600;
 }
 
 .oncall-panel__totals {
-  font-size: 0.8rem;
-  color: var(--rm-text-muted, #656d76);
-}
-
-/* ── Timeline ── */
-.oncall-panel__week {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.oncall-panel__day {
-  display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-}
-
-.oncall-panel__day-label {
-  font-size: 0.8rem;
-  color: var(--rm-text-muted, #656d76);
-}
-
-.oncall-panel__day-label--today {
-  font-weight: 600;
-  color: var(--rm-text, #1f2328);
-}
-
-.oncall-panel__track {
-  position: relative;
-  height: 22px;
-  border-radius: 6px;
-  background: var(--oc-track);
-  border: 1px solid var(--rm-border-muted, #eaeef2);
-}
-
-.oncall-panel__bar {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  padding: 0 6px;
-  border-radius: 6px;
-  font-size: 11px;
+  margin-right: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  overflow: hidden;
-}
-
-.oncall-panel__bar--primary {
-  background: var(--oc-red);
-  color: #fff;
-}
-
-.oncall-panel__bar--secondary {
-  background: var(--oc-red-soft);
-  border: 1.5px dashed var(--oc-red-border);
-  color: var(--oc-red-text);
-}
-
-.oncall-panel__now {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 2px;
-  background: var(--rm-text, #1f2328);
-}
-
-.oncall-panel__axis {
-  display: flex;
-  justify-content: space-between;
-  margin: 4px 0 0 66px;
-  font-size: 11px;
-  color: var(--rm-text-muted, #656d76);
-}
-
-.oncall-panel__legend {
-  display: flex;
-  gap: 16px;
-  margin: 10px 0 0 66px;
-  font-size: 11px;
-  color: var(--rm-text-muted, #656d76);
-}
-
-.oncall-panel__swatch {
-  display: inline-block;
-  width: 14px;
-  height: 10px;
-  margin-right: 5px;
-  vertical-align: -1px;
-  border-radius: 3px;
-  box-sizing: border-box;
-}
-
-.oncall-panel__swatch--primary {
-  background: var(--oc-red);
-}
-
-.oncall-panel__swatch--secondary {
-  background: var(--oc-red-soft);
-  border: 1.5px dashed var(--oc-red-border);
 }
 
 /* ── Upcoming list ── */
 .oncall-panel__list {
   list-style: none;
-  margin: 16px 0 0;
+  margin: 0;
   padding: 0;
-  border-top: 1px solid var(--rm-border, #d0d7de);
 }
 
 .oncall-panel__row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 4px 10px 10px;
-  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
+  gap: 12px;
+  padding: 11px 10px 11px 16px;
+  border-top: 1px solid var(--border);
+  transition: background var(--duration-fast) var(--ease);
 }
 
-.oncall-panel__row:last-child {
-  border-bottom: none;
+.oncall-panel__row:first-child {
+  border-top: 0;
 }
 
-.oncall-panel__row--primary {
-  border-left: 3px solid var(--oc-red);
+.oncall-panel__row:hover,
+.oncall-panel__row:focus-within {
+  background: var(--surface-hover);
 }
 
-.oncall-panel__row--secondary {
-  border-left: 3px dashed var(--oc-red-border);
+/* Type marker: solid for primary, dashed for secondary */
+.oncall-panel__row::before {
+  content: "";
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 3px;
+  min-height: 36px;
+  border-radius: 2px;
+}
+
+.oncall-panel__row--primary::before {
+  background: var(--oc-hue);
+}
+
+.oncall-panel__row--secondary::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--oc-dash) 0 4px,
+    transparent 4px 7px
+  );
 }
 
 .oncall-panel__main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.oncall-panel__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
 }
 
 .oncall-panel__times {
+  font-size: var(--text-md);
   font-weight: 600;
-  color: var(--rm-text, #1f2328);
+  line-height: 1.35;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .oncall-panel__plus1 {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--rm-text-muted, #656d76);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-subtle);
 }
 
 .oncall-panel__meta {
-  font-size: 0.8rem;
-  color: var(--rm-text-muted, #656d76);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 
-.oncall-panel__pill {
-  margin-left: 6px;
-  padding: 1px 7px;
-  font-size: 11px;
-  font-weight: 400;
-  border-radius: 999px;
-  border: 1px solid var(--oc-red-border);
-  color: var(--oc-red-text);
+/* Secondary pill: a dashed outline, echoing the timeline bar */
+.oncall-panel__pill--secondary {
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed var(--oc-dash);
+  color: var(--danger-text);
 }
 
 .oncall-panel__pill--now {
-  background: var(--oc-red);
-  border-color: var(--oc-red);
-  color: #fff;
+  font-weight: 600;
 }
 
-.oncall-panel__icon-btn {
+.oncall-panel__live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--oc-hue);
+  animation: oncall-live 2s var(--ease) infinite;
+}
+
+@keyframes oncall-live {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ── Off-call gap: the time between stretches of cover ──
+   A quiet, sunken row with a dotted grey marker where a shift's coloured
+   edge would be: an absence, not an entry. The gap the user is in right now
+   is tinted green — it's the "you're free" line. */
+.oncall-panel__gap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px 9px 16px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-sunken), var(--surface) 35%);
+}
+
+.oncall-panel__gap:first-child {
+  border-top: 0;
+}
+
+.oncall-panel__gap::before {
+  content: "";
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  font: inherit;
-  font-size: 1rem;
-  line-height: 1;
-  color: var(--rm-text-muted, #656d76);
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  cursor: pointer;
+  align-self: stretch;
+  width: 3px;
+  min-height: 32px;
+  border-radius: 2px;
+  background: radial-gradient(
+      circle,
+      var(--border-strong) 1.2px,
+      transparent 1.6px
+    )
+    center top / 3px 6px repeat-y;
 }
 
-.oncall-panel__icon-btn:hover {
-  border-color: var(--rm-border, #d0d7de);
-  color: var(--rm-text, #1f2328);
+.oncall-panel__gap--now {
+  background: var(--success-soft);
 }
 
-.oncall-panel__icon-btn--danger:hover {
-  color: #cf222e;
-  border-color: #cf222e;
+.oncall-panel__gap--now::before {
+  background: radial-gradient(circle, var(--success) 1.2px, transparent 1.6px)
+    center top / 3px 6px repeat-y;
+}
+
+.oncall-panel__gap-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.oncall-panel__gap--now .oncall-panel__gap-title {
+  color: var(--success-text);
+}
+
+.oncall-panel__gap-range {
+  font-variant-numeric: tabular-nums;
+}
+
+.oncall-panel__gap-span {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+/* Closing line: when cover runs out */
+.oncall-panel__end {
+  padding: 10px 16px 12px 31px;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
+/* Edit / delete: quiet until the row is hovered or focused (always visible
+   on touch screens, where hover doesn't exist) */
+.oncall-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+@media (hover: hover) {
+  .oncall-panel__actions {
+    opacity: 0;
+  }
+
+  .oncall-panel__row:hover .oncall-panel__actions,
+  .oncall-panel__row:focus-within .oncall-panel__actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .oncall-panel__row,
+  .oncall-panel__gap {
+    gap: 10px;
+    padding: 12px 6px 12px 12px;
+  }
 }

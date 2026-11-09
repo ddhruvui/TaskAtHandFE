@@ -4,6 +4,9 @@
  * Primary is the default and renders solid red; secondary is a dashed
  * outline. The quick-add field takes "M/D start-end" with an optional
  * trailing "s" for secondary. Ended shifts are hidden on the local clock.
+ * The view is one agenda: shifts with "Not on call from … to …" gaps between
+ * them (no week paging); its wording comes from `formatMoment`/`formatSpan`
+ * in src/utils/oncall, imported here so the assertions follow the app.
  */
 
 import { test, expect, type Page } from "@playwright/test";
@@ -18,6 +21,7 @@ import {
   waitForPageLoad,
   dateKey,
 } from "./helpers";
+import { formatMoment, formatSpan } from "../src/utils/oncall";
 
 async function openOnCallView(page: Page) {
   await page.locator(".oncall-toggle-btn").click();
@@ -27,6 +31,17 @@ async function openOnCallView(page: Page) {
 
 function rows(page: Page) {
   return page.locator(".oncall-panel__row");
+}
+
+function gaps(page: Page) {
+  return page.locator(".oncall-panel__gap");
+}
+
+/** Local Date for a date key + "HH:mm" (parsed by component, timezone safe). */
+function at(key: string, time: string) {
+  const [y, m, d] = key.split("-").map(Number);
+  const [h, min] = time.split(":").map(Number);
+  return new Date(y, m - 1, d, h, min);
 }
 
 /** "M/D" for a date key, as the quick-add shorthand takes it. */
@@ -100,21 +115,93 @@ test.describe("On-call view", () => {
     await expect(rows(page).first()).toContainText("secondary");
   });
 
-  test("an overnight shift shows +1 and two bars on the timeline", async ({
+  test("an overnight shift shows +1 and frees up the next morning", async ({
     page,
   }) => {
-    // Pick a day that isn't Sunday so both halves land in the same week.
-    let offset = 1;
-    while (new Date(Date.now() + offset * 864e5).getDay() === 0) offset++;
-    await createOnCall({ date: dateKey(offset), start: "22:00", end: "06:00" });
+    await createOnCall({ date: dateKey(2), start: "22:00", end: "06:00" });
     await openOnCallView(page);
-    // Move forward to the week holding the shift if it isn't this one.
-    for (let i = 0; i < 2; i++) {
-      if ((await page.locator(".oncall-panel__bar").count()) > 0) break;
-      await page.getByRole("button", { name: "Next week" }).click();
-    }
     await expect(rows(page).first()).toContainText("+1");
-    await expect(page.locator(".oncall-panel__bar--primary")).toHaveCount(2);
+    await expect(page.locator(".oncall-panel__end")).toHaveText(
+      `Nothing scheduled after ${formatMoment(at(dateKey(3), "06:00"), new Date())}`,
+    );
+  });
+
+  test("shows the gap between shifts as 'Not on call from … to …'", async ({
+    page,
+  }) => {
+    await createOnCall({ date: dateKey(2), start: "09:00", end: "22:00" });
+    await createOnCall({ date: dateKey(10), start: "09:00", end: "17:00" });
+    await openOnCallView(page);
+
+    // the "now" gap, then the one between the two shifts
+    await expect(gaps(page)).toHaveCount(2);
+    const now = new Date();
+    const between = gaps(page).nth(1);
+    await expect(between).toContainText("Not on call");
+    await expect(between).toContainText(
+      `from ${formatMoment(at(dateKey(2), "22:00"), now)} to ${formatMoment(at(dateKey(10), "09:00"), now)}`,
+    );
+    // 22:00 → 09:00 eight days later
+    await expect(between).toContainText(formatSpan(7 * 24 * 60 + 11 * 60));
+    // agenda order: gap, shift, gap, shift
+    await expect(
+      page.locator(".oncall-panel__list > li:not(.oncall-panel__end)"),
+    ).toHaveClass([
+      /oncall-panel__gap--now/,
+      /oncall-panel__row/,
+      /oncall-panel__gap/,
+      /oncall-panel__row/,
+    ]);
+  });
+
+  test("opens with 'Not on call now' when no shift is running", async ({
+    page,
+  }) => {
+    await createOnCall({ date: dateKey(3), start: "09:00", end: "17:00" });
+    await openOnCallView(page);
+    const first = page.locator(".oncall-panel__list > li").first();
+    await expect(first).toHaveClass(/oncall-panel__gap--now/);
+    await expect(first).toContainText("Not on call now");
+    await expect(first).toContainText(
+      `until ${formatMoment(at(dateKey(3), "09:00"), new Date())}`,
+    );
+  });
+
+  test("back-to-back shifts leave no gap between them", async ({ page }) => {
+    await createOnCall({ date: dateKey(2), start: "09:00", end: "17:00" });
+    await createOnCall({
+      date: dateKey(2),
+      start: "17:00",
+      end: "22:00",
+      type: "secondary",
+    });
+    await openOnCallView(page);
+    await expect(rows(page)).toHaveCount(2);
+    // only the "now" gap — cover runs unbroken 09:00–22:00
+    await expect(gaps(page)).toHaveCount(1);
+    await expect(gaps(page).first()).toHaveClass(/oncall-panel__gap--now/);
+  });
+
+  test("a running shift opens the agenda without a 'now' gap", async ({
+    page,
+  }) => {
+    await createOnCall({ date: dateKey(0), start: "00:00", end: "24:00" });
+    await openOnCallView(page);
+    const first = page.locator(".oncall-panel__list > li").first();
+    await expect(first).toHaveClass(/oncall-panel__row--active/);
+    await expect(first).toContainText("now");
+    await expect(page.locator(".oncall-panel__gap--now")).toHaveCount(0);
+  });
+
+  test("has no week paging", async ({ page }) => {
+    await createOnCall({ date: dateKey(2), start: "09:00", end: "22:00" });
+    await openOnCallView(page);
+    await expect(page.getByRole("button", { name: "Next week" })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("button", { name: "Previous week" }),
+    ).toHaveCount(0);
   });
 
   test("shows an overlap error from the server", async ({ page }) => {

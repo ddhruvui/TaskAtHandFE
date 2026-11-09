@@ -36,13 +36,13 @@ Tests for one-time date completion targets.
 
 - **Description**: Dates in the same year show without the year
 - **Steps**: Create task with date in current year (2026-06-15)
-- **Expected Output**: Displays as "[ 06/15 ]" (without year)
+- **Expected Output**: Displays as "06/15" (without year)
 
 #### Test: "should display date ECD with year for different year"
 
 - **Description**: Dates in different years include the year
 - **Steps**: Create task with date in next year (2027-06-15)
-- **Expected Output**: Displays as "[ 06/15/27 ]" (with 2-digit year)
+- **Expected Output**: Displays as "06/15/27" (with 2-digit year)
 
 #### Test: "should create date ECD via UI"
 
@@ -52,7 +52,7 @@ Tests for one-time date completion targets.
   2. Select "Date" mode
   3. Choose 2026-12-31
   4. Click "Add task" button
-- **Expected Output**: Task shows "[ 12/31 ]"
+- **Expected Output**: Task shows "12/31"
 
 #### Test: "should edit date ECD"
 
@@ -60,7 +60,7 @@ Tests for one-time date completion targets.
 - **Steps**:
   1. Open edit modal for task with date 2026-06-15
   2. Change date to 2026-09-20
-- **Expected Output**: Task now shows "[ 09/20 ]"
+- **Expected Output**: Task now shows "09/20"
 
 #### Test: "should validate date format"
 
@@ -238,7 +238,7 @@ Tests for tasks without a completion date.
 
 - **Description**: Tasks without dates display clearly
 - **Steps**: Create task with ecd: null
-- **Expected Output**: Displays "[ No date ]"
+- **Expected Output**: Displays "No date"
 
 #### Test: "should select 'None' by default in add modal"
 
@@ -254,7 +254,7 @@ Tests for tasks without a completion date.
   2. Enter name
   3. Keep "None" selected
   4. Click "Add task" button
-- **Expected Output**: Task shows "[ No date ]"
+- **Expected Output**: Task shows "No date"
 
 ---
 
@@ -269,7 +269,7 @@ Tests for changing ECD types on existing tasks.
   1. Edit task with date ECD (2026-06-15)
   2. Switch to "Weekly" mode
   3. Select Mon
-- **Expected Output**: Task changes from "[ 06/15 ]" to "↻ Mon"
+- **Expected Output**: Task changes from "06/15" to "↻ Mon"
 
 #### Test: "should convert from weekly to monthly ECD"
 
@@ -295,7 +295,7 @@ Tests for changing ECD types on existing tasks.
 - **Steps**:
   1. Edit task with any ECD type
   2. Select "None" mode
-- **Expected Output**: Task shows "[ No date ]"
+- **Expected Output**: Task shows "No date"
 
 ---
 
@@ -303,18 +303,18 @@ Tests for changing ECD types on existing tasks.
 
 ### Visual Indicators
 
-- **One-time dates**: Enclosed in square brackets `[ 06/15 ]`
+- **One-time dates**: A date chip `06/15` (green "Today" / red "Overdue" flag when due today / late and not done)
 - **Recurring dates**: Prefixed with rotation symbol `↻ Mon Wed`
-- **No date**: Shown as `[ No date ]`
+- **No date**: Shown as `No date`
 
 ### Format Examples
 
-- **Date (current year)**: `[ 06/15 ]`
-- **Date (other year)**: `[ 06/15/27 ]`
+- **Date (current year)**: `06/15`
+- **Date (other year)**: `06/15/27`
 - **Weekly**: `↻ Fri Mon Wed` (days displayed in order)
 - **Monthly**: `↻ 1st 15th 30th` (numerically sorted with ordinals)
 - **Yearly**: `↻ 25/12/2026` (D/M/YYYY format)
-- **None**: `[ No date ]`
+- **None**: `No date`
 
 ---
 

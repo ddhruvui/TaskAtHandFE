@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the end-to-end (E2E) tests for the Goals functionality in the Task At Hand application. A goal is a long-term aim (like "Improve Health") broken into small steps/habits ("Wake up at 6", "Have 1 fruit a day") built **one step at a time**. A step is either **paused/pending** (unchecked box, `[ Not started ]` badge) or **under progress** (checked box, `[ ↻ Daily ]` or `[ ↻ Mon, Wed, Fri ]` badge): starting a step opens a day picker and creates a recurring task on the chosen weekdays under a todo header named "One Step At A Time", kept for life; pausing removes that task. The sync works both ways — deleting the daily task (or the whole header) from the todo pauses the matching step(s).
+This document describes the end-to-end (E2E) tests for the Goals functionality in the Task At Hand application. A goal is a long-term aim (like "Improve Health") broken into small steps/habits ("Wake up at 6", "Have 1 fruit a day") built **one step at a time**. A step is either **paused/pending** (unchecked box, `Not started` badge) or **under progress** (checked box, `↻ Daily` or `↻ Mon, Wed, Fri` badge): starting a step opens a day picker and creates a recurring task on the chosen weekdays under a todo header named "One Step At A Time", kept for life; pausing removes that task. The sync works both ways — deleting the daily task (or the whole header) from the todo pauses the matching step(s).
 
 Step rows render with the todo's own row markup (`.task-card*` classes from `TaskCard.css`), so the checkbox toggles the step lifecycle and the status badge sits in the slot the todo uses for the ECD. Steps are added one at a time from a `+` button on the goal heading — the same gesture as adding a task to a header — and each row carries move up/down and delete, just like a todo task. Goals themselves are ordered by a server-side contiguous `priority` and moved with arrows on the heading. There is deliberately **no** Edit control on a goal heading: a goal's name and starting steps are fixed at creation.
 
@@ -48,7 +48,7 @@ These tests verify goal creation through the modal and step creation from the go
 - **Steps**: Open the Goals view, click "Add goal", enter "Improve Health", type "Wake up at 6" and "Have 1 fruit a day" on separate lines, submit
 - **Expected Output**:
   - A new goal section titled "Improve Health" appears with both steps in order
-  - New steps are pending: `[ Not started ]` badges, no checked boxes, and a Start action on each row
+  - New steps are pending: `Not started` badges, no checked boxes, and a Start action on each row
   - The empty state message disappears
 
 #### Test: "should update the step count hint while typing"
@@ -72,19 +72,19 @@ These tests verify goal creation through the modal and step creation from the go
 - **Expected Output**:
   - The modal title reads "Add step — Improve Health"
   - The new step is appended after the existing one (order preserved)
-  - It starts pending with a `[ Not started ]` badge
+  - It starts pending with a `Not started` badge
 
 #### Test: "should add the first step to a goal that has none"
 
 - **Description**: Confirms the add-step flow works against an empty backlog and clears the empty state
 - **Steps**: Seed a goal with no steps, open the Goals view, add "Track every expense" via the heading `+`
-- **Expected Output**: "No steps yet — add one!" disappears and the step appears with a `[ Not started ]` badge
+- **Expected Output**: "No steps yet — add one!" disappears and the step appears with a `Not started` badge
 
 #### Test: "should submit a new step on Enter"
 
 - **Description**: Verifies keyboard submit in the add step modal, matching the add task modal
 - **Steps**: Open the add step modal, type "Walk 20 min", press Enter in the name field
-- **Expected Output**: The step is created with a `[ Not started ]` badge without clicking the confirm button
+- **Expected Output**: The step is created with a `Not started` badge without clicking the confirm button
 
 #### Test: "should not add a step when the name is blank"
 
@@ -156,7 +156,7 @@ These tests verify goal-level and step-level reordering, the under-progress-firs
 
 - **Description**: Starting a step lifts it into the under-progress block at the top, and the new order is persisted
 - **Steps**: Seed a goal with three pending steps; Start the last one; reload and reopen the Goals view
-- **Expected Output**: The started step shows first with the `[ ↻ Daily ]` badge, and the order survives the reload
+- **Expected Output**: The started step shows first with the `↻ Daily` badge, and the order survives the reload
 
 #### Test: "should not move steps across the started/pending barrier"
 
@@ -221,7 +221,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 - **Steps**: Seed a goal with two pending steps; click Start on "Wake up at 6" and confirm the day picker's default; switch back to the todo view
 - **Expected Output**:
   - A notice 'Started "Wake up at 6" — under progress every Sun, Mon, Tue, Wed, Thu, Fri, Sat…' appears
-  - The step row shows a checked box with the `[ ↻ Daily ]` badge and a Pause action
+  - The step row shows a checked box with the `↻ Daily` badge and a Pause action
   - The badge rises immediately to "1/2 under progress"
   - The todo has a "One Step At A Time" header containing the task "Wake up at 6"
 
@@ -230,7 +230,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 - **Description**: Starting more steps must not create duplicate headers
 - **Steps**: Start both steps of a goal; query headers via API; switch to the todo view
 - **Expected Output**:
-  - Both rows show `[ ↻ Daily ]` and the badge reads "2/2 under progress"
+  - Both rows show `↻ Daily` and the badge reads "2/2 under progress"
   - Exactly one header named "One Step At A Time" exists
   - It contains both tasks, in the order the steps were started
 
@@ -239,7 +239,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 - **Description**: The sync works from the todo side — deleting the daily task pauses the step
 - **Steps**: Start "Wake up at 6" (badge "1/2 under progress"); switch to the todo view; delete the task "Wake up at 6" with the normal task delete flow; reopen the Goals view
 - **Expected Output**:
-  - The step shows a Start action and the `[ Not started ]` badge again
+  - The step shows a Start action and the `Not started` badge again
   - The badge drops to "0/2 under progress"
 
 #### Test: "should pause all started steps when the One Step At A Time header is deleted"
@@ -255,7 +255,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 - **Description**: Pausing an under-progress habit seeded from the API removes its daily task
 - **Steps**: Seed a goal whose step is already under progress plus its daily task under "One Step At A Time" (via API, mirroring what Start creates); click Pause on the step; switch to the todo view
 - **Expected Output**:
-  - The step shows `[ ↻ Daily ]` and the badge "1/1 under progress" before pausing
+  - The step shows `↻ Daily` and the badge "1/1 under progress" before pausing
   - A notice containing "paused — moved back to the backlog" appears
   - The step row shows a Start button again and the badge drops to "0/1 under progress"
   - The "One Step At A Time" header no longer contains the task
@@ -263,7 +263,7 @@ These tests verify the step lifecycle side effects on the todo, in both directio
 #### Test: "should pause a step back to the backlog and remove its daily task"
 
 - **Description**: Pausing a step started in the same session removes its daily task
-- **Steps**: Seed a goal with one step; start it (`[ ↻ Daily ]` badge, "1/1 under progress"); click Pause; switch to the todo view
+- **Steps**: Seed a goal with one step; start it (`↻ Daily` badge, "1/1 under progress"); click Pause; switch to the todo view
 - **Expected Output**:
   - A notice containing "paused — moved back to the backlog" appears
   - The step row shows a Start button again and the badge drops to "0/1 under progress"
@@ -280,7 +280,7 @@ These tests verify the day picker that Start opens, and the schedule it writes o
 - **Description**: The picked weekdays become the step's schedule and its task's ECD
 - **Steps**: Seed a goal with one pending step; click Start; select Mon/Wed/Fri; confirm
 - **Expected Output**:
-  - The step badge reads `[ ↻ Mon, Wed, Fri ]` instead of `[ ↻ Daily ]`
+  - The step badge reads `↻ Mon, Wed, Fri` instead of `↻ Daily`
   - A notice 'Started "Gym" — under progress every Mon, Wed, Fri' appears
   - The task's ECD is `{ type: "day_of_week", value: ["Mon", "Wed", "Fri"] }` (week order)
 
@@ -288,7 +288,7 @@ These tests verify the day picker that Start opens, and the schedule it writes o
 
 - **Description**: The todo card shows the same day list the goal row does
 - **Steps**: Start a step on Sat/Sun; switch to the todo view
-- **Expected Output**: The task card's ECD badge reads `[ ↻ Sun, Sat ]` — Sunday-first week order, matching what the backend stores
+- **Expected Output**: The task card's ECD badge reads `↻ Sun, Sat` — Sunday-first week order, matching what the backend stores
 
 #### Test: "should default the picker to every day"
 
@@ -296,13 +296,13 @@ These tests verify the day picker that Start opens, and the schedule it writes o
 - **Steps**: Click Start; inspect the picker; confirm without changing anything
 - **Expected Output**:
   - The hint reads "Due every Sun, Mon, Tue, Wed, Thu, Fri, Sat" and all seven toggles are `aria-pressed="true"`
-  - The resulting badge collapses back to `[ ↻ Daily ]`
+  - The resulting badge collapses back to `↻ Daily`
 
 #### Test: "should offer weekday and weekend presets"
 
 - **Description**: The presets set the selection in one click
 - **Steps**: Click Start; click "Weekdays"; confirm
-- **Expected Output**: The badge reads `[ ↻ Mon, Tue, Wed, Thu, Fri ]`
+- **Expected Output**: The badge reads `↻ Mon, Tue, Wed, Thu, Fri`
 
 #### Test: "should not let a step start with no day selected"
 
@@ -314,7 +314,7 @@ These tests verify the day picker that Start opens, and the schedule it writes o
 
 - **Description**: Cancelling the picker starts nothing
 - **Steps**: Click Start; click Cancel
-- **Expected Output**: The picker closes, the badge stays `[ Not started ]`, the count stays "0/1 under progress", and no task exists under "One Step At A Time"
+- **Expected Output**: The picker closes, the badge stays `Not started`, the count stays "0/1 under progress", and no task exists under "One Step At A Time"
 
 #### Test: "should not offer a days control on a pending step"
 
@@ -327,20 +327,20 @@ These tests verify the day picker that Start opens, and the schedule it writes o
 - **Description**: Rescheduling a running habit updates the goal and the todo together
 - **Steps**: Start a step on Mon/Wed/Fri; click its days control; select Tue/Thu; save
 - **Expected Output**:
-  - The badge reads `[ ↻ Tue, Thu ]` and a notice '"Gym" is now due every Tue, Thu' appears
+  - The badge reads `↻ Tue, Thu` and a notice '"Gym" is now due every Tue, Thu' appears
   - The task's ECD is `{ type: "day_of_week", value: ["Tue", "Thu"] }`
 
 #### Test: "should keep the chosen days after a reload"
 
 - **Description**: The schedule is persisted on the goal, not held in component state
 - **Steps**: Start a step on Mon/Wed/Fri; reload; reopen the Goals view
-- **Expected Output**: The badge still reads `[ ↻ Mon, Wed, Fri ]`
+- **Expected Output**: The badge still reads `↻ Mon, Wed, Fri`
 
 #### Test: "should restore the chosen days when a paused step is started again"
 
 - **Description**: Pausing shelves the step but keeps its schedule, so the picker reopens on it
 - **Steps**: Start a step on Mon/Wed/Fri; pause it; click Start again
-- **Expected Output**: The picker hint reads "Due every Mon, Wed, Fri", and confirming restores the `[ ↻ Mon, Wed, Fri ]` badge
+- **Expected Output**: The picker hint reads "Due every Mon, Wed, Fri", and confirming restores the `↻ Mon, Wed, Fri` badge
 
 ---
 

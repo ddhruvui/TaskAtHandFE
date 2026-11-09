@@ -1,44 +1,115 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Affirmations view: lines read every day, so one calm card of larger,
+   airy rows. Edit/delete stay out of the way until a row is hovered or
+   focused (always visible on touch). The "+" toolbar is lifted into the
+   page header via .page-actions.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .affirmations-panel {
   display: flex;
   flex-direction: column;
 }
 
-/* ── Toolbar ── */
-.affirmations-panel__toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 24px;
+.affirmations-panel__error {
+  margin-bottom: 16px;
 }
 
-/* ── Affirmation list ── */
+/* ── The card ── */
 .affirmations-panel__list {
   list-style: none;
   margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
+  padding: 6px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
 }
 
+/* ── Row ── */
 .affirmations-panel__row {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 12px 14px 22px;
+  transition: background var(--duration-fast) var(--ease);
 }
 
-.affirmations-panel__row:last-child {
-  border-bottom: none;
+/* Hairline between rows, inset to the text so the card reads as one piece */
+.affirmations-panel__row + .affirmations-panel__row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 42px;
+  right: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.affirmations-panel__row:hover,
+.affirmations-panel__row:focus-within {
+  background: var(--surface-hover);
+}
+
+/* Small identity mark in the view's hue, centred on the first line */
+.affirmations-panel__mark {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-top: 11px;
+  border-radius: 50%;
+  background: var(--hue-affirmations);
+  opacity: 0.7;
 }
 
 .affirmations-panel__name {
-  font-size: 15px;
-  color: var(--rm-text, #1f2328);
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-lg);
+  font-weight: 450;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
-/* ── Row action buttons ── */
+/* ── Actions: quiet until the row is hovered or focused ── */
 .affirmations-panel__actions {
-  margin-left: auto;
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+  margin: -1px 0 -1px auto;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+@media (hover: hover) {
+  .affirmations-panel__actions {
+    opacity: 0;
+  }
+
+  .affirmations-panel__row:hover .affirmations-panel__actions,
+  .affirmations-panel__row:focus-within .affirmations-panel__actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .affirmations-panel__row {
+    gap: 12px;
+    padding: 12px 6px 12px 16px;
+  }
+
+  .affirmations-panel__row + .affirmations-panel__row::before {
+    left: 34px;
+    right: 16px;
+  }
+
+  .affirmations-panel__name {
+    font-size: var(--text-md);
+  }
+
+  .affirmations-panel__mark {
+    margin-top: 9px;
+  }
 }

@@ -1,112 +1,124 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Calls view. Each frequency is a shared section card (.readme-section /
+   .readme-heading / .readme-tasks in styles/ui.css); rows follow the todo's
+   row pattern — round checkbox, name, actions revealed on hover/focus.
+   The "+" toolbar is lifted into the page header via .page-actions.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .calls-panel {
   display: flex;
   flex-direction: column;
 }
 
-/* ── Toolbar ── */
-.calls-panel__toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 24px;
+.calls-panel__error {
+  margin-bottom: 16px;
 }
 
-/* ── Frequency sections ── */
-.calls-panel__section {
-  margin-bottom: 24px;
-}
-
-.calls-panel__section-title {
-  margin: 0 0 8px;
-  padding-bottom: 6px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--rm-text, #1f2328);
-  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
-}
-
-/* ── Call list ── */
+/* ── Frequency section card ── */
 .calls-panel__list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
 }
 
+.calls-panel__section-empty {
+  padding: 18px 16px;
+}
+
+/* ── Row ── */
 .calls-panel__row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
+  gap: 12px;
+  min-height: 48px;
+  padding: 7px 10px 7px 16px;
+  border-top: 1px solid var(--border);
+  transition: background var(--duration-fast) var(--ease);
 }
 
-.calls-panel__row:last-child {
-  border-bottom: none;
+.calls-panel__row:first-child {
+  border-top: 0;
 }
 
-.calls-panel__row--done {
-  opacity: 0.6;
+.calls-panel__row:hover,
+.calls-panel__row:focus-within {
+  background: var(--surface-hover);
 }
 
-/* ── Called checkbox (mirrors the task-card checkbox) ── */
+/* ── Called checkbox: the todo's ring that fills with the accent ── */
 .calls-panel__checkbox {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  border-radius: 3px;
-  border: 2px solid var(--rm-border-muted, #d0d7de);
-  cursor: pointer;
   display: grid;
   place-items: center;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  background: transparent;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-on-accent);
+  cursor: pointer;
   transition:
-    background 0.15s,
-    border-color 0.15s;
+    background var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
 .calls-panel__checkbox:hover {
-  border-color: #2da44e;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .calls-panel__checkbox--checked {
-  background: #2da44e;
-  border-color: #2da44e;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
-.calls-panel__check-icon {
-  width: 10px;
-  height: 10px;
-  fill: #fff;
-  display: block;
-}
-
-@media (prefers-color-scheme: dark) {
-  .calls-panel__checkbox:hover {
-    border-color: #3fb950;
-  }
-
-  .calls-panel__checkbox--checked {
-    background: #3fb950;
-    border-color: #3fb950;
-  }
-}
-
-/* ── Name (strikethrough when called, like a done task) ── */
+/* ── Name (struck through once called, like a done task) ── */
 .calls-panel__name {
-  font-size: 15px;
-  color: var(--rm-text, #1f2328);
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 .calls-panel__name--done {
+  color: var(--text-subtle);
   text-decoration: line-through;
-  color: var(--rm-text-muted, #656d76);
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--text-subtle),
+    transparent 40%
+  );
 }
 
-/* ── Row action buttons ── */
+/* ── Actions: quiet until the row is hovered or focused (always on touch) ── */
 .calls-panel__actions {
-  margin-left: auto;
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+@media (hover: hover) {
+  .calls-panel__actions {
+    opacity: 0;
+  }
+
+  .calls-panel__row:hover .calls-panel__actions,
+  .calls-panel__row:focus-within .calls-panel__actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .calls-panel__row {
+    padding: 6px 6px 6px 12px;
+    gap: 10px;
+  }
 }

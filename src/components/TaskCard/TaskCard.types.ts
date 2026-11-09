@@ -27,6 +27,12 @@ export interface TaskCardProps {
    * habit the nightly archive has no results for yet.
    */
   streak?: { current: number; longest: number };
+  /**
+   * Name of the header the task lives under, shown as a small tag. Only the
+   * By Date view passes it — there tasks from every header are mixed, so the
+   * tag is the only hint of where each one belongs.
+   */
+  headerName?: string;
   onToggleDone: (id: string) => void;
   onEdit: (id: string, payload: EditPayload) => void;
   onMoveUp: (id: string) => void;

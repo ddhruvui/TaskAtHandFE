@@ -18,6 +18,7 @@ import { AddStepModal } from "../AddStepModal";
 import { StepDaysModal } from "../StepDaysModal";
 import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
+import { Icon } from "../Icon";
 // Step rows reuse the todo's row styling (.task-card*) so the two lists stay
 // visually identical from one source. Imported explicitly rather than relying
 // on TaskCard being mounted elsewhere in the tree.
@@ -371,23 +372,31 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
 
   return (
     <div className="goals-panel">
-      {error && <p className="empty-message">Action failed: {error}</p>}
-      {notice && (
-        <p className="goals-panel__notice">
-          {notice}{" "}
-          <button
-            className="goals-panel__notice-dismiss"
-            onClick={() => setNotice(null)}
-            aria-label="Dismiss notice"
-          >
-            ✕
-          </button>
-        </p>
-      )}
-
-      <div className="goals-panel__toolbar">
+      {/* The view's "+" — lifted into the page header row by .page-actions */}
+      <div className="goals-panel__toolbar page-actions">
         <AddButton ariaLabel="Add goal" onClick={() => setAddGoalOpen(true)} />
       </div>
+
+      {error && (
+        <p className="alert alert--danger goals-panel__error" role="alert">
+          <Icon name="alert" />
+          <span>Action failed: {error}</span>
+        </p>
+      )}
+      {notice && (
+        <div className="alert goals-panel__notice" role="status">
+          <Icon name="check" />
+          <span className="goals-panel__notice-text">{notice}</span>
+          <button
+            className="icon-btn goals-panel__notice-dismiss"
+            onClick={() => setNotice(null)}
+            aria-label="Dismiss notice"
+            title="Dismiss"
+          >
+            <Icon name="x" size={14} />
+          </button>
+        </div>
+      )}
 
       {goals.map((goal, idx) => {
         // Anything non-pending counts (covers legacy statuses from old data)
@@ -400,71 +409,61 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
         return (
           <section key={goal._id} className="readme-section">
             <div className="readme-heading">
-              <h2 className="readme-heading__text">{goal.name}</h2>
+              {/* Progress stays outside the <h2> — e2e reads the heading
+                  text as exactly the goal name. */}
+              <div className="readme-heading__title">
+                <h2 className="readme-heading__text">{goal.name}</h2>
+                {goal.steps.length > 0 && (
+                  <span
+                    className={`readme-heading__count goals-panel__progress${underProgressCount > 0 ? " goals-panel__progress--active" : ""}`}
+                    title={`${underProgressCount} of ${goal.steps.length} habits in practice, each on the weekdays it was started with`}
+                  >
+                    {underProgressCount}/{goal.steps.length} under progress
+                  </span>
+                )}
+              </div>
 
-              {goal.steps.length > 0 && (
-                <span
-                  className="goals-panel__progress"
-                  title={`${underProgressCount} of ${goal.steps.length} habits in practice, each on the weekdays it was started with`}
-                >
-                  {underProgressCount}/{goal.steps.length} under progress
-                </span>
-              )}
               {/* Goal order is manual, like todo headers and projects — the
-                  server shifts the neighbours to keep priorities contiguous. */}
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => handleMoveGoal(goal, -1)}
-                disabled={idx === 0}
-                aria-label={`Move goal ${goal.name} up`}
-                title="Move goal up"
-              >
-                ↑
-              </button>
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => handleMoveGoal(goal, 1)}
-                disabled={idx === goals.length - 1}
-                aria-label={`Move goal ${goal.name} down`}
-                title="Move goal down"
-              >
-                ↓
-              </button>
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => setDeleteTarget(goal)}
-                aria-label={`Delete goal ${goal.name}`}
-                title="Delete goal"
-                style={{ color: "#e74c3c" }}
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  width="14"
-                  height="14"
-                  fill="currentColor"
+                  server shifts the neighbours to keep priorities contiguous.
+                  Quiet until the section is hovered or focused. */}
+              <div className="readme-heading__actions readme-heading__actions--reveal">
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() => handleMoveGoal(goal, -1)}
+                  disabled={idx === 0}
+                  aria-label={`Move goal ${goal.name} up`}
+                  title="Move goal up"
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
-                  />
-                </svg>
-              </button>
+                  <Icon name="arrow-up" size={15} />
+                </button>
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() => handleMoveGoal(goal, 1)}
+                  disabled={idx === goals.length - 1}
+                  aria-label={`Move goal ${goal.name} down`}
+                  title="Move goal down"
+                >
+                  <Icon name="arrow-down" size={15} />
+                </button>
+                <button
+                  className="readme-heading__add-btn icon-btn--danger"
+                  onClick={() => setDeleteTarget(goal)}
+                  aria-label={`Delete goal ${goal.name}`}
+                  title="Delete goal"
+                >
+                  <Icon name="trash" size={15} />
+                </button>
+              </div>
               {/* Same trailing "+" the todo puts on a header, adding one step
-                  at a time instead of retyping the whole list. */}
+                  at a time instead of retyping the whole list. Always
+                  visible: it's the section's main action. */}
               <button
-                className="readme-heading__add-btn"
+                className="readme-heading__add-btn goals-panel__add-step"
                 onClick={() => setAddStepGoal(goal)}
                 aria-label={`Add step to ${goal.name}`}
                 title="Add step"
               >
-                <svg
-                  viewBox="0 0 16 16"
-                  width="14"
-                  height="14"
-                  fill="currentColor"
-                >
-                  <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z" />
-                </svg>
+                <Icon name="plus" size={16} />
               </button>
             </div>
 
@@ -511,31 +510,27 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
                       >
                         {started && (
                           <svg
-                            viewBox="0 0 16 16"
+                            viewBox="0 0 24 24"
                             className="task-card__check-icon"
                           >
-                            <path
-                              fillRule="evenodd"
-                              d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
-                            />
+                            <path d="M20 6 9 17l-5-5" />
                           </svg>
                         )}
                       </button>
 
-                      <span className="task-card__body">
-                        <span className="task-card__label">
-                          <span className="task-card__name goals-panel__step-name">
-                            {step.name}
-                          </span>
-                          {/* Same slot the todo uses for the ECD badge. A
-                              started step is a recurring task there, so it
-                              gets the recurring styling and the same day list
-                              its task card shows. */}
+                      <div className="task-card__body">
+                        <span className="task-card__name goals-panel__step-name">
+                          {step.name}
+                        </span>
+                        <span className="task-card__meta">
+                          {/* Same chip the todo uses for the ECD. A started
+                              step is a recurring task there, so it gets the
+                              recurring styling and the same day list its
+                              task card shows. */}
                           <span
                             className={`task-card__ecd goals-panel__step-status${started ? " task-card__ecd--recurring" : ""}`}
                           >
-                            [ {started ? `↻ ${daysLabel(days)}` : "Not started"}{" "}
-                            ]
+                            {started ? `↻ ${daysLabel(days)}` : "Not started"}
                           </span>
                           {/* Streak over the step's own days — a habit set to
                               Mon/Wed/Fri isn't broken by an untouched Tuesday,
@@ -550,10 +545,29 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
                             </span>
                           )}
                         </span>
-                      </span>
+                      </div>
 
-                      {/* Same action cluster the todo puts on a task */}
+                      {/* Same action cluster the todo puts on a task, in the
+                          same order: move up, move down, edit, delete */}
                       <div className="task-card__actions">
+                        <button
+                          className="task-card__action-btn"
+                          onClick={() => handleMoveStep(goal, i, -1)}
+                          disabled={busy || !canMoveUp}
+                          aria-label={`Move step ${step.name} up`}
+                          title="Move up"
+                        >
+                          <Icon name="arrow-up" size={15} />
+                        </button>
+                        <button
+                          className="task-card__action-btn"
+                          onClick={() => handleMoveStep(goal, i, 1)}
+                          disabled={busy || !canMoveDown}
+                          aria-label={`Move step ${step.name} down`}
+                          title="Move down"
+                        >
+                          <Icon name="arrow-down" size={15} />
+                        </button>
                         {/* Only a started step has a schedule to change; a
                             pending one is asked for its days when it starts.
                             The todo can't do it — EditNotesModal locks the ECD
@@ -568,51 +582,9 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
                             aria-label={`Change days for step ${step.name}`}
                             title="Change which days this habit runs on"
                           >
-                            <svg
-                              viewBox="0 0 16 16"
-                              className="task-card__action-icon"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1a1.75 1.75 0 0 1 1.75 1.75v10.5A1.75 1.75 0 0 1 13 16H3a1.75 1.75 0 0 1-1.75-1.75V3.75A1.75 1.75 0 0 1 3 2h1V.75A.75.75 0 0 1 4.75 0zM3 3.5a.25.25 0 0 0-.25.25V6h10.5V3.75A.25.25 0 0 0 13 3.5H3zm10.25 4H2.75v6.75c0 .138.112.25.25.25h10a.25.25 0 0 0 .25-.25V7.5z"
-                              />
-                            </svg>
+                            <Icon name="calendar" size={15} />
                           </button>
                         )}
-                        <button
-                          className="task-card__action-btn"
-                          onClick={() => handleMoveStep(goal, i, 1)}
-                          disabled={busy || !canMoveDown}
-                          aria-label={`Move step ${step.name} down`}
-                          title="Move down"
-                        >
-                          <svg
-                            viewBox="0 0 16 16"
-                            className="task-card__action-icon"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M8 2.25a.75.75 0 0 1 .75.75v8.19l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06L7.25 11.19V3A.75.75 0 0 1 8 2.25z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          className="task-card__action-btn"
-                          onClick={() => handleMoveStep(goal, i, -1)}
-                          disabled={busy || !canMoveUp}
-                          aria-label={`Move step ${step.name} up`}
-                          title="Move up"
-                        >
-                          <svg
-                            viewBox="0 0 16 16"
-                            className="task-card__action-icon task-card__action-icon--flip"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M8 2.25a.75.75 0 0 1 .75.75v8.19l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06L7.25 11.19V3A.75.75 0 0 1 8 2.25z"
-                            />
-                          </svg>
-                        </button>
                         <button
                           className="task-card__action-btn task-card__action-btn--danger"
                           onClick={() =>
@@ -622,37 +594,36 @@ export default function GoalsPanel({ onTasksChanged }: GoalsPanelProps) {
                           aria-label={`Delete step ${step.name}`}
                           title="Delete step"
                         >
-                          <svg
-                            viewBox="0 0 16 16"
-                            className="task-card__action-icon"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
-                            />
-                          </svg>
+                          <Icon name="trash" size={15} />
                         </button>
                       </div>
                     </div>
                   </div>
                 );
               })}
+              {goal.steps.length === 0 && (
+                <p className="empty-message goals-panel__no-steps">
+                  No steps yet — add one!
+                </p>
+              )}
             </div>
-            {goal.steps.length === 0 && (
-              <p className="goals-panel__no-steps">No steps yet — add one!</p>
-            )}
           </section>
         );
       })}
 
       {goals.length === 0 && (
-        <p className="empty-message">
-          No goals yet — add one! A goal (e.g. "Improve Health") lists the small
-          habits that get you there, built one step at a time: start a step,
-          pick the weekdays it runs on and it's under progress — for life —
-          then start the next when it sticks. Its streak counts only those
-          days. Pause anytime to shelve one.
-        </p>
+        <div className="goals-panel__empty">
+          <span className="goals-panel__empty-icon" aria-hidden="true">
+            <Icon name="goals" size={22} />
+          </span>
+          <p className="empty-message">
+            No goals yet — add one! A goal (e.g. "Improve Health") lists the
+            small habits that get you there, built one step at a time: start a
+            step, pick the weekdays it runs on and it's under progress — for
+            life — then start the next when it sticks. Its streak counts only
+            those days. Pause anytime to shelve one.
+          </p>
+        </div>
       )}
 
       {/* Modals */}

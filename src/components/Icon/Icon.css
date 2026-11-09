@@ -1,0 +1,11 @@
+/* Stroke icons. !important because primitives such as `.icon-btn svg`
+   paint fill-based glyphs with `fill: currentColor`, which would flood a
+   stroke icon's shape. */
+.ui-icon {
+  display: block;
+  flex-shrink: 0;
+  fill: none !important;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

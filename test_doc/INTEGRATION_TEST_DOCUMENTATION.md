@@ -139,11 +139,11 @@ These tests verify the app handles unusual or extreme inputs gracefully.
 - **Description**: Different ECD types coexist in one header
 - **Steps**: Create tasks with all 5 ECD types in one header
 - **Expected Output**: All tasks display correctly with their respective ECD formats:
-  - Date: `[ 12/31 ]`
+  - Date: `12/31`
   - Weekly: `↻ Mon`
   - Monthly: `↻ 1st`
   - Yearly: `↻ 1/1/2027`
-  - None: `[ No date ]`
+  - None: `No date`
 
 ---
 

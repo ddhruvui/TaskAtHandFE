@@ -1,163 +1,284 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Vacation view: banner, then one card of trips. Each row is a summary line
+   (icon tile · date range + status chip over length/note · Tasks toggle and
+   hover-revealed edit/delete) with the re-date list expanding beneath it.
+   The banner reuses App's .app-banner; the "+" toolbar is lifted into the
+   page header via .page-actions.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .vacation-panel {
   display: flex;
   flex-direction: column;
 }
 
+.vacation-panel__error {
+  margin-bottom: 16px;
+}
+
 /* ── Status banner ──
    A forgotten vacation is the most likely real-world failure of this feature,
-   so an active one is always visible rather than only in the toolbar. */
-.vacation-panel__banner {
-  padding: 12px 14px;
-  margin-bottom: 20px;
-  border-radius: 6px;
-  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
-  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
-  font-size: 0.9rem;
-  line-height: 1.5;
+   so an active one is always visible rather than only in the toolbar.
+   Scoped under .vacation-panel to outrank App.css, which loads later. */
+.vacation-panel .vacation-panel__banner {
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding: 9px 14px 9px 12px;
 }
 
-.vacation-panel__banner--active {
-  border-left-width: 4px;
+.vacation-panel .vacation-panel__banner-icon {
+  margin-top: 2px;
 }
 
-/* ── Toolbar ── */
-.vacation-panel__toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 24px;
+.vacation-panel .vacation-panel__banner-text {
+  padding: 0;
 }
 
-/* ── Vacation list ── */
+.vacation-panel .vacation-panel__banner--active {
+  border-color: color-mix(in srgb, var(--hue-vacation), var(--border) 60%);
+  background: color-mix(in srgb, var(--hue-vacation), var(--surface) 94%);
+}
+
+.vacation-panel .vacation-panel__banner--back .vacation-panel__banner-icon {
+  background: var(--success);
+}
+
+/* Empty view (App's .app-empty-state): keep the long hint readable */
+.vacation-panel__empty .app-empty-state__hint {
+  max-width: 460px;
+}
+
+/* ── The trip card ── */
 .vacation-panel__list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
 }
 
 .vacation-panel__row {
+  border-top: 1px solid var(--border);
+}
+
+.vacation-panel__row:first-child {
+  border-top: 0;
+}
+
+/* Running now: a bar in the view's hue down the left edge */
+.vacation-panel__row--active {
+  box-shadow: inset 3px 0 0 var(--hue-vacation);
+}
+
+/* ── Summary line ── */
+.vacation-panel__summary {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 10px 4px;
-  border-bottom: 1px solid var(--border, #e5e4e7);
+  gap: 12px;
+  padding: 12px 10px 12px 16px;
+  transition: background var(--duration-fast) var(--ease);
 }
 
-.vacation-panel__row:last-child {
-  border-bottom: none;
+.vacation-panel__summary:hover,
+.vacation-panel__summary:focus-within {
+  background: var(--surface-hover);
 }
 
-.vacation-panel__row--past {
-  opacity: 0.6;
+.vacation-panel__icon-tile {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--hue-vacation), transparent 86%);
+  color: var(--hue-vacation);
 }
 
-.vacation-panel__row--active {
-  border-left: 3px solid var(--accent, #aa3bff);
-  padding-left: 10px;
+.vacation-panel__row--past .vacation-panel__icon-tile {
+  background: color-mix(in srgb, var(--text-subtle), transparent 88%);
+  color: var(--text-subtle);
 }
 
 .vacation-panel__main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.vacation-panel__title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
 }
 
 .vacation-panel__dates {
+  font-size: var(--text-base);
   font-weight: 600;
-  color: var(--text-h, #08060d);
+  line-height: 1.4;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.vacation-panel__row--past .vacation-panel__dates {
+  color: var(--text-muted);
+}
+
+/* The status word is lowercase in the DOM; only its first letter is raised. */
+.vacation-panel__status-label {
+  display: inline-block;
+}
+
+.vacation-panel__status-label::first-letter {
+  text-transform: uppercase;
 }
 
 .vacation-panel__meta {
-  font-size: 0.8rem;
-  color: var(--text, #6b6375);
+  min-width: 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.vacation-panel__meta-sep {
+  color: var(--text-subtle);
 }
 
 /* ── Row controls ── */
-.vacation-panel__link-btn {
+.vacation-panel__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
-  padding: 4px 10px;
-  font: inherit;
-  font-size: 0.8rem;
-  color: var(--accent, #aa3bff);
-  background: none;
-  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
-  border-radius: 6px;
-  cursor: pointer;
+  margin-left: auto;
 }
 
-.vacation-panel__link-btn:hover {
-  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+.vacation-panel__chevron {
+  transition: transform var(--duration) var(--ease);
 }
 
-.vacation-panel__icon-btn {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  font: inherit;
-  font-size: 1rem;
-  line-height: 1;
-  color: var(--text, #6b6375);
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  cursor: pointer;
+.vacation-panel__link-btn--open .vacation-panel__chevron {
+  transform: rotate(180deg);
 }
 
-.vacation-panel__icon-btn:hover {
-  border-color: var(--border, #e5e4e7);
-  color: var(--text-h, #08060d);
+/* Edit/delete stay quiet until the row is hovered or focused (always on touch) */
+.vacation-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  transition: opacity var(--duration-fast) var(--ease);
 }
 
-.vacation-panel__icon-btn--danger:hover {
-  color: #cf222e;
-  border-color: #cf222e;
+@media (hover: hover) {
+  .vacation-panel__actions {
+    opacity: 0;
+  }
+
+  .vacation-panel__row:hover .vacation-panel__actions,
+  .vacation-panel__summary:focus-within .vacation-panel__actions {
+    opacity: 1;
+  }
 }
 
 /* ── The re-date list, expanded under a row ── */
 .vacation-panel__tasks {
-  flex: 1 0 100%;
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: var(--code-bg, #f4f3ec);
+  margin: 0 16px 14px 62px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  overflow: hidden;
 }
 
 .vacation-panel__tasks-empty {
-  margin: 0;
-  font-size: 0.85rem;
+  padding: 12px 14px;
+  font-size: var(--text-sm);
   line-height: 1.5;
-  color: var(--text, #6b6375);
+  color: var(--text-muted);
 }
 
 .vacation-panel__tasks-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .vacation-panel__task-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 10px 10px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.vacation-panel__task-row:first-child {
+  border-top: 0;
+}
+
+.vacation-panel__task-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .vacation-panel__task-name {
-  font-weight: 600;
-  color: var(--text-h, #08060d);
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 .vacation-panel__task-meta {
-  flex: 1 1 auto;
-  font-size: 0.8rem;
-  color: var(--text, #6b6375);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Neutral chips sit on the sunken panel, so lift them onto the surface */
+.vacation-panel__task-date {
+  background: var(--surface);
+}
+
+.vacation-panel__redate-btn {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .vacation-panel__summary {
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    padding: 12px 8px 10px 12px;
+  }
+
+  /* Controls drop to their own line under the dates: Tasks toggle first,
+     edit/delete at the far end */
+  .vacation-panel__controls {
+    flex-basis: 100%;
+    padding-left: 46px;
+  }
+
+  .vacation-panel__controls .vacation-panel__link-btn {
+    order: -1;
+  }
+
+  .vacation-panel__actions {
+    margin-left: auto;
+  }
+
+  .vacation-panel__tasks {
+    margin: 0 10px 12px;
+  }
+
+  .vacation-panel__task-row {
+    flex-wrap: wrap;
+  }
 }

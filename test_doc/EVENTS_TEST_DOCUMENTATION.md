@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the end-to-end (E2E) tests for the Events functionality in the Task At Hand application. An event is a reusable bundle of tasks (like "Burger Night" with its shopping list). The Events view lists them as an accordion: each row shows the event name, a task count, a one-line preview when collapsed, edit/delete icons and a green "Add to todo" button; expanding a row shows its numbered tasks. "Add to todo" opens a modal with Today / Tomorrow / Saturday date shortcuts, a calendar and a checklist of the event's tasks. Confirming creates the selected tasks, in template order, as one-time date tasks under a header named after the event (reused case-insensitively, created otherwise). The template is never consumed.
+This document describes the end-to-end (E2E) tests for the Events functionality in the Task At Hand application. An event is a reusable bundle of tasks (like "Burger Night" with its shopping list). The Events view lists them as an accordion: each row shows the event name, a task count, a one-line preview when collapsed, edit/delete icons (revealed on hover) and an always-visible "Add to todo" button; expanding a row shows its numbered tasks. "Add to todo" opens a modal with Today / Tomorrow / Saturday date shortcuts, a calendar and a checklist of the event's tasks. Confirming creates the selected tasks, in template order, as one-time date tasks under a header named after the event (reused case-insensitively, created otherwise). The template is never consumed.
 
 ## Test File Location
 

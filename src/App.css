@@ -1,457 +1,594 @@
-/* ─── App layout ─── */
-.app-container {
-  width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 48px 24px;
-  box-sizing: border-box;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
-    Arial, sans-serif;
-  color: var(--rm-text, #1f2328);
+/* ═══════════════════════════════════════════════════════════════════════
+   App shell: a fixed sidebar (brand + grouped navigation) beside a centred
+   content column. Below 900px the sidebar becomes a sticky top bar whose
+   navigation scrolls sideways.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-height: 100svh;
 }
 
-.app-container h1 {
-  text-align: left;
-  margin-bottom: 32px;
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--rm-text, #1f2328);
+/* ─────────────────────────── Sidebar ─────────────────────────── */
+
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 12px 24px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  scrollbar-width: thin;
 }
 
-/* ─── README wrapper ─── */
-.readme {
-  --rm-bg: #ffffff;
-  --rm-text: #1f2328;
-  --rm-text-muted: #656d76;
-  --rm-border: #d0d7de;
-  --rm-border-muted: #eaeef2;
-  --rm-heading-border: #d0d7de;
-
-  background: var(--rm-bg);
-  border: 1px solid var(--rm-border);
-  border-radius: 6px;
-  padding: 24px 32px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .readme {
-    --rm-bg: #0d1117;
-    --rm-text: #e6edf3;
-    --rm-text-muted: #8b949e;
-    --rm-border: #30363d;
-    --rm-border-muted: #21262d;
-    --rm-heading-border: #30363d;
-  }
-
-  .app-container {
-    color: #e6edf3;
-  }
-
-  .app-container h1 {
-    color: #e6edf3;
-  }
-}
-
-/* ─── Folder → README section ─── */
-.readme-section {
-  margin-bottom: 28px;
-}
-
-.readme-section:last-child {
-  margin-bottom: 0;
-}
-
-/* ── Heading row: [color dot] [## Name] [×] ── */
-.readme-heading {
+.app-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--rm-heading-border);
-  margin-bottom: 12px;
+  padding: 4px 4px 12px 8px;
 }
 
-.readme-heading__text {
-  flex: 1;
-  margin: 0;
-  font-size: 1.5em;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--rm-text);
-}
-
-/* ── Task list under each heading ── */
-.readme-tasks {
-  display: flex;
-  flex-direction: column;
-  margin: 0 30px;
-}
-
-/* ─── Add-task button in heading ─── */
-.readme-heading__add-btn {
-  flex-shrink: 0;
+.app-brand__mark {
   display: grid;
   place-items: center;
   width: 26px;
   height: 26px;
-  border: 1px solid var(--rm-border);
-  border-radius: 6px;
+  border-radius: 8px;
+  background: linear-gradient(140deg, var(--accent) 0%, var(--hue-events) 100%);
+  color: var(--text-on-accent);
+  box-shadow:
+    0 1px 2px rgba(60, 50, 160, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.app-brand__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+.app-theme-btn {
+  width: 28px;
+  height: 28px;
+}
+
+/* ── Navigation ── */
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.app-nav__group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.app-nav__group-label {
+  padding: 0 10px 6px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.app-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: var(--radius-md);
   background: transparent;
-  color: var(--rm-text-muted);
+  color: var(--text-muted);
+  font-size: var(--text-base);
+  font-weight: 500;
+  text-align: left;
   cursor: pointer;
   transition:
-    background 0.12s,
-    border-color 0.12s,
-    color 0.12s;
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
-.readme-heading__add-btn:hover {
-  background: var(--rm-border-muted);
-  border-color: var(--rm-border);
-  color: var(--rm-text);
+.app-nav__item:hover {
+  background: color-mix(in srgb, var(--bg-sidebar), var(--text) 6%);
+  color: var(--text);
 }
 
-/* ─── Empty state ─── */
-.empty-message {
+/* The one item showing right now. (Panel toggles also carry their old
+   `<key>-toggle-btn--active` class; this is what styles it.) */
+.app-nav__item--current,
+.app-nav__item--current:hover {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.app-nav__icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--text-on-accent);
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.app-nav__label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-nav__count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
   text-align: center;
-  font-size: 0.95rem;
-  color: var(--rm-text-muted, #656d76);
-  padding: 24px 0;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ─── By Date view: thick divider between present, past and future ─── */
-.bydate-divider {
-  border: none;
-  border-top: 4px solid var(--rm-border);
-  margin: 28px 0;
+.app-nav__count--due {
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 
-/* ─── By Date toggle button active state ─── */
-.bydate-toggle-btn--active {
-  background: #1a7f37 !important;
-  border-color: #1a7f37 !important;
-  color: #ffffff !important;
+/* Live indicator: on call right now / on vacation right now */
+.app-nav__live {
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--hue-oncall);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--hue-oncall), transparent 40%);
+  animation: app-pulse 2s infinite;
 }
 
-.bydate-toggle-btn--active:hover {
-  background: #137030 !important;
-  border-color: #137030 !important;
+.app-nav__live--vacation {
+  background: var(--hue-vacation);
+  animation: none;
 }
 
-/* ─── Insights toggle button active state ─── */
-.insights-toggle-btn--active {
-  background: #0969da !important;
-  border-color: #0969da !important;
-  color: #ffffff !important;
-}
-
-.insights-toggle-btn--active:hover {
-  background: #0860ca !important;
-  border-color: #0860ca !important;
-}
-
-/* ─── Events toggle button active state ─── */
-.events-toggle-btn--active {
-  background: #8250df !important;
-  border-color: #8250df !important;
-  color: #ffffff !important;
-}
-
-.events-toggle-btn--active:hover {
-  background: #6e40c9 !important;
-  border-color: #6e40c9 !important;
-}
-
-/* ─── Life Events toggle button active state ─── */
-.lifeevents-toggle-btn--active {
-  background: #9a6700 !important;
-  border-color: #9a6700 !important;
-  color: #ffffff !important;
-}
-
-.lifeevents-toggle-btn--active:hover {
-  background: #7d5400 !important;
-  border-color: #7d5400 !important;
-}
-
-/* ─── Goals toggle button active state ─── */
-.goals-toggle-btn--active {
-  background: #bc4c00 !important;
-  border-color: #bc4c00 !important;
-  color: #ffffff !important;
-}
-
-.goals-toggle-btn--active:hover {
-  background: #a04100 !important;
-  border-color: #a04100 !important;
-}
-
-/* ─── Projects toggle button active state ─── */
-.projects-toggle-btn--active {
-  background: #57606a !important;
-  border-color: #57606a !important;
-  color: #ffffff !important;
-}
-
-.projects-toggle-btn--active:hover {
-  background: #424a53 !important;
-  border-color: #424a53 !important;
-}
-
-/* ─── Affirmations toggle button active state ─── */
-.affirmations-toggle-btn--active {
-  background: #bf3989 !important;
-  border-color: #bf3989 !important;
-  color: #ffffff !important;
-}
-
-.affirmations-toggle-btn--active:hover {
-  background: #99286e !important;
-  border-color: #99286e !important;
-}
-
-/* ─── Calls toggle button active state ─── */
-.calls-toggle-btn--active {
-  background: #0c8599 !important;
-  border-color: #0c8599 !important;
-  color: #ffffff !important;
-}
-
-.calls-toggle-btn--active:hover {
-  background: #0b7285 !important;
-  border-color: #0b7285 !important;
-}
-
-/* ─── On-call toggle button active state ───
-   Red: the one hue no other view uses, and it reads as "pager". */
-.oncall-toggle-btn--active {
-  background: #cf222e !important;
-  border-color: #cf222e !important;
-  color: #ffffff !important;
-}
-
-.oncall-toggle-btn--active:hover {
-  background: #a40e26 !important;
-  border-color: #a40e26 !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  .oncall-toggle-btn--active {
-    background: #da3633 !important;
-    border-color: #da3633 !important;
+@keyframes app-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--hue-oncall), transparent 40%);
   }
-
-  .oncall-toggle-btn--active:hover {
-    background: #f85149 !important;
-    border-color: #f85149 !important;
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 
-/* ── On-call banner ──
-   Same shape and purple tint as the vacation banner, with a red left edge
-   (solid for primary, dashed for secondary) so a running shift stands out. */
+/* ─────────────────────────── Main column ─────────────────────────── */
+
+.app-main {
+  min-width: 0;
+  padding: 36px 48px 80px;
+}
+
+.app-main__inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+/* A panel's "+" toolbar sits in the page-header row, top right. Panels mark
+   their toolbar with .page-actions; the header reserves room for it. */
+.app-view {
+  position: relative;
+}
+
+.app-view--panel > .page-header {
+  min-height: 40px;
+  padding-right: 64px;
+}
+
+.app-view--panel .page-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+}
+
+/* ── Error (sticky so it is seen even when scrolled) ── */
+.app-action-error {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 6px 6px 6px 14px;
+  box-shadow: var(--shadow-md);
+}
+
+.app-action-error > svg {
+  margin-top: 0;
+}
+
+.app-action-error__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-action-error__dismiss {
+  width: 28px;
+  height: 28px;
+  color: inherit;
+}
+
+.app-action-error__dismiss:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger-soft), var(--danger) 12%);
+  color: inherit;
+}
+
+.app-load-error {
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font-size: var(--text-sm);
+}
+
+/* ── Status banners (vacation, on call now) ── */
+.app-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.app-banner + .app-view,
+.app-banner + .alert {
+  margin-top: 20px;
+}
+
+.app-banner strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.app-banner__text {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 3px 0;
+}
+
+.app-banner__icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--hue-vacation);
+  color: var(--text-on-accent);
+  flex-shrink: 0;
+}
+
+.app-banner__btn {
+  margin-left: auto;
+  color: var(--accent-text);
+}
+
+.app-banner__btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.app-banner__pulse {
+  width: 8px;
+  height: 8px;
+  margin: 0 3px 0 4px;
+  border-radius: 50%;
+  background: var(--hue-oncall);
+  flex-shrink: 0;
+  animation: app-pulse 2s infinite;
+}
+
+/* Secondary on call: a hollow dot (primary is solid) */
+.app-oncall-banner--secondary .app-banner__pulse {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--hue-oncall);
+  animation: none;
+}
+
 .app-oncall-banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
-  margin-bottom: 20px;
-  border-radius: 6px;
-  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
-  border-left: 4px solid #cf222e;
-  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
-  font-size: 0.9rem;
-  line-height: 1.5;
+  border-color: color-mix(in srgb, var(--hue-oncall), var(--border) 70%);
 }
 
-.app-oncall-banner--secondary {
-  border-left-style: dashed;
-}
-
-.app-oncall-banner__text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.app-oncall-banner__btn {
-  flex-shrink: 0;
-  padding: 4px 12px;
-  font: inherit;
-  font-size: 0.8rem;
-  color: var(--accent, #aa3bff);
-  background: none;
-  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.app-oncall-banner__btn:hover {
-  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
-}
-
-@media (prefers-color-scheme: dark) {
-  .app-oncall-banner {
-    border-left-color: #da3633;
-  }
-}
-
-/* ─── Vacation toggle button active state ─── */
-.vacation-toggle-btn--active {
-  background: #bf8700 !important;
-  border-color: #bf8700 !important;
-  color: #ffffff !important;
-}
-
-.vacation-toggle-btn--active:hover {
-  background: #a97a00 !important;
-  border-color: #a97a00 !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  .vacation-toggle-btn--active {
-    background: #d4a72c !important;
-    border-color: #d4a72c !important;
-    color: #ffffff !important;
-  }
-
-  .vacation-toggle-btn--active:hover {
-    background: #e3b341 !important;
-    border-color: #e3b341 !important;
-  }
-
-  .calls-toggle-btn--active {
-    background: #22b8cf !important;
-    border-color: #22b8cf !important;
-    color: #ffffff !important;
-  }
-
-  .calls-toggle-btn--active:hover {
-    background: #3bc9db !important;
-    border-color: #3bc9db !important;
-  }
-
-  .projects-toggle-btn--active {
-    background: #768390 !important;
-    border-color: #768390 !important;
-    color: #ffffff !important;
-  }
-
-  .projects-toggle-btn--active:hover {
-    background: #8b949e !important;
-    border-color: #8b949e !important;
-  }
-
-  .affirmations-toggle-btn--active {
-    background: #db61a2 !important;
-    border-color: #db61a2 !important;
-    color: #ffffff !important;
-  }
-
-  .affirmations-toggle-btn--active:hover {
-    background: #e77bb3 !important;
-    border-color: #e77bb3 !important;
-  }
-
-  .goals-toggle-btn--active {
-    background: #db6d28 !important;
-    border-color: #db6d28 !important;
-    color: #ffffff !important;
-  }
-
-  .goals-toggle-btn--active:hover {
-    background: #e8824a !important;
-    border-color: #e8824a !important;
-  }
-
-  .lifeevents-toggle-btn--active {
-    background: #bb8009 !important;
-    border-color: #bb8009 !important;
-    color: #ffffff !important;
-  }
-
-  .lifeevents-toggle-btn--active:hover {
-    background: #d29922 !important;
-    border-color: #d29922 !important;
-  }
-
-  .insights-toggle-btn--active {
-    background: #1f6feb !important;
-    border-color: #1f6feb !important;
-    color: #ffffff !important;
-  }
-
-  .insights-toggle-btn--active:hover {
-    background: #388bfd !important;
-    border-color: #388bfd !important;
-  }
-
-  .events-toggle-btn--active {
-    background: #8957e5 !important;
-    border-color: #8957e5 !important;
-    color: #ffffff !important;
-  }
-
-  .events-toggle-btn--active:hover {
-    background: #a371f7 !important;
-    border-color: #a371f7 !important;
-  }
-
-  .bydate-toggle-btn--active {
-    background: #238636 !important;
-    border-color: #238636 !important;
-    color: #ffffff !important;
-  }
-
-  .bydate-toggle-btn--active:hover {
-    background: #2ea043 !important;
-    border-color: #2ea043 !important;
-  }
-}
-
-@media (max-width: 640px) {
-  .readme {
-    padding: 16px 12px;
-  }
-}
-
-/* ── Vacation banner ──
-   Rendered above the view toggles in every view. An active vacation silently
-   changes how insights read the archive, so it must never be invisible: the
-   failure mode this feature has is booking time off and forgetting. */
 .app-vacation-banner {
+  border-color: color-mix(in srgb, var(--hue-vacation), var(--border) 70%);
+}
+
+/* ── Section heading: the always-visible "add task" button ── */
+.app-add-task-btn {
+  color: var(--accent-text);
+  margin-left: 2px;
+}
+
+.app-add-task-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* Empty section: the whole row adds a task */
+.app-empty-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
-  margin-bottom: 20px;
-  border-radius: 6px;
-  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
-  border-left-width: 4px;
-  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.app-vacation-banner__text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.app-vacation-banner__btn {
-  flex-shrink: 0;
-  padding: 4px 12px;
-  font: inherit;
-  font-size: 0.8rem;
-  color: var(--accent, #aa3bff);
-  background: none;
-  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
-  border-radius: 6px;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text-subtle);
+  text-align: left;
   cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
-.app-vacation-banner__btn:hover {
-  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+.app-empty-row .empty-message {
+  padding: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.app-empty-row:hover {
+  background: var(--surface-hover);
+  color: var(--accent-text);
+}
+
+/* ── Empty view ── */
+.app-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 56px 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.app-empty-state__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.app-empty-state .empty-message {
+  padding: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.app-empty-state__hint {
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+}
+
+/* ── Loading skeleton ── */
+.app-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app-skeleton > .empty-message {
+  padding: 0;
+  text-align: left;
+}
+
+.app-skeleton__card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.app-skeleton__line {
+  height: 12px;
+  width: 70%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    90deg,
+    var(--surface-sunken) 0%,
+    var(--surface-hover) 50%,
+    var(--surface-sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: app-shimmer 1.4s ease-in-out infinite;
+}
+
+.app-skeleton__line--title {
+  width: 30%;
+  height: 14px;
+}
+
+.app-skeleton__line--short {
+  width: 45%;
+}
+
+@keyframes app-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ─────────────────────────── By Date view ─────────────────────────── */
+
+.bydate-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px 2px;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.bydate-section-label::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+
+.bydate-section-label--present::before {
+  background: var(--success);
+}
+
+.bydate-section-label--past::before {
+  background: var(--danger);
+}
+
+.bydate-section-label--future::before {
+  background: var(--info);
+}
+
+/* Between the present / past / future sections */
+.bydate-divider {
+  height: 0;
+  margin: 28px 0 24px;
+  border: 0;
+  border-top: 1px dashed var(--border-strong);
+}
+
+/* ─────────────────────────── Responsive ─────────────────────────── */
+
+@media (max-width: 1100px) {
+  .app-main {
+    padding: 28px 28px 72px;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    display: block;
+  }
+
+  .app-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: auto;
+    overflow: visible;
+    gap: 0;
+    padding: calc(8px + env(safe-area-inset-top)) 0 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-sidebar), transparent 8%);
+    backdrop-filter: saturate(1.4) blur(12px);
+  }
+
+  .app-brand {
+    padding: 2px 12px 8px 16px;
+  }
+
+  .app-nav {
+    flex-direction: row;
+    gap: 6px;
+    padding: 0 16px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-padding-inline: 16px;
+  }
+
+  .app-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-nav__group {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .app-nav__group-label {
+    display: none;
+  }
+
+  .app-nav__item {
+    width: auto;
+    height: 32px;
+    padding: 0 12px 0 5px;
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: var(--text-sm);
+    gap: 7px;
+  }
+
+  .app-nav__item--current,
+  .app-nav__item--current:hover {
+    background: var(--text);
+    color: var(--bg);
+    box-shadow: none;
+  }
+
+  .app-nav__item--current .app-nav__count {
+    color: inherit;
+  }
+
+  .app-nav__icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+  }
+
+  .app-nav__label {
+    overflow: visible;
+  }
+
+  .app-main {
+    padding: 20px 16px 64px;
+  }
 }

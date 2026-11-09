@@ -6,6 +6,7 @@ import { WEEK_DAYS } from "../../utils/goalSync";
 // same gesture as picking a weekly task's ECD, so the two must look identical
 // from one source.
 import "../AddTaskModal/AddTaskModal.css";
+import { Modal } from "../Modal";
 
 /** Picker order — Mon-first, matching AddTaskModal's weekly ECD strip. */
 const PICKER_ORDER: DayOfWeek[] = [
@@ -65,71 +66,73 @@ export default function StepDaysModal({
     );
 
   return (
-    <div className="add-modal__overlay" onClick={onCancel}>
-      <div
-        className="add-modal"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onCancel();
-        }}
+    <Modal
+      onClose={onCancel}
+      className="add-modal"
+      overlayClassName="add-modal__overlay"
+      labelledBy="step-days-modal-title"
+    >
+      <h3
+        id="step-days-modal-title"
+        className="ui-modal__title add-modal__title"
       >
-        <h3 className="add-modal__title">
-          {mode === "start" ? "Start step" : "Change days"}{" "}
-          <span className="add-modal__title-folder">— {stepName}</span>
-        </h3>
+        {mode === "start" ? "Start step" : "Change days"}{" "}
+        <span className="ui-modal__subtitle add-modal__title-folder">
+          — {stepName}
+        </span>
+      </h3>
 
-        <div className="add-modal__ecd">
-          <div className="add-modal__dow">
-            {PICKER_ORDER.map((day) => (
-              <button
-                key={day}
-                type="button"
-                className={`add-modal__dow-btn${days.includes(day) ? " add-modal__dow-btn--active" : ""}`}
-                aria-pressed={days.includes(day)}
-                aria-label={`Toggle ${day}`}
-                onClick={() => toggle(day)}
-              >
-                {day}
-              </button>
-            ))}
-          </div>
-
-          <div className="add-modal__ecd-modes">
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                className="add-modal__mode-btn"
-                onClick={() => setDays([...preset.days])}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
-          <p className="add-modal__ecd-hint">
-            {selected.length === 0
-              ? "Pick at least one day — a habit needs a day to run on."
-              : `Due every ${selected.join(", ")} under "${goalName}". The streak counts only these days.`}
-          </p>
+      <div className="add-modal__ecd">
+        <div className="add-modal__dow">
+          {PICKER_ORDER.map((day) => (
+            <button
+              key={day}
+              type="button"
+              className={`add-modal__dow-btn${days.includes(day) ? " add-modal__dow-btn--active" : ""}`}
+              aria-pressed={days.includes(day)}
+              aria-label={`Toggle ${day}`}
+              onClick={() => toggle(day)}
+            >
+              {day}
+            </button>
+          ))}
         </div>
 
-        <div className="add-modal__actions">
-          <button
-            className="add-modal__btn add-modal__btn--cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="add-modal__btn add-modal__btn--confirm"
-            onClick={() => onConfirm(selected)}
-            disabled={busy || selected.length === 0}
-          >
-            {mode === "start" ? "Start step" : "Save days"}
-          </button>
+        <div className="add-modal__ecd-modes add-modal__presets">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              className="btn btn--ghost btn--sm add-modal__mode-btn add-modal__preset-btn"
+              onClick={() => setDays([...preset.days])}
+            >
+              {preset.label}
+            </button>
+          ))}
         </div>
+
+        <p className="add-modal__ecd-hint">
+          {selected.length === 0
+            ? "Pick at least one day — a habit needs a day to run on."
+            : `Due every ${selected.join(", ")} under "${goalName}". The streak counts only these days.`}
+        </p>
       </div>
-    </div>
+
+      <div className="ui-modal__actions add-modal__actions">
+        <button
+          className="btn btn--secondary add-modal__btn add-modal__btn--cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn btn--primary add-modal__btn add-modal__btn--confirm"
+          onClick={() => onConfirm(selected)}
+          disabled={busy || selected.length === 0}
+        >
+          {mode === "start" ? "Start step" : "Save days"}
+        </button>
+      </div>
+    </Modal>
   );
 }

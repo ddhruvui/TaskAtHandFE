@@ -2,7 +2,9 @@
 
 This file tracks frontend unit test scenarios for the API wrappers and shared
 utilities (`headers`, `tasks`, `events`, `goals`, `affirmations`, `calls`,
-`insights`, ECD helpers, project→todo header order sync).
+`insights`, ECD helpers, project→todo header order sync), plus the two UI
+building blocks with logic of their own: the colour-theme hook and the shared
+`Modal` dialog.
 End-to-end tests are documented in the `*_TEST_DOCUMENTATION.md` files.
 
 ---
@@ -170,7 +172,7 @@ Validates the ECD utility functions with a fixed fake system time (40 tests):
 
 ### `src/utils/oncall.test.ts`
 
-Validates on-call shift maths, the quick-add parser and the week timeline against a fixed "now" (Mon Nov 9 2026, 17:48 local) (17 tests):
+Validates on-call shift maths, the quick-add parser and the on-call agenda (shifts with the "Not on call" gaps between them) against a fixed "now" (Mon Nov 9 2026, 17:48 local) (20 tests):
 
 | Function | Coverage |
 | --- | --- |
@@ -179,7 +181,8 @@ Validates on-call shift maths, the quick-add parser and the week timeline agains
 | `upcomingShifts` / `activeShift` | ended shifts dropped, start order; primary wins when two run at once |
 | `formatDuration` | `13h`, `8h 30m`, `45m` |
 | `parseQuickAdd` | `11/16 9-22` → primary; minutes, overnight, `24` end; `s`/`sec`/`secondary` suffix; year roll-over (yesterday kept); malformed/impossible/equal-time input → null |
-| `weekStartKey` / `weekSegments` / `weekTotals` | Monday weeks; an overnight shift split into two bars, including across a week boundary; per-type minutes inside the week only |
+| `formatSpan` / `formatMoment` | spans of a day or more as `7d 11h` / `1d`; moments as `Today 22:00`, `Tomorrow 09:00`, `Tue 11/24 09:00`, `/YY` outside the current year |
+| `onCallAgenda` | empty with nothing upcoming; a "now" gap when not on call, then the gap between shifts (Mon 11/16 22:00 → Tue 11/24 09:00 = 7d 11h) and `freeAfter`; no "now" gap while a shift runs; back-to-back and overlapping shifts are one stretch of cover; a gap is measured from the end of the longest cover, not the last shift |
 
 ### `src/utils/projectSync.test.ts`
 
@@ -216,6 +219,36 @@ Validates the life event↔todo sync helpers (mocks `lifeEventsApi.getAll` / `li
 | keeps the done state as-is when unlinking | Deleting the task isn't completing it — `done` untouched |
 | skips the fetch entirely for an empty id list | Early return — no API calls |
 
+### `src/hooks/useTheme.test.ts`
+
+Validates the colour-theme preference (follow the OS, or pin light/dark via `<html data-theme>`, persisted in `localStorage["tah-theme"]`):
+
+| Test | What it checks |
+| --- | --- |
+| pins light and dark on `<html data-theme>` | `applyTheme` writes the attribute |
+| clears the attribute for system so the OS decides | `applyTheme("system")` removes `data-theme` |
+| defaults to system with nothing stored | No stored value → `"system"`, no attribute |
+| starts from a stored light/dark choice | A saved `"dark"` is applied on mount |
+| ignores an unknown stored value | Anything but light/dark falls back to system |
+| cycles system → light → dark → system, persisting pinned choices | `cycleTheme` order; light/dark stored, system removes the key |
+| still switches when storage is unavailable | Throwing `localStorage` doesn't break switching |
+
+### `src/components/Modal/Modal.test.tsx`
+
+Validates the shared dialog shell every modal renders through:
+
+| Test | What it checks |
+| --- | --- |
+| renders a named modal dialog carrying the caller's classes | `role="dialog"`, `aria-modal`, `aria-labelledby` name; `ui-modal*` + the caller's BEM classes on dialog and overlay |
+| closes on Escape from anywhere | A window-level Escape calls `onClose` |
+| ignores other keys | Enter doesn't close |
+| closes on a click that starts and ends on the overlay | Pointer-down + click on the overlay closes |
+| stays open for a click inside the dialog | Clicks within the dialog don't close |
+| stays open when a drag starts inside and is released on the overlay | Drag-to-select released outside doesn't close |
+| only lets the top-most dialog answer Escape | Stacked dialogs: only the inner one closes |
+| locks page scroll while open and restores it on close | `body.style.overflow` hidden while open |
+| moves focus into the dialog and back to the opener on close | Dialog takes focus when no field claims it; opener refocused on unmount |
+
 ---
 
 ## Notes
@@ -223,6 +256,7 @@ Validates the life event↔todo sync helpers (mocks `lifeEventsApi.getAll` / `li
 - These tests are frontend unit tests and do not replace backend integration tests.
 - Cron/backend-only scenarios were intentionally removed from this frontend reference.
 - Test setup file: `src/test/setup.ts` (Testing Library + cleanup).
+- `Modal.test.tsx` is the one component-level unit test: dialog behaviour (Escape stacking, drag-safe overlay, focus restore) is easier to pin down in jsdom than in the browser. Visual/flow coverage of components stays in e2e (`e2e/ui.spec.ts` for the shell and design system).
 
 ---
 

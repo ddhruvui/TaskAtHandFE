@@ -5,44 +5,19 @@ import { OnCallModal } from "../OnCallModal";
 import type { OnCallDraft } from "../OnCallModal";
 import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
-import { addDaysToDateKey, formatDateKey, todayDateKey } from "../../utils/ecd";
+import { Icon } from "../Icon";
+import { formatDateKey } from "../../utils/ecd";
 import {
-  MINUTES_PER_DAY,
   dateKeyOf,
   formatDuration,
+  formatMoment,
+  formatSpan,
   isActive,
   isOvernight,
+  onCallAgenda,
   shiftMinutes,
-  upcomingShifts,
-  weekSegments,
-  weekStartKey,
-  weekTotals,
 } from "../../utils/oncall";
 import "./OnCallPanel.css";
-
-const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const SHORT_MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-/** "2026-11-09" → "Nov 9", parsed by component (never `new Date(key)`). */
-function shortDay(key: string): string {
-  const [, m, d] = key.split("-").map(Number);
-  return `${SHORT_MONTHS[m - 1]} ${d}`;
-}
-
-const pct = (minutes: number) => `${(minutes / MINUTES_PER_DAY) * 100}%`;
 
 interface OnCallPanelProps {
   /** Called after any change, so the app-wide "on call now" banner refreshes. */
@@ -50,22 +25,23 @@ interface OnCallPanelProps {
 }
 
 /**
- * On-call view (option B): a week timeline of shift bars over a list of
- * upcoming shifts.
+ * On-call view: one agenda of upcoming shifts with the off-call gaps between
+ * them — "Not on call from Mon 11/16 22:00 to Tue 11/24 09:00" — instead of
+ * paging through weeks (`onCallAgenda` in utils/oncall). Back-to-back or
+ * overlapping shifts are one stretch of cover, with no gap inside; when the
+ * user isn't on call right now the agenda opens with "Not on call now".
  *
  * On-call is a record kept apart from the todo — nothing here touches tasks.
- * Primary shifts are solid red, secondary ones a dashed outline in the same
- * red family. Ended shifts are hidden on the local clock the moment they end;
- * the backend cron deletes them overnight.
+ * Primary shifts are solid bars in the On-call hue, secondary ones a tinted,
+ * dashed outline in the same family — they differ by shape, not just colour.
+ * Ended shifts are hidden on the local clock the moment they end; the backend
+ * cron deletes them overnight.
  */
 export default function OnCallPanel({ onShiftsChanged }: OnCallPanelProps) {
   const [shifts, setShifts] = useState<OnCallShift[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
-  const [weekStart, setWeekStart] = useState(() =>
-    weekStartKey(todayDateKey()),
-  );
   const [modalState, setModalState] = useState<{
     mode: "add" | "edit";
     shift?: OnCallShift;
@@ -89,7 +65,7 @@ export default function OnCallPanel({ onShiftsChanged }: OnCallPanelProps) {
     );
   }, []);
 
-  // A shift drops off the list the minute it ends, and the "now" line moves.
+  // A shift drops off the list the minute it ends, and "now" gaps shrink.
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
@@ -136,168 +112,144 @@ export default function OnCallPanel({ onShiftsChanged }: OnCallPanelProps) {
   }
 
   const today = dateKeyOf(now);
-  const upcoming = upcomingShifts(shifts, now);
-  const days = weekSegments(upcoming, weekStart);
-  const totals = weekTotals(upcoming, weekStart);
-  const weekEnd = addDaysToDateKey(weekStart, 6);
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const thisWeek = weekStartKey(today);
+  const { items, freeAfter } = onCallAgenda(shifts, now);
+  const shiftItems = items.filter((i) => i.kind === "shift");
+  const totalMinutes = shiftItems.reduce(
+    (sum, i) => sum + shiftMinutes(i.shift),
+    0,
+  );
 
   return (
     <div className="oncall-panel">
-      {error && <p className="empty-message">Action failed: {error}</p>}
-
-      <div className="oncall-panel__toolbar">
-        <div className="oncall-panel__week-nav">
-          <button
-            className="oncall-panel__nav-btn"
-            onClick={() => setWeekStart(addDaysToDateKey(weekStart, -7))}
-            aria-label="Previous week"
-            disabled={weekStart <= thisWeek}
-          >
-            ‹
-          </button>
-          <span className="oncall-panel__week-label">
-            {shortDay(weekStart)} – {shortDay(weekEnd)}
-          </span>
-          <button
-            className="oncall-panel__nav-btn"
-            onClick={() => setWeekStart(addDaysToDateKey(weekStart, 7))}
-            aria-label="Next week"
-          >
-            ›
-          </button>
-          <span className="oncall-panel__totals">
-            · {formatDuration(totals.primary)} primary
-            {totals.secondary > 0 &&
-              ` · ${formatDuration(totals.secondary)} secondary`}
-          </span>
+      {error && (
+        <div className="alert alert--danger oncall-panel__error" role="alert">
+          <Icon name="alert" />
+          <span>Action failed: {error}</span>
         </div>
+      )}
+
+      {/* The view's "+", lifted into the page header (top right) */}
+      <div className="oncall-panel__toolbar page-actions">
         <AddButton
           ariaLabel="Add on-call shift"
           onClick={() => setModalState({ mode: "add" })}
         />
       </div>
 
-      <div className="oncall-panel__week" aria-label="On-call week timeline">
-        {days.map((day, i) => {
-          const isToday = day.date === today;
-          return (
-            <div className="oncall-panel__day" key={day.date}>
-              <span
-                className={`oncall-panel__day-label${isToday ? " oncall-panel__day-label--today" : ""}`}
-              >
-                {DOW[i]} {Number(day.date.slice(8))}
-              </span>
-              <div className="oncall-panel__track">
-                {day.segments.map((seg) => (
-                  <div
-                    key={`${seg.shift._id}-${seg.part}`}
-                    className={`oncall-panel__bar oncall-panel__bar--${seg.shift.type}`}
-                    style={{
-                      left: pct(seg.from),
-                      width: pct(seg.to - seg.from),
-                    }}
-                    title={`${seg.shift.type} · ${seg.shift.start}–${seg.shift.end}`}
+      <section className="readme-section oncall-panel__upcoming">
+        <div className="readme-heading">
+          <div className="readme-heading__title">
+            <h2 className="readme-heading__text">Upcoming</h2>
+            {shiftItems.length > 0 && (
+              <span className="readme-heading__count">{shiftItems.length}</span>
+            )}
+          </div>
+          {shiftItems.length > 0 && (
+            <span className="oncall-panel__totals">
+              {formatDuration(totalMinutes)} on call
+            </span>
+          )}
+        </div>
+        {shiftItems.length === 0 ? (
+          <p className="empty-message">
+            No upcoming on-call shifts — add one! Type the shorthand you already
+            use, like 11/16 9-22. On-call is kept separate and never changes
+            your tasks.
+          </p>
+        ) : (
+          <ol className="oncall-panel__list" aria-label="On-call agenda">
+            {items.map((item) => {
+              if (item.kind === "gap") {
+                return (
+                  <li
+                    key={`gap-${item.from.getTime()}`}
+                    className={`oncall-panel__gap${item.fromNow ? " oncall-panel__gap--now" : ""}`}
                   >
-                    {seg.part === "start"
-                      ? `${seg.shift.start} →`
-                      : seg.part === "end"
-                        ? `→ ${seg.shift.end}`
-                        : `${seg.shift.start}–${seg.shift.end}`}
-                    {seg.shift.type === "secondary" && seg.part !== "end"
-                      ? " secondary"
-                      : ""}
-                  </div>
-                ))}
-                {isToday && (
-                  <div
-                    className="oncall-panel__now"
-                    style={{ left: pct(nowMinutes) }}
-                    aria-hidden="true"
-                  />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="oncall-panel__axis" aria-hidden="true">
-        <span>0</span>
-        <span>6</span>
-        <span>12</span>
-        <span>18</span>
-        <span>24</span>
-      </div>
-      <div className="oncall-panel__legend">
-        <span>
-          <span className="oncall-panel__swatch oncall-panel__swatch--primary" />
-          Primary
-        </span>
-        <span>
-          <span className="oncall-panel__swatch oncall-panel__swatch--secondary" />
-          Secondary
-        </span>
-      </div>
-
-      {upcoming.length === 0 ? (
-        <p className="empty-message">
-          No upcoming on-call shifts — add one! Type the shorthand you already
-          use, like 11/16 9-22. On-call is kept separate and never changes your
-          tasks.
-        </p>
-      ) : (
-        <ul className="oncall-panel__list">
-          {upcoming.map((shift) => {
-            const active = isActive(shift, now);
-            return (
-              <li
-                key={shift._id}
-                className={`oncall-panel__row oncall-panel__row--${shift.type}`}
-              >
-                <div className="oncall-panel__main">
-                  <span className="oncall-panel__times">
-                    {shift.start} – {shift.end}
-                    {isOvernight(shift) && (
-                      <span className="oncall-panel__plus1"> +1</span>
-                    )}
-                    {shift.type === "secondary" && (
-                      <span className="oncall-panel__pill">secondary</span>
-                    )}
-                    {active && (
-                      <span className="oncall-panel__pill oncall-panel__pill--now">
-                        now
+                    <div className="oncall-panel__main">
+                      <span className="oncall-panel__gap-title">
+                        Not on call{item.fromNow ? " now" : ""}
                       </span>
-                    )}
-                  </span>
-                  <span className="oncall-panel__meta">
-                    {shift.date === today ? "Today · " : ""}
-                    {formatDateKey(shift.date)} ·{" "}
-                    {formatDuration(shiftMinutes(shift))}
-                    {shift.note ? ` · ${shift.note}` : ""}
-                  </span>
-                </div>
-                <button
-                  className="oncall-panel__icon-btn"
-                  onClick={() => setModalState({ mode: "edit", shift })}
-                  aria-label={`Edit on-call shift ${shift.date} ${shift.start}`}
-                  title="Edit"
+                      <span className="oncall-panel__meta oncall-panel__gap-range">
+                        {item.fromNow
+                          ? `until ${formatMoment(item.to, now)}`
+                          : `from ${formatMoment(item.from, now)} to ${formatMoment(item.to, now)}`}
+                      </span>
+                    </div>
+                    <span
+                      className={`chip oncall-panel__gap-span${item.fromNow ? " chip--success" : ""}`}
+                      title={`${formatSpan(item.minutes)} without on-call cover`}
+                    >
+                      {formatSpan(item.minutes)}
+                    </span>
+                  </li>
+                );
+              }
+              const { shift } = item;
+              const active = isActive(shift, now);
+              return (
+                <li
+                  key={shift._id}
+                  className={`oncall-panel__row oncall-panel__row--${shift.type}${active ? " oncall-panel__row--active" : ""}`}
                 >
-                  ✎
-                </button>
-                <button
-                  className="oncall-panel__icon-btn oncall-panel__icon-btn--danger"
-                  onClick={() => setDeleteTarget(shift)}
-                  aria-label={`Delete on-call shift ${shift.date} ${shift.start}`}
-                  title="Delete"
-                >
-                  ×
-                </button>
+                  <div className="oncall-panel__main">
+                    <div className="oncall-panel__line">
+                      <span className="oncall-panel__times">
+                        {shift.start} – {shift.end}
+                        {isOvernight(shift) && (
+                          <span className="oncall-panel__plus1"> +1</span>
+                        )}
+                      </span>
+                      {shift.type === "secondary" && (
+                        <span className="chip oncall-panel__pill oncall-panel__pill--secondary">
+                          secondary
+                        </span>
+                      )}
+                      {active && (
+                        <span className="chip chip--danger oncall-panel__pill oncall-panel__pill--now">
+                          <span
+                            className="oncall-panel__live-dot"
+                            aria-hidden="true"
+                          />
+                          now
+                        </span>
+                      )}
+                    </div>
+                    <span className="oncall-panel__meta">
+                      {shift.date === today ? "Today · " : ""}
+                      {formatDateKey(shift.date)} ·{" "}
+                      {formatDuration(shiftMinutes(shift))}
+                      {shift.note ? ` · ${shift.note}` : ""}
+                    </span>
+                  </div>
+                  <div className="oncall-panel__actions">
+                    <button
+                      className="icon-btn oncall-panel__icon-btn"
+                      onClick={() => setModalState({ mode: "edit", shift })}
+                      aria-label={`Edit on-call shift ${shift.date} ${shift.start}`}
+                      title="Edit"
+                    >
+                      <Icon name="pencil" size={15} />
+                    </button>
+                    <button
+                      className="icon-btn icon-btn--danger oncall-panel__icon-btn oncall-panel__icon-btn--danger"
+                      onClick={() => setDeleteTarget(shift)}
+                      aria-label={`Delete on-call shift ${shift.date} ${shift.start}`}
+                      title="Delete"
+                    >
+                      <Icon name="trash" size={15} />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+            {freeAfter && (
+              <li className="oncall-panel__end">
+                Nothing scheduled after {formatMoment(freeAfter, now)}
               </li>
-            );
-          })}
-        </ul>
-      )}
+            )}
+          </ol>
+        )}
+      </section>
 
       {modalState && (
         <OnCallModal

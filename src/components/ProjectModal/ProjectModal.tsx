@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Modal } from "../Modal";
 import "./ProjectModal.css";
 
 interface ProjectModalProps {
@@ -30,41 +31,46 @@ export default function ProjectModal({
   }
 
   return (
-    <div className="project-modal__overlay" onClick={onCancel}>
-      <div className="project-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="project-modal__title">
-          {projectName ? "Edit Project" : "Add Project"}
-        </h3>
+    <Modal
+      onClose={onCancel}
+      className="project-modal"
+      overlayClassName="project-modal__overlay"
+      labelledBy="project-modal-title"
+    >
+      <h3
+        id="project-modal-title"
+        className="ui-modal__title project-modal__title"
+      >
+        {projectName ? "Edit Project" : "Add Project"}
+      </h3>
 
-        <input
-          ref={nameRef}
-          className="project-modal__name-input"
-          type="text"
-          placeholder="Project name…"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubmit();
-            if (e.key === "Escape") onCancel();
-          }}
-        />
+      <input
+        ref={nameRef}
+        className="input project-modal__name-input"
+        type="text"
+        placeholder="Project name…"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSubmit();
+        }}
+      />
 
-        <div className="project-modal__actions">
-          <button
-            className="project-modal__btn project-modal__btn--cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="project-modal__btn project-modal__btn--confirm"
-            onClick={handleSubmit}
-            disabled={!name.trim()}
-          >
-            {projectName ? "Save" : "Add"}
-          </button>
-        </div>
+      <div className="ui-modal__actions project-modal__actions">
+        <button
+          className="btn btn--secondary project-modal__btn project-modal__btn--cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn btn--primary project-modal__btn project-modal__btn--confirm"
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+        >
+          {projectName ? "Save" : "Add"}
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }

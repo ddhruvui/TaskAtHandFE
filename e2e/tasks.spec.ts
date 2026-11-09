@@ -264,7 +264,7 @@ test.describe("Tasks - Read", () => {
     await waitForPageLoad(page);
 
     const task = getTask(page, "Write report");
-    await expect(task.getByText("=>")).toBeVisible();
+    await expect(task.locator(".task-card__notes-text")).toBeVisible();
     await expect(task.getByText("Include Q1 data")).toBeVisible();
   });
 
@@ -280,7 +280,7 @@ test.describe("Tasks - Read", () => {
     await waitForPageLoad(page);
 
     const task = getTask(page, "Write report");
-    await expect(task.getByText("[ 06/15 ]")).toBeVisible();
+    await expect(task.getByText("06/15")).toBeVisible();
   });
 
   test("should show recurring ECD with special icon", async ({ page }) => {
@@ -456,7 +456,7 @@ test.describe("Tasks - Update Edit", () => {
     await reasonInput.fill("blocked on the vendor's reply");
     await page.getByRole("button", { name: "Save" }).click();
 
-    await expect(task.getByText("[ 09/20 ]")).toBeVisible();
+    await expect(task.getByText("09/20")).toBeVisible();
 
     // The reason rides along on the task_rescheduled event for the AI insights.
     const events = await getArchiveEvents("task_rescheduled");
@@ -495,7 +495,7 @@ test.describe("Tasks - Update Edit", () => {
     await expect(page.locator(".edit-modal__reason-input")).toBeVisible();
 
     await page.getByRole("button", { name: "Save" }).click();
-    await expect(task.getByText("[ 09/20 ]")).toBeVisible();
+    await expect(task.getByText("09/20")).toBeVisible();
 
     // No reason → the AI treats this postpone as procrastination.
     const events = await getArchiveEvents("task_rescheduled");
@@ -525,7 +525,7 @@ test.describe("Tasks - Update Edit", () => {
     await page.getByRole("button", { name: "None" }).click();
     await page.getByRole("button", { name: "Save" }).click();
 
-    await expect(task.getByText("[ No date ]")).toBeVisible();
+    await expect(task.getByText("No date", { exact: true })).toBeVisible();
   });
 
   test("should show created and updated timestamps in edit modal", async ({
@@ -822,7 +822,9 @@ test.describe("Tasks - Delete", () => {
 
     // The reason is archived as a task_deleted event for the AI insights
     const events = await getArchiveEvents("task_deleted");
-    const deleted = events.find((e: { taskName: string }) => e.taskName === "Abandon me");
+    const deleted = events.find(
+      (e: { taskName: string }) => e.taskName === "Abandon me",
+    );
     expect(deleted).toBeTruthy();
     expect(deleted.reason).toBe("no longer needed");
   });
@@ -978,7 +980,7 @@ test.describe("Tasks - Display and Styling", () => {
 
     const task = getTask(page, "Completed task");
     await expect(task).toHaveClass(/task-card--done/);
-    await expect(task.getByText("=>")).toBeVisible();
+    await expect(task.locator(".task-card__notes-text")).toBeVisible();
     await expect(task.getByText("Task notes")).toBeVisible();
   });
 
@@ -996,7 +998,7 @@ test.describe("Tasks - Display and Styling", () => {
 
     const task = getTask(page, "Completed task");
     await expect(task).toHaveClass(/task-card--done/);
-    await expect(task.getByText("[ 06/15 ]")).toBeVisible();
+    await expect(task.getByText("06/15")).toBeVisible();
   });
 });
 

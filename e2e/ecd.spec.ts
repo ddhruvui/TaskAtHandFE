@@ -36,7 +36,7 @@ test.describe("ECD - Date Type", () => {
     await waitForPageLoad(page);
 
     const task = getTask(page, "Task 1");
-    await expect(task.getByText("[ 06/15 ]")).toBeVisible();
+    await expect(task.getByText("06/15")).toBeVisible();
   });
 
   test("should display date ECD with year for different year", async ({
@@ -55,7 +55,7 @@ test.describe("ECD - Date Type", () => {
 
     const task = getTask(page, "Task 1");
     const yearShort = String(nextYear).slice(-2);
-    await expect(task.getByText(`[ 06/15/${yearShort} ]`)).toBeVisible();
+    await expect(task.getByText(`06/15/${yearShort}`)).toBeVisible();
   });
 
   test("should create date ECD via UI", async ({ page }) => {
@@ -109,7 +109,7 @@ test.describe("ECD - Date Type", () => {
 
     await page.getByRole("button", { name: "Save" }).click();
 
-    await expect(task.getByText("[ 09/20 ]")).toBeVisible();
+    await expect(task.getByText("09/20")).toBeVisible();
   });
 
   test("should show calendar when Date mode selected", async ({ page }) => {
@@ -560,7 +560,7 @@ test.describe("ECD - No Date", () => {
     await waitForPageLoad(page);
 
     const task = getTask(page, "Task 1");
-    await expect(task.getByText("[ No date ]")).toBeVisible();
+    await expect(task.getByText("No date", { exact: true })).toBeVisible();
   });
 
   test("should select 'None' by default in add modal", async ({ page }) => {
@@ -590,7 +590,7 @@ test.describe("ECD - No Date", () => {
     await page.getByRole("button", { name: "Add task", exact: true }).click();
 
     const task = getTask(page, "Task 1");
-    await expect(task.getByText("[ No date ]")).toBeVisible();
+    await expect(task.getByText("No date", { exact: true })).toBeVisible();
   });
 });
 
@@ -688,6 +688,6 @@ test.describe("ECD - Type Conversion", () => {
     await page.getByRole("button", { name: "None" }).click();
     await page.getByRole("button", { name: "Save" }).click();
 
-    await expect(task.getByText("[ No date ]")).toBeVisible();
+    await expect(task.getByText("No date", { exact: true })).toBeVisible();
   });
 });

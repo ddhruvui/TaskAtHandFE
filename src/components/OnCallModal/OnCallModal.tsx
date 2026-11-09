@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import type { OnCallShift, OnCallType } from "../../types";
 import { EcdCalendar } from "../DatePicker";
+import { Modal } from "../Modal";
+import { Icon } from "../Icon";
 import {
   formatDuration,
   isOvernight,
@@ -86,121 +88,160 @@ export default function OnCallModal({
     onConfirm({ date, start, end, type, note: note.trim() });
   }
 
+  // Enter submits from any field; Escape is handled by <Modal>.
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSubmit();
-    if (e.key === "Escape") onCancel();
   };
 
   return (
-    <div className="oncall-modal__overlay" onClick={onCancel}>
-      <div className="oncall-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="oncall-modal__title">
-          {shift ? "Edit On-call Shift" : "Add On-call Shift"}
-        </h3>
+    <Modal
+      onClose={onCancel}
+      className="oncall-modal"
+      overlayClassName="oncall-modal__overlay"
+      labelledBy="oncall-modal-title"
+    >
+      <h3 id="oncall-modal-title" className="ui-modal__title oncall-modal__title">
+        {shift ? "Edit On-call Shift" : "Add On-call Shift"}
+      </h3>
 
-        <label className="oncall-modal__label">
+      <div className="field oncall-modal__quick">
+        <label className="field__label oncall-modal__label" htmlFor="oncall-modal-quick">
           Quick add
-          <input
-            ref={quickRef}
-            className="oncall-modal__input oncall-modal__input--mono"
-            type="text"
-            placeholder="11/16 9-22"
-            value={quick}
-            onChange={(e) => handleQuickChange(e.target.value)}
-            onKeyDown={onKey}
-            aria-label="Quick add on-call shift"
-          />
         </label>
-        {quick.trim() && (
+        <input
+          id="oncall-modal-quick"
+          ref={quickRef}
+          className="input oncall-modal__input oncall-modal__input--mono"
+          type="text"
+          placeholder="11/16 9-22"
+          value={quick}
+          onChange={(e) => handleQuickChange(e.target.value)}
+          onKeyDown={onKey}
+          aria-label="Quick add on-call shift"
+          autoComplete="off"
+          spellCheck={false}
+        />
+        {quick.trim() ? (
           <p
             className={`oncall-modal__preview${parsed ? "" : " oncall-modal__preview--error"}`}
           >
-            {parsed
-              ? `${formatDateKey(parsed.date)} · ${parsed.start} → ${parsed.end}${isOvernight(parsed) ? " (+1 day)" : ""} · ${formatDuration(shiftMinutes(parsed))} · ${parsed.type}`
-              : "Use M/D start-end, like 11/16 9-22 or 11/12 22-6 (add s for secondary)"}
+            <Icon name={parsed ? "check" : "alert"} size={14} />
+            <span>
+              {parsed
+                ? `${formatDateKey(parsed.date)} · ${parsed.start} → ${parsed.end}${isOvernight(parsed) ? " (+1 day)" : ""} · ${formatDuration(shiftMinutes(parsed))} · ${parsed.type}`
+                : "Use M/D start-end, like 11/16 9-22 or 11/12 22-6 (add s for secondary)"}
+            </span>
+          </p>
+        ) : (
+          <p className="field__hint oncall-modal__hint">
+            Month/day and hours fill the fields below — end with “s” for a
+            secondary shift.
           </p>
         )}
+      </div>
 
-        <div
-          className="oncall-modal__segmented"
-          role="radiogroup"
-          aria-label="Shift type"
-        >
-          {(["primary", "secondary"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              role="radio"
-              aria-checked={type === t}
-              className={`oncall-modal__seg oncall-modal__seg--${t}${type === t ? " oncall-modal__seg--active" : ""}`}
-              onClick={() => setType(t)}
-            >
-              {t === "primary" ? "Primary" : "Secondary"}
-            </button>
-          ))}
+      <div className="oncall-modal__fields">
+        <div className="field oncall-modal__date">
+          <span className="field__label oncall-modal__label">Date</span>
+          <EcdCalendar mode="date" value={date} onChange={setDate} />
         </div>
 
-        <div className="oncall-modal__fields">
-          <div className="oncall-modal__date">
-            <span className="oncall-modal__label">Date</span>
-            <EcdCalendar mode="date" value={date} onChange={setDate} />
+        <div className="oncall-modal__times">
+          <div className="field">
+            <span className="field__label oncall-modal__label">Type</span>
+            <div
+              className="segmented oncall-modal__segmented"
+              role="radiogroup"
+              aria-label="Shift type"
+            >
+              {(["primary", "secondary"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="radio"
+                  aria-checked={type === t}
+                  className={`segmented__btn oncall-modal__seg oncall-modal__seg--${t}${type === t ? " segmented__btn--active oncall-modal__seg--active" : ""}`}
+                  onClick={() => setType(t)}
+                >
+                  <span
+                    className={`oncall-modal__swatch oncall-modal__swatch--${t}`}
+                    aria-hidden="true"
+                  />
+                  {t === "primary" ? "Primary" : "Secondary"}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="oncall-modal__times">
-            <label className="oncall-modal__label">
-              Start
+
+          <div className="oncall-modal__time-pair">
+            <label className="field oncall-modal__label">
+              <span className="field__label">Start</span>
               <input
-                className="oncall-modal__input oncall-modal__input--mono"
+                className="input oncall-modal__input oncall-modal__input--mono"
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
                 onKeyDown={onKey}
                 placeholder="09:00"
                 aria-label="Start time"
+                inputMode="numeric"
               />
             </label>
-            <label className="oncall-modal__label">
-              End
+            <label className="field oncall-modal__label">
+              <span className="field__label">End</span>
               <input
-                className="oncall-modal__input oncall-modal__input--mono"
+                className="input oncall-modal__input oncall-modal__input--mono"
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
                 onKeyDown={onKey}
                 placeholder="22:00"
                 aria-label="End time"
+                inputMode="numeric"
               />
             </label>
-            <label className="oncall-modal__label">
-              Note
-              <input
-                className="oncall-modal__input"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                onKeyDown={onKey}
-                placeholder="Optional"
-                aria-label="Note"
-              />
-            </label>
-            <p className="oncall-modal__summary">
+          </div>
+
+          <label className="field oncall-modal__label">
+            <span className="field__label">Note</span>
+            <input
+              className="input oncall-modal__input"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              onKeyDown={onKey}
+              placeholder="Optional"
+              aria-label="Note"
+            />
+          </label>
+
+          <p
+            className={`oncall-modal__summary${minutes > 0 ? "" : " oncall-modal__summary--invalid"}`}
+          >
+            <Icon name="clock" size={14} />
+            <span>
               {minutes > 0
                 ? `${formatDuration(minutes)}${isOvernight({ start, end }) ? " · ends next day" : ""}`
                 : "Start and end can't be the same."}
-            </p>
-          </div>
-        </div>
-
-        {formError && <p className="oncall-modal__error">{formError}</p>}
-
-        <div className="oncall-modal__actions">
-          <button className="oncall-modal__btn" onClick={onCancel}>
-            Cancel
-          </button>
-          <button
-            className="oncall-modal__btn oncall-modal__btn--primary"
-            onClick={handleSubmit}
-          >
-            {shift ? "Save" : "Add"}
-          </button>
+            </span>
+          </p>
         </div>
       </div>
-    </div>
+
+      {formError && (
+        <p className="ui-modal__error oncall-modal__error" role="alert">
+          {formError}
+        </p>
+      )}
+
+      <div className="ui-modal__actions oncall-modal__actions">
+        <button className="btn btn--secondary oncall-modal__btn" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          className="btn btn--primary oncall-modal__btn oncall-modal__btn--primary"
+          onClick={handleSubmit}
+        >
+          {shift ? "Save" : "Add"}
+        </button>
+      </div>
+    </Modal>
   );
 }

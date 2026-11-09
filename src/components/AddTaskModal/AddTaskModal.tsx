@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import type { ECD } from "../../types";
 import { buildEcdFromInputs, todayDateKey } from "../../utils/ecd";
 import { EcdCalendar } from "../DatePicker";
+import { Modal } from "../Modal";
 import "./AddTaskModal.css";
 
 type EcdMode = "date" | "week" | "month" | "year" | "none";
@@ -72,139 +73,148 @@ export default function AddTaskModal({
   }
 
   return (
-    <div className="add-modal__overlay" onClick={onCancel}>
-      <div className="add-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="add-modal__title">
-          Add task{" "}
-          <span className="add-modal__title-folder">— {headerName}</span>
-        </h3>
-        {formError && <p className="add-modal__ecd-hint">{formError}</p>}
+    <Modal
+      onClose={onCancel}
+      className="add-modal"
+      overlayClassName="add-modal__overlay"
+      labelledBy="add-modal-title"
+    >
+      <h3 id="add-modal-title" className="ui-modal__title add-modal__title">
+        Add task{" "}
+        <span className="ui-modal__subtitle add-modal__title-folder">
+          — {headerName}
+        </span>
+      </h3>
+      {formError && (
+        <p className="add-modal__ecd-hint add-modal__error" role="alert">
+          {formError}
+        </p>
+      )}
 
-        {/* Task name */}
-        <input
-          ref={nameRef}
-          className="add-modal__name-input"
-          type="text"
-          placeholder="Task name…"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleAdd();
-            if (e.key === "Escape") onCancel();
-          }}
-        />
+      {/* Task name */}
+      <input
+        ref={nameRef}
+        className="input add-modal__name-input"
+        type="text"
+        placeholder="Task name…"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleAdd();
+        }}
+      />
 
-        {/* ECD section */}
-        <div className="add-modal__ecd">
-          <span className="add-modal__ecd-label">Due</span>
-          <div className="add-modal__ecd-modes">
-            {(["none", "date", "week", "month", "year"] as EcdMode[]).map(
-              (m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className={`add-modal__mode-btn${mode === m ? " add-modal__mode-btn--active" : ""}`}
-                  onClick={() => setMode(m)}
-                >
-                  {m === "none"
-                    ? "None"
-                    : m === "date"
-                      ? "Date"
-                      : m === "week"
-                        ? "Weekly"
-                        : m === "month"
-                          ? "Monthly"
-                          : "Yearly"}
-                </button>
-              ),
-            )}
+      {/* ECD section */}
+      <div className="add-modal__ecd">
+        <span className="field__label add-modal__ecd-label">Due</span>
+        <div
+          className="segmented add-modal__ecd-modes"
+          role="group"
+          aria-label="Due"
+        >
+          {(["none", "date", "week", "month", "year"] as EcdMode[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={`segmented__btn add-modal__mode-btn${mode === m ? " segmented__btn--active add-modal__mode-btn--active" : ""}`}
+              aria-pressed={mode === m}
+              onClick={() => setMode(m)}
+            >
+              {m === "none"
+                ? "None"
+                : m === "date"
+                  ? "Date"
+                  : m === "week"
+                    ? "Weekly"
+                    : m === "month"
+                      ? "Monthly"
+                      : "Yearly"}
+            </button>
+          ))}
+        </div>
+
+        {mode === "date" && (
+          <EcdCalendar mode="date" value={dateVal} onChange={setDateVal} />
+        )}
+
+        {mode === "week" && (
+          <div className="add-modal__dow">
+            {DOW_LABELS.map((label) => (
+              <button
+                key={label}
+                type="button"
+                className={`add-modal__dow-btn${dowVal.includes(label) ? " add-modal__dow-btn--active" : ""}`}
+                onClick={() => setDowVal((prev) => toggleInArray(prev, label))}
+              >
+                {label}
+              </button>
+            ))}
           </div>
+        )}
 
-          {mode === "date" && (
-            <EcdCalendar mode="date" value={dateVal} onChange={setDateVal} />
-          )}
+        {mode === "month" && (
+          <div className="add-modal__dom">
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={`add-modal__dom-btn${domVal.includes(d) ? " add-modal__dom-btn--active" : ""}`}
+                onClick={() => setDomVal((prev) => toggleInArray(prev, d))}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        )}
 
-          {mode === "week" && (
-            <div className="add-modal__dow">
-              {DOW_LABELS.map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  className={`add-modal__dow-btn${dowVal.includes(label) ? " add-modal__dow-btn--active" : ""}`}
-                  onClick={() =>
-                    setDowVal((prev) => toggleInArray(prev, label))
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
+        {mode === "year" && (
+          <EcdCalendar mode="year" value={yearVal} onChange={setYearVal} />
+        )}
 
-          {mode === "month" && (
-            <div className="add-modal__dom">
-              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  className={`add-modal__dom-btn${domVal.includes(d) ? " add-modal__dom-btn--active" : ""}`}
-                  onClick={() => setDomVal((prev) => toggleInArray(prev, d))}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {mode === "year" && (
-            <EcdCalendar mode="year" value={yearVal} onChange={setYearVal} />
-          )}
-
-          {mode === "week" && dowVal.length > 0 && (
-            <p className="add-modal__ecd-hint">
-              Repeats every {dowVal.join(", ")}
-            </p>
-          )}
-          {mode === "month" && domVal.length > 0 && (
-            <p className="add-modal__ecd-hint">
-              Repeats on the{" "}
-              {[...domVal]
-                .sort((a, b) => a - b)
-                .map((d) => getOrdinal(d))
-                .join(", ")}{" "}
-              of each month
-            </p>
-          )}
-          {mode === "year" && yearVal && (
-            <p className="add-modal__ecd-hint">Repeats annually on {yearVal}</p>
-          )}
-        </div>
-
-        {/* Notes */}
-        <textarea
-          className="add-modal__textarea"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Notes (optional)…"
-          rows={4}
-        />
-
-        <div className="add-modal__actions">
-          <button
-            className="add-modal__btn add-modal__btn--cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="add-modal__btn add-modal__btn--confirm"
-            onClick={handleAdd}
-            disabled={!name.trim()}
-          >
-            Add task
-          </button>
-        </div>
+        {mode === "week" && dowVal.length > 0 && (
+          <p className="add-modal__ecd-hint">
+            Repeats every {dowVal.join(", ")}
+          </p>
+        )}
+        {mode === "month" && domVal.length > 0 && (
+          <p className="add-modal__ecd-hint">
+            Repeats on the{" "}
+            {[...domVal]
+              .sort((a, b) => a - b)
+              .map((d) => getOrdinal(d))
+              .join(", ")}{" "}
+            of each month
+          </p>
+        )}
+        {mode === "year" && yearVal && (
+          <p className="add-modal__ecd-hint">Repeats annually on {yearVal}</p>
+        )}
       </div>
-    </div>
+
+      {/* Notes */}
+      <textarea
+        className="textarea add-modal__textarea"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Notes (optional)…"
+        rows={4}
+      />
+
+      <div className="ui-modal__actions add-modal__actions">
+        <button
+          className="btn btn--secondary add-modal__btn add-modal__btn--cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn btn--primary add-modal__btn add-modal__btn--confirm"
+          onClick={handleAdd}
+          disabled={!name.trim()}
+        >
+          Add task
+        </button>
+      </div>
+    </Modal>
   );
 }

@@ -40,8 +40,8 @@ function stepStatus(page: Page, stepName: string) {
   return stepRow(page, stepName).locator(".goals-panel__step-status");
 }
 
-const UNDER_PROGRESS = "[ ↻ Daily ]";
-const NOT_STARTED = "[ Not started ]";
+const UNDER_PROGRESS = "↻ Daily";
+const NOT_STARTED = "Not started";
 
 const ALL_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -823,7 +823,7 @@ test.describe("Goals - Habit days", () => {
     await startStep(page, "Gym", ["Mon", "Wed", "Fri"]);
 
     // The badge lists the days instead of collapsing to "Daily"
-    await expect(stepStatus(page, "Gym")).toHaveText("[ ↻ Mon, Wed, Fri ]");
+    await expect(stepStatus(page, "Gym")).toHaveText("↻ Mon, Wed, Fri");
     await expect(
       page.getByText(`Started "Gym" — under progress every Mon, Wed, Fri`),
     ).toBeVisible();
@@ -847,7 +847,7 @@ test.describe("Goals - Habit days", () => {
     await page.locator(".goals-toggle-btn").click();
     // Week order is Sunday-first, matching what the backend stores
     await expect(getTask(page, "Gym").locator(".task-card__ecd")).toHaveText(
-      "[ ↻ Sun, Sat ]",
+      "↻ Sun, Sat",
     );
   });
 
@@ -889,7 +889,7 @@ test.describe("Goals - Habit days", () => {
       .click();
 
     await expect(stepStatus(page, "Gym")).toHaveText(
-      "[ ↻ Mon, Tue, Wed, Thu, Fri ]",
+      "↻ Mon, Tue, Wed, Thu, Fri",
     );
   });
 
@@ -953,7 +953,7 @@ test.describe("Goals - Habit days", () => {
 
     await changeStepDays(page, "Gym", ["Tue", "Thu"]);
 
-    await expect(stepStatus(page, "Gym")).toHaveText("[ ↻ Tue, Thu ]");
+    await expect(stepStatus(page, "Gym")).toHaveText("↻ Tue, Thu");
     await expect(
       page.getByText(`"Gym" is now due every Tue, Thu`),
     ).toBeVisible();
@@ -974,7 +974,7 @@ test.describe("Goals - Habit days", () => {
     await waitForPageLoad(page);
     await openGoalsView(page);
 
-    await expect(stepStatus(page, "Gym")).toHaveText("[ ↻ Mon, Wed, Fri ]");
+    await expect(stepStatus(page, "Gym")).toHaveText("↻ Mon, Wed, Fri");
   });
 
   test("should restore the chosen days when a paused step is started again", async ({
@@ -998,7 +998,7 @@ test.describe("Goals - Habit days", () => {
       .getByRole("button", { name: "Start step", exact: true })
       .click();
 
-    await expect(stepStatus(page, "Gym")).toHaveText("[ ↻ Mon, Wed, Fri ]");
+    await expect(stepStatus(page, "Gym")).toHaveText("↻ Mon, Wed, Fri");
   });
 });
 

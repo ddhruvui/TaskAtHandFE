@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { Affirmation } from "../../types";
+import { Modal } from "../Modal";
 import "./AffirmationModal.css";
 
 interface AffirmationModalProps {
@@ -31,41 +32,51 @@ export default function AffirmationModal({
   }
 
   return (
-    <div className="affirmation-modal__overlay" onClick={onCancel}>
-      <div className="affirmation-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="affirmation-modal__title">
+    <Modal
+      onClose={onCancel}
+      className="affirmation-modal"
+      overlayClassName="affirmation-modal__overlay"
+      labelledBy="affirmation-modal-title"
+    >
+      <div>
+        <h3
+          id="affirmation-modal-title"
+          className="ui-modal__title affirmation-modal__title"
+        >
           {affirmation ? "Edit Affirmation" : "Add Affirmation"}
         </h3>
-
-        <input
-          ref={nameRef}
-          className="affirmation-modal__name-input"
-          type="text"
-          placeholder="Affirmation… (e.g. Thank you blessing)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubmit();
-            if (e.key === "Escape") onCancel();
-          }}
-        />
-
-        <div className="affirmation-modal__actions">
-          <button
-            className="affirmation-modal__btn affirmation-modal__btn--cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="affirmation-modal__btn affirmation-modal__btn--confirm"
-            onClick={handleSubmit}
-            disabled={!name.trim()}
-          >
-            {affirmation ? "Save" : "Add"}
-          </button>
-        </div>
+        <p className="ui-modal__description affirmation-modal__description">
+          A short line to read every day.
+        </p>
       </div>
-    </div>
+
+      <input
+        ref={nameRef}
+        className="input affirmation-modal__name-input"
+        type="text"
+        placeholder="Affirmation… (e.g. Thank you blessing)"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSubmit();
+        }}
+      />
+
+      <div className="ui-modal__actions affirmation-modal__actions">
+        <button
+          className="btn btn--secondary affirmation-modal__btn affirmation-modal__btn--cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn btn--primary affirmation-modal__btn affirmation-modal__btn--confirm"
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+        >
+          {affirmation ? "Save" : "Add"}
+        </button>
+      </div>
+    </Modal>
   );
 }

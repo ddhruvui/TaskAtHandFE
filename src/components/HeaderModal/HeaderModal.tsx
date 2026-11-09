@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Modal } from "../Modal";
 import "./HeaderModal.css";
 
 interface HeaderModalProps {
@@ -30,41 +31,53 @@ export default function HeaderModal({
   }
 
   return (
-    <div className="header-modal__overlay" onClick={onCancel}>
-      <div className="header-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="header-modal__title">
+    <Modal
+      onClose={onCancel}
+      className="header-modal"
+      overlayClassName="header-modal__overlay"
+      labelledBy="header-modal-title"
+    >
+      <div>
+        <h3
+          id="header-modal-title"
+          className="ui-modal__title header-modal__title"
+        >
           {headerName ? "Edit Header" : "Add Header"}
         </h3>
-
-        <input
-          ref={nameRef}
-          className="header-modal__name-input"
-          type="text"
-          placeholder="Header name…"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubmit();
-            if (e.key === "Escape") onCancel();
-          }}
-        />
-
-        <div className="header-modal__actions">
-          <button
-            className="header-modal__btn header-modal__btn--cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="header-modal__btn header-modal__btn--confirm"
-            onClick={handleSubmit}
-            disabled={!name.trim()}
-          >
-            {headerName ? "Save" : "Add"}
-          </button>
-        </div>
+        <p className="ui-modal__description header-modal__description">
+          {headerName
+            ? "Rename this group of tasks."
+            : "Headers group related tasks, like Work or Home."}
+        </p>
       </div>
-    </div>
+
+      <input
+        ref={nameRef}
+        className="input header-modal__name-input"
+        type="text"
+        placeholder="Header name…"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSubmit();
+        }}
+      />
+
+      <div className="ui-modal__actions header-modal__actions">
+        <button
+          className="btn btn--secondary header-modal__btn header-modal__btn--cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn btn--primary header-modal__btn header-modal__btn--confirm"
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+        >
+          {headerName ? "Save" : "Add"}
+        </button>
+      </div>
+    </Modal>
   );
 }

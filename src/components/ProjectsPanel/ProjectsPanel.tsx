@@ -7,6 +7,7 @@ import { ProjectModal } from "../ProjectModal";
 import { ProjectTaskModal } from "../ProjectTaskModal";
 import { AddButton } from "../AddButton";
 import { ConfirmModal } from "../ConfirmModal";
+import { Icon } from "../Icon";
 // Task rows reuse the todo's row styling (.task-card*) so the two lists stay
 // visually identical from one source. Imported explicitly rather than relying
 // on TaskCard being mounted elsewhere in the tree.
@@ -415,99 +416,87 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
 
   return (
     <div className="projects-panel">
-      {error && <p className="empty-message">Action failed: {error}</p>}
-
-      <div className="projects-panel__toolbar">
+      {/* The view's "+" — lifted into the page header row by .page-actions */}
+      <div className="projects-panel__toolbar page-actions">
         <AddButton
           ariaLabel="Add project"
           onClick={() => setProjectModalState({ mode: "add" })}
         />
       </div>
 
+      {error && (
+        <p className="alert alert--danger projects-panel__error" role="alert">
+          <Icon name="alert" />
+          <span>Action failed: {error}</span>
+        </p>
+      )}
+
       {projects.map((project, idx) => {
         const doneCount = project.tasks.filter((t) => t.done).length;
         return (
           <section key={project._id} className="readme-section">
             <div className="readme-heading">
-              <h2 className="readme-heading__text">{project.name}</h2>
+              {/* Progress stays outside the <h2> — e2e reads the heading
+                  text as exactly the project name. */}
+              <div className="readme-heading__title">
+                <h2 className="readme-heading__text">{project.name}</h2>
+                {project.tasks.length > 0 && (
+                  <span
+                    className="readme-heading__count projects-panel__progress"
+                    title={`${doneCount} of ${project.tasks.length} tasks done`}
+                  >
+                    {doneCount}/{project.tasks.length} done
+                  </span>
+                )}
+              </div>
 
-              {project.tasks.length > 0 && (
-                <span
-                  className="projects-panel__progress"
-                  title={`${doneCount} of ${project.tasks.length} tasks done`}
+              {/* Quiet until the section is hovered or focused */}
+              <div className="readme-heading__actions readme-heading__actions--reveal">
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() => handleMoveProject(project, -1)}
+                  disabled={idx === 0}
+                  aria-label={`Move project ${project.name} up`}
+                  title="Move project up"
                 >
-                  {doneCount}/{project.tasks.length} done
-                </span>
-              )}
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => handleMoveProject(project, -1)}
-                disabled={idx === 0}
-                aria-label={`Move project ${project.name} up`}
-                title="Move project up"
-              >
-                ↑
-              </button>
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => handleMoveProject(project, 1)}
-                disabled={idx === projects.length - 1}
-                aria-label={`Move project ${project.name} down`}
-                title="Move project down"
-              >
-                ↓
-              </button>
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => setProjectModalState({ mode: "edit", project })}
-                aria-label={`Edit project ${project.name}`}
-                title="Edit project name"
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  width="14"
-                  height="14"
-                  fill="currentColor"
+                  <Icon name="arrow-up" size={15} />
+                </button>
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() => handleMoveProject(project, 1)}
+                  disabled={idx === projects.length - 1}
+                  aria-label={`Move project ${project.name} down`}
+                  title="Move project down"
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z"
-                  />
-                </svg>
-              </button>
-              <button
-                className="readme-heading__add-btn"
-                onClick={() => setDeleteProjectTarget(project)}
-                aria-label={`Delete project ${project.name}`}
-                title="Delete project"
-                style={{ color: "#e74c3c" }}
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  width="14"
-                  height="14"
-                  fill="currentColor"
+                  <Icon name="arrow-down" size={15} />
+                </button>
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() =>
+                    setProjectModalState({ mode: "edit", project })
+                  }
+                  aria-label={`Edit project ${project.name}`}
+                  title="Edit project name"
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
-                  />
-                </svg>
-              </button>
+                  <Icon name="pencil" size={15} />
+                </button>
+                <button
+                  className="readme-heading__add-btn icon-btn--danger"
+                  onClick={() => setDeleteProjectTarget(project)}
+                  aria-label={`Delete project ${project.name}`}
+                  title="Delete project"
+                >
+                  <Icon name="trash" size={15} />
+                </button>
+              </div>
+              {/* Add task stays visible: it's the section's main action */}
               <button
-                className="readme-heading__add-btn"
+                className="readme-heading__add-btn projects-panel__add-task"
                 onClick={() => setTaskModalState({ project })}
                 aria-label={`Add task to ${project.name}`}
                 title="Add task"
               >
-                <svg
-                  viewBox="0 0 16 16"
-                  width="14"
-                  height="14"
-                  fill="currentColor"
-                >
-                  <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z" />
-                </svg>
+                <Icon name="plus" size={16} />
               </button>
             </div>
 
@@ -537,25 +526,22 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
                       >
                         {task.done && (
                           <svg
-                            viewBox="0 0 16 16"
+                            viewBox="0 0 24 24"
                             className="task-card__check-icon"
                           >
-                            <path
-                              fillRule="evenodd"
-                              d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
-                            />
+                            <path d="M20 6 9 17l-5-5" />
                           </svg>
                         )}
                       </button>
 
-                      <span className="task-card__body">
-                        <span className="task-card__label">
-                          <span
-                            className={`task-card__name projects-panel__task-name${task.done ? " task-card__name--done" : ""}`}
-                          >
-                            {task.name}
-                          </span>
-                          {/* Same slot the todo uses for the ECD badge; only a
+                      <div className="task-card__body">
+                        <span
+                          className={`task-card__name projects-panel__task-name${task.done ? " task-card__name--done" : ""}`}
+                        >
+                          {task.name}
+                        </span>
+                        <span className="task-card__meta">
+                          {/* Same chip the todo uses for the ECD; only a
                               dated task carries the panel's date hook. */}
                           {task.date ? (
                             <span
@@ -566,23 +552,42 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
                                   : `In the todo under "${project.name}" — due ${task.date}`
                               }
                             >
-                              [ {formatTaskDate(task.date)} ]
+                              {formatTaskDate(task.date)}
                             </span>
                           ) : (
-                            <span className="task-card__ecd">[ No date ]</span>
+                            <span className="task-card__ecd task-card__ecd--none">
+                              No date
+                            </span>
                           )}
                           {task.notes && (
-                            <span className="task-card__arrow">=&gt;</span>
+                            <span className="task-card__notes-text projects-panel__task-notes">
+                              {task.notes}
+                            </span>
                           )}
                         </span>
-                        {task.notes && (
-                          <span className="task-card__notes-text projects-panel__task-notes">
-                            {task.notes}
-                          </span>
-                        )}
-                      </span>
+                      </div>
 
+                      {/* Same action cluster, in the same order, as the
+                          todo's task row: move up, move down, edit, delete */}
                       <div className="task-card__actions">
+                        <button
+                          className="task-card__action-btn"
+                          onClick={() => handleMoveTask(project, taskIdx, -1)}
+                          disabled={busy || !canMoveUp}
+                          aria-label={`Move task ${task.name} up`}
+                          title="Move task up"
+                        >
+                          <Icon name="arrow-up" size={15} />
+                        </button>
+                        <button
+                          className="task-card__action-btn"
+                          onClick={() => handleMoveTask(project, taskIdx, 1)}
+                          disabled={busy || !canMoveDown}
+                          aria-label={`Move task ${task.name} down`}
+                          title="Move task down"
+                        >
+                          <Icon name="arrow-down" size={15} />
+                        </button>
                         <button
                           className="task-card__action-btn"
                           onClick={() =>
@@ -592,49 +597,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
                           aria-label={`Edit task ${task.name}`}
                           title="Edit task"
                         >
-                          <svg
-                            viewBox="0 0 16 16"
-                            className="task-card__action-icon"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          className="task-card__action-btn"
-                          onClick={() => handleMoveTask(project, taskIdx, 1)}
-                          disabled={busy || !canMoveDown}
-                          aria-label={`Move task ${task.name} down`}
-                          title="Move task down"
-                        >
-                          <svg
-                            viewBox="0 0 16 16"
-                            className="task-card__action-icon"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M8 2.25a.75.75 0 0 1 .75.75v8.19l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06L7.25 11.19V3A.75.75 0 0 1 8 2.25z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          className="task-card__action-btn"
-                          onClick={() => handleMoveTask(project, taskIdx, -1)}
-                          disabled={busy || !canMoveUp}
-                          aria-label={`Move task ${task.name} up`}
-                          title="Move task up"
-                        >
-                          <svg
-                            viewBox="0 0 16 16"
-                            className="task-card__action-icon task-card__action-icon--flip"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M8 2.25a.75.75 0 0 1 .75.75v8.19l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06L7.25 11.19V3A.75.75 0 0 1 8 2.25z"
-                            />
-                          </svg>
+                          <Icon name="pencil" size={15} />
                         </button>
                         <button
                           className="task-card__action-btn task-card__action-btn--danger"
@@ -645,15 +608,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
                           aria-label={`Delete task ${task.name}`}
                           title="Delete task"
                         >
-                          <svg
-                            viewBox="0 0 16 16"
-                            className="task-card__action-icon"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
-                            />
-                          </svg>
+                          <Icon name="trash" size={15} />
                         </button>
                       </div>
                     </div>
@@ -661,7 +616,7 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
                 );
               })}
               {project.tasks.length === 0 && (
-                <p className="projects-panel__no-tasks">
+                <p className="empty-message projects-panel__no-tasks">
                   No tasks yet — add the steps that get this project done.
                 </p>
               )}
@@ -671,13 +626,18 @@ export default function ProjectsPanel({ onTasksChanged }: ProjectsPanelProps) {
       })}
 
       {projects.length === 0 && (
-        <p className="empty-message">
-          No projects yet — add one! A long term project (e.g. "Automated Stock
-          Market") lists the steps that get it done (e.g. "get data from
-          EODHD"). Give a step a date and it shows up in the todo under the
-          project's name; once it's done and the nightly cleanup runs, it leaves
-          the todo but stays here as a completed step.
-        </p>
+        <div className="projects-panel__empty">
+          <span className="projects-panel__empty-icon" aria-hidden="true">
+            <Icon name="projects" size={22} />
+          </span>
+          <p className="empty-message">
+            No projects yet — add one! A long term project (e.g. "Automated
+            Stock Market") lists the steps that get it done (e.g. "get data
+            from EODHD"). Give a step a date and it shows up in the todo under
+            the project's name; once it's done and the nightly cleanup runs, it
+            leaves the todo but stays here as a completed step.
+          </p>
+        </div>
       )}
 
       {/* Modals */}

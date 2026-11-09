@@ -13,6 +13,8 @@ import { AffirmationsPanel } from "./components/AffirmationsPanel";
 import { CallsPanel } from "./components/CallsPanel";
 import { VacationPanel } from "./components/VacationPanel";
 import { OnCallPanel } from "./components/OnCallPanel";
+import { Icon } from "./components/Icon";
+import type { IconName } from "./components/Icon";
 import type { Header, OnCallShift, Task, VacationStatus } from "./types";
 import type { EditPayload } from "./components/TaskCard/TaskCard.types";
 import * as headersApi from "./api/headers";
@@ -40,10 +42,135 @@ import {
   syncLifeEventsForTodoEdit,
   unlinkLifeEventsForTodoTasks,
 } from "./utils/lifeEventSync";
+import { useTheme } from "./hooks/useTheme";
 import "./App.css";
 
 interface HeaderWithTasks extends Header {
   tasks: Task[];
+}
+
+/* ── Views ──
+   The todo list (with its By Date filter) is home; every other view is a
+   panel. Panels are mutually exclusive and toggle: clicking the active
+   panel's nav item returns to the todo. Each nav item keeps its
+   `<key>-toggle-btn` class, aria-pressed state and Show/Hide aria-label —
+   e2e drives the views through exactly those. */
+type PanelKey =
+  | "insights"
+  | "events"
+  | "lifeevents"
+  | "goals"
+  | "projects"
+  | "affirmations"
+  | "calls"
+  | "vacation"
+  | "oncall";
+
+interface PanelNavItem {
+  key: PanelKey;
+  label: string;
+  /** Noun in the "Show …"/"Hide …" aria-label */
+  noun: string;
+  icon: IconName;
+  description: string;
+}
+
+const NAV_GROUPS: { label: string | null; items: PanelNavItem[] }[] = [
+  {
+    label: null,
+    items: [
+      {
+        key: "insights",
+        label: "Insights",
+        noun: "insights",
+        icon: "insights",
+        description: "Habit stats, task history and your AI coach.",
+      },
+    ],
+  },
+  {
+    label: "Plan",
+    items: [
+      {
+        key: "projects",
+        label: "Projects",
+        noun: "projects",
+        icon: "projects",
+        description: "Long-term efforts, built one dated step at a time.",
+      },
+      {
+        key: "goals",
+        label: "Goals",
+        noun: "goals",
+        icon: "goals",
+        description: "Habits you build one step at a time.",
+      },
+      {
+        key: "events",
+        label: "Events",
+        noun: "events",
+        icon: "events",
+        description: "Bundles of tasks you can drop into your todo in one go.",
+      },
+    ],
+  },
+  {
+    label: "Life",
+    items: [
+      {
+        key: "lifeevents",
+        label: "Life events",
+        noun: "life events",
+        icon: "lifeevents",
+        description:
+          "Birthdays and anniversaries, added to your todo each year.",
+      },
+      {
+        key: "calls",
+        label: "Calls",
+        noun: "calls",
+        icon: "calls",
+        description: "People to catch up with, biweekly or monthly.",
+      },
+      {
+        key: "affirmations",
+        label: "Affirmations",
+        noun: "affirmations",
+        icon: "affirmations",
+        description: "Short lines to read every day.",
+      },
+    ],
+  },
+  {
+    label: "Time off",
+    items: [
+      {
+        key: "vacation",
+        label: "Vacation",
+        noun: "vacations",
+        icon: "vacation",
+        description:
+          "Days off — missed habits during these don't count against you.",
+      },
+      {
+        key: "oncall",
+        label: "On-call",
+        noun: "on-call",
+        icon: "oncall",
+        description: "Your on-call shifts, kept separate from tasks.",
+      },
+    ],
+  },
+];
+
+const PANELS = NAV_GROUPS.flatMap((g) => g.items);
+
+function todayHeading(): string {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 function App() {
@@ -52,15 +179,8 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [byDateMode, setByDateMode] = useState(false);
-  const [insightsMode, setInsightsMode] = useState(false);
-  const [eventsMode, setEventsMode] = useState(false);
-  const [lifeEventsMode, setLifeEventsMode] = useState(false);
-  const [goalsMode, setGoalsMode] = useState(false);
-  const [projectsMode, setProjectsMode] = useState(false);
-  const [affirmationsMode, setAffirmationsMode] = useState(false);
-  const [callsMode, setCallsMode] = useState(false);
-  const [vacationMode, setVacationMode] = useState(false);
-  const [onCallMode, setOnCallMode] = useState(false);
+  const [activePanel, setActivePanel] = useState<PanelKey | null>(null);
+  const { theme, cycleTheme } = useTheme();
 
   // On-call shifts are app-level so the "on call now" banner shows from every
   // view. On-call is a record only — it never feeds into tasks or stats.
@@ -80,25 +200,16 @@ function App() {
   // Null while it is loading and after a failed fetch, which just hides them.
   const [streaks, setStreaks] = useState<StreakMap | null>(null);
 
-  // Panel views are mutually exclusive — activating one deactivates the rest,
-  // so the clicked tab is always the one shown (byDateMode is a todo-list
-  // filter, not a panel, and stays independent).
-  const panelModeSetters = [
-    setInsightsMode,
-    setEventsMode,
-    setLifeEventsMode,
-    setGoalsMode,
-    setProjectsMode,
-    setAffirmationsMode,
-    setCallsMode,
-    setVacationMode,
-    setOnCallMode,
-  ];
-  const togglePanelMode = (setter: (typeof panelModeSetters)[number]) => {
-    panelModeSetters.forEach((s) => {
-      if (s !== setter) s(false);
-    });
-    setter((prev) => !prev);
+  // Panel views are mutually exclusive — opening one closes the rest, and
+  // clicking the open one again goes back to the todo (byDateMode is a
+  // todo-list filter, not a panel, and stays independent).
+  const togglePanel = (key: PanelKey) =>
+    setActivePanel((prev) => (prev === key ? null : key));
+
+  /** Home: the todo list, keeping whichever list/by-date layout was chosen. */
+  const showTasks = (byDate: boolean) => {
+    setActivePanel(null);
+    setByDateMode(byDate);
   };
 
   // Modal states
@@ -166,10 +277,15 @@ function App() {
   }, []);
 
   useEffect(() => {
-    loadAll();
-    refreshVacationStatus();
-    refreshStreaks();
-    refreshOnCall();
+    // Initial load. Kicked off from a resolved promise so every setState
+    // lands in an async callback, not the effect body
+    // (react-hooks/set-state-in-effect).
+    void Promise.resolve().then(() => {
+      loadAll();
+      refreshVacationStatus();
+      refreshStreaks();
+      refreshOnCall();
+    });
   }, [loadAll, refreshVacationStatus, refreshStreaks, refreshOnCall]);
 
   // The banner's "time left" and its disappearance at shift end follow the
@@ -178,6 +294,11 @@ function App() {
     const id = setInterval(() => setClock(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  // Each view starts at the top, like a page.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [activePanel, byDateMode]);
 
   const currentShift = activeShift(onCallShifts, clock);
 
@@ -416,39 +537,28 @@ function App() {
     }
   };
 
-  /* ── Render ── */
-
-  if (loading) {
-    return (
-      <div className="app-container">
-        <h1>Task At Hand</h1>
-        <div className="readme">
-          <p className="empty-message">Loading…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="app-container">
-        <h1>Task At Hand</h1>
-        <div className="readme">
-          <p className="empty-message">
-            Failed to load: {error}. Is the backend running at{" "}
-            {import.meta.env.VITE_API_BASE_URL}?
-          </p>
-        </div>
-      </div>
-    );
-  }
+  /* ── Derived view data ── */
 
   const addTaskHeader = headers.find((h) => h._id === addTaskHeaderId);
+  const headerNameById = new Map(headers.map((h) => [h._id, h.name]));
 
   // Daily habit tasks under "One Step At A Time" are linked to their goal
   // step by name — TaskCard locks name/schedule edits for them.
   const oneStepHeaderIds = new Set(
     headers.filter((h) => isOneStepHeaderName(h.name)).map((h) => h._id),
+  );
+
+  // Sidebar counts: open tasks, and how many of them are due today or late.
+  const today = todayDateKey();
+  let openCount = 0;
+  let dueCount = 0;
+  headers.forEach((h) =>
+    h.tasks.forEach((t) => {
+      if (t.done) return;
+      openCount += 1;
+      const key = getEcdDateKey(t.ecd);
+      if (key && key <= today) dueCount += 1;
+    }),
   );
 
   /* ── By Date view: group tasks by calendar date into present, past and
@@ -484,7 +594,6 @@ function App() {
         label: formatDateKey(key),
         tasks: sortTasks(items),
       }));
-    const today = todayDateKey();
     const present = dated.filter((g) => g.key === today);
     const past = dated.filter((g) => g.key < today);
     const future = dated.filter((g) => g.key > today);
@@ -497,612 +606,524 @@ function App() {
       });
     }
     return [
-      { key: "present", groups: present },
-      { key: "past", groups: past },
-      { key: "future", groups: future },
+      { key: "present", label: "Today", groups: present },
+      { key: "past", label: "Overdue", groups: past },
+      { key: "future", label: "Upcoming", groups: future },
     ].filter((section) => section.groups.length > 0);
   })();
 
-  return (
-    <div className="app-container">
-      <h1>Task At Hand</h1>
+  const currentPanel = PANELS.find((p) => p.key === activePanel) ?? null;
+  const onTasksView = activePanel === null;
 
-      <div className="readme">
-        {actionError && (
-          <p className="empty-message">Action failed: {actionError}</p>
-        )}
+  const themeLabel =
+    theme === "system" ? "System" : theme === "light" ? "Light" : "Dark";
 
-        {/* Shown in every view *except* the Vacation panel, which carries its
-            own fuller banner: booking time off and forgetting is the failure
-            mode this feature actually has, but two banners stacked on the same
-            screen is just noise. */}
-        {vacationStatus?.onVacation &&
-          vacationStatus.active &&
-          !vacationMode && (
-            <div className="app-vacation-banner" role="status">
-              <span className="app-vacation-banner__text">
-                <strong>On vacation</strong> — day{" "}
-                {vacationStatus.active.dayOfVacation} of{" "}
-                {vacationStatus.active.totalDays}
-                {vacationStatus.active.note
-                  ? ` · ${vacationStatus.active.note}`
-                  : ""}
-                . Missed days aren't counted against you.
-              </span>
+  /* ── Render ── */
+
+  const renderTaskList = () => (
+    <>
+      {headers.map((header, idx) => {
+        const visibleTasks = header.tasks;
+        const openInHeader = visibleTasks.filter((t) => !t.done).length;
+
+        return (
+          <section key={header._id} className="readme-section">
+            {/* ── Header heading ── */}
+            <div className="readme-heading">
+              <div className="readme-heading__title">
+                <h2 className="readme-heading__text">{header.name}</h2>
+                <span
+                  className="readme-heading__count"
+                  title={`${openInHeader} open`}
+                >
+                  {openInHeader}
+                </span>
+              </div>
+
+              <div className="readme-heading__actions readme-heading__actions--reveal">
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() => handleMoveHeaderUp(header._id)}
+                  disabled={idx === 0}
+                  aria-label="Move header up"
+                  title="Move header up"
+                >
+                  <Icon name="arrow-up" size={15} />
+                </button>
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() => handleMoveHeaderDown(header._id)}
+                  disabled={idx === headers.length - 1}
+                  aria-label="Move header down"
+                  title="Move header down"
+                >
+                  <Icon name="arrow-down" size={15} />
+                </button>
+                <button
+                  className="readme-heading__add-btn"
+                  onClick={() =>
+                    setHeaderModalState({
+                      mode: "edit",
+                      headerId: header._id,
+                      name: header.name,
+                    })
+                  }
+                  aria-label="Edit header"
+                  title="Edit header"
+                >
+                  <Icon name="pencil" size={15} />
+                </button>
+                <button
+                  className="readme-heading__add-btn icon-btn--danger"
+                  onClick={() =>
+                    setDeleteTarget({
+                      type: "header",
+                      headerId: header._id,
+                      id: header._id,
+                      name: header.name,
+                    })
+                  }
+                  aria-label="Delete header"
+                  title="Delete header"
+                >
+                  <Icon name="trash" size={15} />
+                </button>
+              </div>
+              {/* Add task stays visible: it's the section's main action */}
               <button
-                className="app-vacation-banner__btn"
-                onClick={() => {
-                  if (!vacationMode) togglePanelMode(setVacationMode);
-                }}
-                aria-label="Manage vacation"
+                className="readme-heading__add-btn app-add-task-btn"
+                onClick={() => setAddTaskHeaderId(header._id)}
+                aria-label={`Add task to ${header.name}`}
+                title="Add task"
               >
-                Manage
+                <Icon name="plus" size={16} />
               </button>
             </div>
-          )}
-        {/* On call right now — shown in every view, including On-call. */}
-        {currentShift && (
-          <div
-            className={`app-oncall-banner app-oncall-banner--${currentShift.type}`}
-            role="status"
+
+            {/* ── Task list ── */}
+            <div className="readme-tasks">
+              {visibleTasks.map((task, taskIdx) => (
+                <TaskCard
+                  key={task._id}
+                  task={task}
+                  isFirst={taskIdx === 0}
+                  isLast={taskIdx === visibleTasks.length - 1}
+                  prevTaskDone={
+                    taskIdx > 0 ? visibleTasks[taskIdx - 1].done : undefined
+                  }
+                  nextTaskDone={
+                    taskIdx < visibleTasks.length - 1
+                      ? visibleTasks[taskIdx + 1].done
+                      : undefined
+                  }
+                  goalManaged={oneStepHeaderIds.has(header._id)}
+                  streak={
+                    oneStepHeaderIds.has(header._id)
+                      ? streakFor(streaks, task.name)
+                      : undefined
+                  }
+                  onToggleDone={handleToggleDone(header._id)}
+                  onEdit={handleEditTask(header._id)}
+                  onMoveUp={handleMoveTaskUp(header._id)}
+                  onMoveDown={handleMoveTaskDown(header._id)}
+                  onDelete={handleDeleteTask(header._id)}
+                />
+              ))}
+              {visibleTasks.length === 0 && (
+                <button
+                  className="app-empty-row"
+                  onClick={() => setAddTaskHeaderId(header._id)}
+                >
+                  <Icon name="plus" size={14} />
+                  <span className="empty-message">No tasks yet — add one!</span>
+                </button>
+              )}
+            </div>
+          </section>
+        );
+      })}
+
+      {headers.length === 0 && (
+        <div className="app-empty-state">
+          <span className="app-empty-state__icon" aria-hidden="true">
+            <Icon name="tasks" size={22} />
+          </span>
+          <p className="empty-message">No headers yet — add one!</p>
+          <p className="app-empty-state__hint">
+            Headers group your tasks — try “Work”, “Home” or “Health”.
+          </p>
+        </div>
+      )}
+    </>
+  );
+
+  const renderByDate = () => (
+    <>
+      {byDateSections.map((section, sectionIdx) => (
+        <Fragment key={section.key}>
+          {sectionIdx > 0 && <hr className="bydate-divider" />}
+          <p
+            className={`bydate-section-label bydate-section-label--${section.key}`}
           >
-            <span className="app-oncall-banner__text">
-              <strong>
-                {currentShift.type === "primary" ? "Primary" : "Secondary"} on
-                call now
-              </strong>{" "}
-              · until{" "}
-              {currentShift.end === "24:00" ? "midnight" : currentShift.end} ·{" "}
-              {formatDuration(minutesLeft(currentShift, clock))} left
-            </span>
-            {!onCallMode && (
-              <button
-                className="app-oncall-banner__btn"
-                onClick={() => togglePanelMode(setOnCallMode)}
-                aria-label="Manage on-call"
-              >
-                Manage
-              </button>
-            )}
-          </div>
-        )}
-        {/* View-mode toggle buttons at the top */}
-        <div
-          style={{
-            marginBottom: "24px",
-            display: "flex",
-            gap: "12px",
-            justifyContent: "flex-end",
-            // Ten toggles no longer fit one row on a narrow window; wrapping
-            // keeps the leftmost ones reachable instead of clipping them.
-            flexWrap: "wrap",
-          }}
-        >
+            {section.label}
+          </p>
+          {section.groups.map((group) => (
+            <section key={group.key} className="readme-section">
+              <div className="readme-heading">
+                <div className="readme-heading__title">
+                  <h2 className="readme-heading__text">{group.label}</h2>
+                  <span className="readme-heading__count">
+                    {group.tasks.length}
+                  </span>
+                </div>
+              </div>
+              <div className="readme-tasks">
+                {group.tasks.map((task) => (
+                  <TaskCard
+                    key={task._id}
+                    task={task}
+                    isFirst
+                    isLast
+                    headerName={headerNameById.get(task.headerId)}
+                    goalManaged={oneStepHeaderIds.has(task.headerId)}
+                    streak={
+                      oneStepHeaderIds.has(task.headerId)
+                        ? streakFor(streaks, task.name)
+                        : undefined
+                    }
+                    onToggleDone={handleToggleDone(task.headerId)}
+                    onEdit={handleEditTask(task.headerId)}
+                    onMoveUp={handleMoveTaskUp(task.headerId)}
+                    onMoveDown={handleMoveTaskDown(task.headerId)}
+                    onDelete={handleDeleteTask(task.headerId)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </Fragment>
+      ))}
+      {byDateSections.length === 0 && (
+        <div className="app-empty-state">
+          <span className="app-empty-state__icon" aria-hidden="true">
+            <Icon name="calendar" size={22} />
+          </span>
+          <p className="empty-message">No dated tasks to show.</p>
+        </div>
+      )}
+    </>
+  );
+
+  const renderTasksView = () => {
+    if (loading) {
+      return (
+        <div className="app-skeleton" aria-busy="true">
+          <p className="empty-message">Loading…</p>
+          {[0, 1].map((i) => (
+            <div key={i} className="app-skeleton__card">
+              <div className="app-skeleton__line app-skeleton__line--title" />
+              <div className="app-skeleton__line" />
+              <div className="app-skeleton__line app-skeleton__line--short" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="alert alert--danger" role="alert">
+          <Icon name="alert" />
+          <p className="empty-message app-load-error">
+            Failed to load: {error}. Is the backend running at{" "}
+            {import.meta.env.VITE_API_BASE_URL}?
+          </p>
+        </div>
+      );
+    }
+    return byDateMode ? renderByDate() : renderTaskList();
+  };
+
+  return (
+    <div className="app-shell">
+      {/* ── Sidebar: brand + grouped navigation (a top bar on phones) ── */}
+      <aside className="app-sidebar">
+        <div className="app-brand">
+          <span className="app-brand__mark" aria-hidden="true">
+            <Icon name="check" size={14} strokeWidth={3} />
+          </span>
+          <h1 className="app-brand__title">Task At Hand</h1>
           <button
-            className={`readme-heading__add-btn bydate-toggle-btn${byDateMode ? " bydate-toggle-btn--active" : ""}`}
-            onClick={() => setByDateMode((prev) => !prev)}
-            aria-label={
-              byDateMode ? "Disable by date view" : "Enable by date view"
-            }
-            aria-pressed={byDateMode}
-            title={
-              byDateMode
-                ? "By date view on — tasks grouped by date"
-                : "Group tasks by date"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
+            className="icon-btn app-theme-btn"
+            onClick={cycleTheme}
+            aria-label={`Colour theme: ${themeLabel}`}
+            title={`Theme: ${themeLabel} (click to switch)`}
           >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h.25C13.216 2 14 2.784 14 3.75v9.5A1.75 1.75 0 0 1 12.25 15H1.75A1.75 1.75 0 0 1 0 13.25v-9.5C0 2.784.784 2 1.75 2H2V.75A.75.75 0 0 1 2.75 0h2zM1.5 6.5v6.75c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V6.5h-11zm11-1.5v-1.25a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25V5h11z" />
-            </svg>
-            By Date
-          </button>
-          <button
-            className={`readme-heading__add-btn insights-toggle-btn${insightsMode ? " insights-toggle-btn--active" : ""}`}
-            onClick={() => togglePanelMode(setInsightsMode)}
-            aria-label={insightsMode ? "Hide insights" : "Show insights"}
-            aria-pressed={insightsMode}
-            title={
-              insightsMode
-                ? "Insights on — showing habit stats and AI coach"
-                : "Show habit stats and AI coach"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M1.5 1.75a.75.75 0 0 0-1.5 0v12.5c0 .414.336.75.75.75h14.5a.75.75 0 0 0 0-1.5H1.5V1.75zm14.28 2.53a.75.75 0 0 0-1.06-1.06L10 7.94 7.53 5.47a.75.75 0 0 0-1.06 0L3.22 8.72a.75.75 0 0 0 1.06 1.06L7 7.06l2.47 2.47a.75.75 0 0 0 1.06 0l5.25-5.25z" />
-            </svg>
-            Insights
-          </button>
-          <button
-            className={`readme-heading__add-btn events-toggle-btn${eventsMode ? " events-toggle-btn--active" : ""}`}
-            onClick={() => togglePanelMode(setEventsMode)}
-            aria-label={eventsMode ? "Hide events" : "Show events"}
-            aria-pressed={eventsMode}
-            title={
-              eventsMode
-                ? "Events on — manage reusable task bundles"
-                : "Manage events (reusable task bundles)"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5v-9zm10.5 6V1.5h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8zM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2v-3.25z" />
-            </svg>
-            Events
-          </button>
-          <button
-            className={`readme-heading__add-btn lifeevents-toggle-btn${lifeEventsMode ? " lifeevents-toggle-btn--active" : ""}`}
-            onClick={() => togglePanelMode(setLifeEventsMode)}
-            aria-label={
-              lifeEventsMode ? "Hide life events" : "Show life events"
-            }
-            aria-pressed={lifeEventsMode}
-            title={
-              lifeEventsMode
-                ? "Life events on — annual dates added to the todo each year"
-                : "Manage life events (annual dates like birthdays)"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M2 2.75C2 1.784 2.784 1 3.75 1h2.5c.966 0 1.75.784 1.75 1.75V5h4.25C13.216 5 14 5.784 14 6.75v5.5A2.75 2.75 0 0 1 11.25 15h-6.5A2.75 2.75 0 0 1 2 12.25v-9.5zm1.5 0v9.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25v-5.5a.25.25 0 0 0-.25-.25H8a.75.75 0 0 1-.75-.75V2.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25zM8 8.75A.75.75 0 0 1 8.75 8h2.5a.75.75 0 0 1 0 1.5h-2.5A.75.75 0 0 1 8 8.75zm-3.5 3A.75.75 0 0 1 5.25 11h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75zM5.25 8a.75.75 0 0 0 0 1.5h.5a.75.75 0 0 0 0-1.5h-.5z" />
-            </svg>
-            Life Events
-          </button>
-          <button
-            className={`readme-heading__add-btn goals-toggle-btn${goalsMode ? " goals-toggle-btn--active" : ""}`}
-            onClick={() => togglePanelMode(setGoalsMode)}
-            aria-label={goalsMode ? "Hide goals" : "Show goals"}
-            aria-pressed={goalsMode}
-            title={
-              goalsMode
-                ? "Goals on — build habits one step at a time"
-                : "Manage goals (habits built one step at a time)"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M1 14.5V11h4.5V6.5H10V2h5v12.5H1z" />
-            </svg>
-            Goals
-          </button>
-          <button
-            className={`readme-heading__add-btn projects-toggle-btn${projectsMode ? " projects-toggle-btn--active" : ""}`}
-            onClick={() => togglePanelMode(setProjectsMode)}
-            aria-label={projectsMode ? "Hide projects" : "Show projects"}
-            aria-pressed={projectsMode}
-            title={
-              projectsMode
-                ? "Projects on — long term projects built step by step"
-                : "Manage long term projects (multi-step efforts)"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25V1.75C0 .784.784 0 1.75 0zM1.5 1.75v12.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25zM11.75 3a.75.75 0 0 1 .75.75v7.5a.75.75 0 0 1-1.5 0v-7.5a.75.75 0 0 1 .75-.75zm-8.25.75a.75.75 0 0 1 1.5 0v5.5a.75.75 0 0 1-1.5 0v-5.5zM8 3a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 3z" />
-            </svg>
-            Projects
-          </button>
-          <button
-            className={`readme-heading__add-btn affirmations-toggle-btn${affirmationsMode ? " affirmations-toggle-btn--active" : ""}`}
-            onClick={() => togglePanelMode(setAffirmationsMode)}
-            aria-label={
-              affirmationsMode ? "Hide affirmations" : "Show affirmations"
-            }
-            aria-pressed={affirmationsMode}
-            title={
-              affirmationsMode
-                ? "Affirmations on — short lines to read daily"
-                : "Manage affirmations (short lines to read daily)"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="m8 14.25.345.666a.75.75 0 0 1-.69 0l-.008-.004-.018-.01a7.152 7.152 0 0 1-.31-.17 22.055 22.055 0 0 1-3.434-2.414C2.045 10.731 0 8.35 0 5.5 0 2.836 2.086 1 4.25 1 5.797 1 7.153 1.802 8 3.02 8.847 1.802 10.203 1 11.75 1 13.914 1 16 2.836 16 5.5c0 2.85-2.045 5.231-3.885 6.818a22.066 22.066 0 0 1-3.744 2.584l-.018.01-.006.003h-.002ZM4.25 2.5c-1.336 0-2.75 1.164-2.75 3 0 2.15 1.58 4.144 3.365 5.682A20.58 20.58 0 0 0 8 13.393a20.58 20.58 0 0 0 3.135-2.211C12.92 9.644 14.5 7.65 14.5 5.5c0-1.836-1.414-3-2.75-3-1.373 0-2.609.986-3.029 2.456a.749.749 0 0 1-1.442 0C6.859 3.486 5.623 2.5 4.25 2.5Z" />
-            </svg>
-            Affirmations
-          </button>
-          <button
-            className={`readme-heading__add-btn calls-toggle-btn${callsMode ? " calls-toggle-btn--active" : ""}`}
-            onClick={() => togglePanelMode(setCallsMode)}
-            aria-label={callsMode ? "Hide calls" : "Show calls"}
-            aria-pressed={callsMode}
-            title={
-              callsMode
-                ? "Calls on — people to call biweekly or monthly"
-                : "Manage calls (people to call biweekly or monthly)"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.678.678 0 0 0 .178.643l2.457 2.457a.678.678 0 0 0 .644.178l2.189-.547a1.745 1.745 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.634 18.634 0 0 1-7.01-4.42 18.634 18.634 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877L1.885.511z" />
-            </svg>
-            Calls
-          </button>
-          <button
-            className={`readme-heading__add-btn vacation-toggle-btn${vacationMode ? " vacation-toggle-btn--active" : ""}`}
-            onClick={() => togglePanelMode(setVacationMode)}
-            aria-label={vacationMode ? "Hide vacations" : "Show vacations"}
-            aria-pressed={vacationMode}
-            title={
-              vacationMode
-                ? "Vacation on — days off, where missed work isn't procrastination"
-                : "Manage vacations (days off, where missed work isn't procrastination)"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-1.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm5.657-8.157a.75.75 0 0 1 0 1.06l-1.061 1.061a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0ZM8 0a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0V.75A.75.75 0 0 1 8 0ZM3.404 2.343a.75.75 0 0 1 1.06 0l1.06 1.061a.75.75 0 1 1-1.06 1.06L3.404 3.404a.75.75 0 0 1 0-1.06ZM16 8a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 16 8Zm-13 0a.75.75 0 0 1-.75.75H.75a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 3 8Zm10.657 5.657a.75.75 0 0 1-1.06 0l-1.061-1.06a.75.75 0 0 1 1.06-1.061l1.061 1.06a.75.75 0 0 1 0 1.06Zm-9.193-1.06a.75.75 0 0 1 0 1.06l-1.06 1.06a.75.75 0 1 1-1.061-1.06l1.06-1.06a.75.75 0 0 1 1.061 0ZM8 13a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 8 13Z" />
-            </svg>
-            Vacation
-          </button>
-          <button
-            className={`readme-heading__add-btn oncall-toggle-btn${onCallMode ? " oncall-toggle-btn--active" : ""}`}
-            onClick={() => togglePanelMode(setOnCallMode)}
-            aria-label={onCallMode ? "Hide on-call" : "Show on-call"}
-            aria-pressed={onCallMode}
-            title={
-              onCallMode
-                ? "On-call on — your shifts, kept separate from tasks"
-                : "Manage on-call shifts (kept separate from tasks)"
-            }
-            style={{
-              width: "auto",
-              padding: "8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
-              <path d="M8 16a2 2 0 0 0 1.985-1.75c.017-.137-.097-.25-.235-.25h-3.5c-.138 0-.252.113-.235.25A2 2 0 0 0 8 16ZM3 5a5 5 0 0 1 10 0v2.947c0 .05.015.098.042.139l1.703 2.555A1.519 1.519 0 0 1 13.482 13H2.518a1.516 1.516 0 0 1-1.263-2.36l1.703-2.554A.255.255 0 0 0 3 7.947Zm5-3.5A3.5 3.5 0 0 0 4.5 5v2.947c0 .346-.102.683-.294.97l-1.703 2.556a.017.017 0 0 0-.003.01l.001.006c0 .002.002.004.004.006l.006.004.007.001h10.964l.007-.001.006-.004.004-.006.001-.007a.017.017 0 0 0-.003-.01l-1.703-2.554a1.745 1.745 0 0 1-.294-.97V5A3.5 3.5 0 0 0 8 1.5Z" />
-            </svg>
-            On-call
+            <Icon
+              name={
+                theme === "system"
+                  ? "monitor"
+                  : theme === "light"
+                    ? "sun"
+                    : "moon"
+              }
+            />
           </button>
         </div>
 
-        {/* Add Header on its own row, todo view only */}
-        {!insightsMode &&
-          !eventsMode &&
-          !lifeEventsMode &&
-          !goalsMode &&
-          !projectsMode &&
-          !affirmationsMode &&
-          !callsMode &&
-          !vacationMode &&
-          !onCallMode && (
-            <div
-              style={{
-                marginBottom: "24px",
-                display: "flex",
-                justifyContent: "flex-end",
-              }}
+        <nav className="app-nav" aria-label="Views">
+          <div className="app-nav__group">
+            <button
+              className={`app-nav__item tasks-nav-btn${onTasksView && !byDateMode ? " app-nav__item--current" : ""}`}
+              onClick={() => showTasks(false)}
+              aria-current={onTasksView && !byDateMode ? "page" : undefined}
+              title="Your todo list, grouped by header"
             >
-              <AddButton
-                ariaLabel="Add header"
-                onClick={() => setHeaderModalState({ mode: "add" })}
-              />
+              <span
+                className="app-nav__icon"
+                style={{ background: "var(--hue-tasks)" }}
+              >
+                <Icon name="tasks" size={14} />
+              </span>
+              <span className="app-nav__label">Tasks</span>
+              {!loading && openCount > 0 && (
+                <span className="app-nav__count">{openCount}</span>
+              )}
+            </button>
+            {/* By Date is a todo-list filter, not a panel: its pressed state
+                survives visiting a panel, and from a panel it opens the todo
+                grouped by date. */}
+            <button
+              className={`app-nav__item bydate-toggle-btn${byDateMode ? " bydate-toggle-btn--active" : ""}${onTasksView && byDateMode ? " app-nav__item--current" : ""}`}
+              onClick={() =>
+                onTasksView ? setByDateMode((prev) => !prev) : showTasks(true)
+              }
+              aria-label={
+                byDateMode ? "Disable by date view" : "Enable by date view"
+              }
+              aria-pressed={byDateMode}
+              title={
+                byDateMode
+                  ? "By date view on — tasks grouped by date"
+                  : "Group tasks by date"
+              }
+            >
+              <span
+                className="app-nav__icon"
+                style={{ background: "var(--hue-bydate)" }}
+              >
+                <Icon name="calendar" size={14} />
+              </span>
+              <span className="app-nav__label">By date</span>
+              {!loading && dueCount > 0 && (
+                <span className="app-nav__count app-nav__count--due">
+                  {dueCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label ?? "top"} className="app-nav__group">
+              {group.label && (
+                <p className="app-nav__group-label">{group.label}</p>
+              )}
+              {group.items.map((item) => {
+                const active = activePanel === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    className={`app-nav__item ${item.key}-toggle-btn${active ? ` ${item.key}-toggle-btn--active app-nav__item--current` : ""}`}
+                    onClick={() => togglePanel(item.key)}
+                    aria-label={`${active ? "Hide" : "Show"} ${item.noun}`}
+                    aria-pressed={active}
+                    title={item.description}
+                  >
+                    <span
+                      className="app-nav__icon"
+                      style={{ background: `var(--hue-${item.key})` }}
+                    >
+                      <Icon name={item.icon} size={14} />
+                    </span>
+                    <span className="app-nav__label">{item.label}</span>
+                    {item.key === "oncall" && currentShift && (
+                      <span
+                        className="app-nav__live"
+                        title="On call now"
+                        aria-hidden="true"
+                      />
+                    )}
+                    {item.key === "vacation" &&
+                      vacationStatus?.onVacation &&
+                      vacationStatus.active && (
+                        <span
+                          className="app-nav__live app-nav__live--vacation"
+                          title="On vacation"
+                          aria-hidden="true"
+                        />
+                      )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+      </aside>
+
+      {/* ── Main column ── */}
+      <main className="app-main">
+        <div className="app-main__inner">
+          {actionError && (
+            <div className="alert alert--danger app-action-error" role="alert">
+              <Icon name="alert" />
+              <p className="app-action-error__text">
+                Action failed: {actionError}
+              </p>
+              <button
+                className="icon-btn app-action-error__dismiss"
+                onClick={() => setActionError(null)}
+                aria-label="Dismiss error"
+                title="Dismiss"
+              >
+                <Icon name="x" size={14} />
+              </button>
             </div>
           )}
 
-        {insightsMode && <InsightsPanel />}
-
-        {!insightsMode && eventsMode && (
-          <EventsPanel
-            onTasksAdded={loadAll}
-            onViewTodo={() => setEventsMode(false)}
-          />
-        )}
-
-        {!insightsMode && !eventsMode && lifeEventsMode && (
-          <LifeEventsPanel onTasksChanged={loadAll} />
-        )}
-
-        {!insightsMode && !eventsMode && !lifeEventsMode && goalsMode && (
-          <GoalsPanel onTasksChanged={loadAll} />
-        )}
-
-        {!insightsMode &&
-          !eventsMode &&
-          !lifeEventsMode &&
-          !goalsMode &&
-          projectsMode && <ProjectsPanel onTasksChanged={loadAll} />}
-
-        {!insightsMode &&
-          !eventsMode &&
-          !lifeEventsMode &&
-          !goalsMode &&
-          !projectsMode &&
-          affirmationsMode && <AffirmationsPanel />}
-
-        {!insightsMode &&
-          !eventsMode &&
-          !lifeEventsMode &&
-          !goalsMode &&
-          !projectsMode &&
-          !affirmationsMode &&
-          callsMode && <CallsPanel />}
-
-        {!insightsMode &&
-          !eventsMode &&
-          !lifeEventsMode &&
-          !goalsMode &&
-          !projectsMode &&
-          !affirmationsMode &&
-          !callsMode &&
-          !onCallMode &&
-          vacationMode && (
-            <VacationPanel
-              onTasksChanged={async () => {
-                await loadAll();
-                await refreshVacationStatus();
-              }}
-            />
-          )}
-
-        {onCallMode && <OnCallPanel onShiftsChanged={refreshOnCall} />}
-
-        {!insightsMode &&
-          !eventsMode &&
-          !lifeEventsMode &&
-          !goalsMode &&
-          !projectsMode &&
-          !affirmationsMode &&
-          !callsMode &&
-          !vacationMode &&
-          !onCallMode &&
-          !byDateMode &&
-          headers.map((header, idx) => {
-            const visibleTasks = header.tasks;
-
-            return (
-              <section key={header._id} className="readme-section">
-                {/* ── Header heading ── */}
-                <div className="readme-heading">
-                  <h2 className="readme-heading__text">{header.name}</h2>
-
-                  {/* Header action buttons */}
-                  <button
-                    className="readme-heading__add-btn"
-                    onClick={() => handleMoveHeaderUp(header._id)}
-                    disabled={idx === 0}
-                    aria-label="Move header up"
-                    title="Move header up"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    className="readme-heading__add-btn"
-                    onClick={() => handleMoveHeaderDown(header._id)}
-                    disabled={idx === headers.length - 1}
-                    aria-label="Move header down"
-                    title="Move header down"
-                  >
-                    ↓
-                  </button>
-                  <button
-                    className="readme-heading__add-btn"
-                    onClick={() =>
-                      setHeaderModalState({
-                        mode: "edit",
-                        headerId: header._id,
-                        name: header.name,
-                      })
-                    }
-                    aria-label="Edit header"
-                    title="Edit header"
-                  >
-                    <svg
-                      viewBox="0 0 16 16"
-                      width="14"
-                      height="14"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25 9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    className="readme-heading__add-btn"
-                    onClick={() =>
-                      setDeleteTarget({
-                        type: "header",
-                        headerId: header._id,
-                        id: header._id,
-                        name: header.name,
-                      })
-                    }
-                    aria-label="Delete header"
-                    title="Delete header"
-                    style={{ color: "#e74c3c" }}
-                  >
-                    <svg
-                      viewBox="0 0 16 16"
-                      width="14"
-                      height="14"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.559a.75.75 0 1 0-1.492.141l.6 6.35A1.5 1.5 0 0 0 5.1 14.4h5.8a1.5 1.5 0 0 0 1.496-1.35l.6-6.35a.75.75 0 1 0-1.492-.141l-.6 6.33a.008.008 0 0 1-.007.011H5.104a.008.008 0 0 1-.007-.01l-.6-6.332z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    className="readme-heading__add-btn"
-                    onClick={() => setAddTaskHeaderId(header._id)}
-                    aria-label={`Add task to ${header.name}`}
-                    title="Add task"
-                  >
-                    <svg
-                      viewBox="0 0 16 16"
-                      width="14"
-                      height="14"
-                      fill="currentColor"
-                    >
-                      <path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2z" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* ── Task list ── */}
-                <div className="readme-tasks">
-                  {visibleTasks.map((task, taskIdx) => (
-                    <TaskCard
-                      key={task._id}
-                      task={task}
-                      isFirst={taskIdx === 0}
-                      isLast={taskIdx === visibleTasks.length - 1}
-                      prevTaskDone={
-                        taskIdx > 0 ? visibleTasks[taskIdx - 1].done : undefined
-                      }
-                      nextTaskDone={
-                        taskIdx < visibleTasks.length - 1
-                          ? visibleTasks[taskIdx + 1].done
-                          : undefined
-                      }
-                      goalManaged={oneStepHeaderIds.has(header._id)}
-                      streak={
-                        oneStepHeaderIds.has(header._id)
-                          ? streakFor(streaks, task.name)
-                          : undefined
-                      }
-                      onToggleDone={handleToggleDone(header._id)}
-                      onEdit={handleEditTask(header._id)}
-                      onMoveUp={handleMoveTaskUp(header._id)}
-                      onMoveDown={handleMoveTaskDown(header._id)}
-                      onDelete={handleDeleteTask(header._id)}
-                    />
-                  ))}
-                  {visibleTasks.length === 0 && (
-                    <p className="empty-message">No tasks yet — add one!</p>
-                  )}
-                </div>
-              </section>
-            );
-          })}
-
-        {!insightsMode &&
-          !eventsMode &&
-          !lifeEventsMode &&
-          !goalsMode &&
-          !projectsMode &&
-          !affirmationsMode &&
-          !callsMode &&
-          !vacationMode &&
-          !onCallMode &&
-          !byDateMode &&
-          headers.length === 0 && (
-            <p className="empty-message">No headers yet — add one!</p>
-          )}
-
-        {!insightsMode &&
-          !eventsMode &&
-          !lifeEventsMode &&
-          !goalsMode &&
-          !projectsMode &&
-          !affirmationsMode &&
-          !callsMode &&
-          !vacationMode &&
-          !onCallMode &&
-          byDateMode && (
-            <>
-              {byDateSections.map((section, sectionIdx) => (
-                <Fragment key={section.key}>
-                  {sectionIdx > 0 && <hr className="bydate-divider" />}
-                  {section.groups.map((group) => (
-                    <section key={group.key} className="readme-section">
-                      <div className="readme-heading">
-                        <h2 className="readme-heading__text">{group.label}</h2>
-                      </div>
-                      <div className="readme-tasks">
-                        {group.tasks.map((task) => (
-                          <TaskCard
-                            key={task._id}
-                            task={task}
-                            isFirst
-                            isLast
-                            goalManaged={oneStepHeaderIds.has(task.headerId)}
-                            streak={
-                              oneStepHeaderIds.has(task.headerId)
-                                ? streakFor(streaks, task.name)
-                                : undefined
-                            }
-                            onToggleDone={handleToggleDone(task.headerId)}
-                            onEdit={handleEditTask(task.headerId)}
-                            onMoveUp={handleMoveTaskUp(task.headerId)}
-                            onMoveDown={handleMoveTaskDown(task.headerId)}
-                            onDelete={handleDeleteTask(task.headerId)}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  ))}
-                </Fragment>
-              ))}
-              {byDateSections.length === 0 && (
-                <p className="empty-message">No dated tasks to show.</p>
+          {/* Shown in every view *except* the Vacation panel, which carries its
+              own fuller banner: booking time off and forgetting is the failure
+              mode this feature actually has, but two banners stacked on the same
+              screen is just noise. */}
+          {vacationStatus?.onVacation &&
+            vacationStatus.active &&
+            activePanel !== "vacation" && (
+              <div className="app-banner app-vacation-banner" role="status">
+                <span className="app-banner__icon" aria-hidden="true">
+                  <Icon name="vacation" size={14} />
+                </span>
+                <span className="app-banner__text app-vacation-banner__text">
+                  <strong>On vacation</strong> — day{" "}
+                  {vacationStatus.active.dayOfVacation} of{" "}
+                  {vacationStatus.active.totalDays}
+                  {vacationStatus.active.note
+                    ? ` · ${vacationStatus.active.note}`
+                    : ""}
+                  . Missed days aren't counted against you.
+                </span>
+                <button
+                  className="btn btn--ghost btn--sm app-banner__btn app-vacation-banner__btn"
+                  onClick={() => setActivePanel("vacation")}
+                  aria-label="Manage vacation"
+                >
+                  Manage
+                </button>
+              </div>
+            )}
+          {/* On call right now — shown in every view, including On-call. */}
+          {currentShift && (
+            <div
+              className={`app-banner app-oncall-banner app-oncall-banner--${currentShift.type}`}
+              role="status"
+            >
+              <span className="app-banner__pulse" aria-hidden="true" />
+              <span className="app-banner__text app-oncall-banner__text">
+                <strong>
+                  {currentShift.type === "primary" ? "Primary" : "Secondary"} on
+                  call now
+                </strong>{" "}
+                · until{" "}
+                {currentShift.end === "24:00" ? "midnight" : currentShift.end} ·{" "}
+                {formatDuration(minutesLeft(currentShift, clock))} left
+              </span>
+              {activePanel !== "oncall" && (
+                <button
+                  className="btn btn--ghost btn--sm app-banner__btn app-oncall-banner__btn"
+                  onClick={() => setActivePanel("oncall")}
+                  aria-label="Manage on-call"
+                >
+                  Manage
+                </button>
               )}
-            </>
+            </div>
           )}
-      </div>
+
+          {onTasksView ? (
+            <div className="app-view">
+              <header className="page-header">
+                <div className="page-header__text">
+                  <h2 className="page-header__title">
+                    {byDateMode ? "By date" : "Tasks"}
+                  </h2>
+                  <p className="page-header__description">
+                    {todayHeading()}
+                    {!loading && !error && (
+                      <>
+                        {" · "}
+                        {openCount} open
+                        {dueCount > 0 && ` · ${dueCount} due`}
+                      </>
+                    )}
+                  </p>
+                </div>
+                {/* Add Header: the todo view's toolbar */}
+                {!byDateMode && (
+                  <div className="page-header__actions app__toolbar">
+                    <AddButton
+                      ariaLabel="Add header"
+                      onClick={() => setHeaderModalState({ mode: "add" })}
+                    />
+                  </div>
+                )}
+              </header>
+              {renderTasksView()}
+            </div>
+          ) : (
+            currentPanel && (
+              <div
+                className={`app-view app-view--panel app-view--${currentPanel.key}`}
+              >
+                <header className="page-header">
+                  <div className="page-header__text">
+                    <h2 className="page-header__title">{currentPanel.label}</h2>
+                    <p className="page-header__description">
+                      {currentPanel.description}
+                    </p>
+                  </div>
+                </header>
+
+                {activePanel === "insights" && <InsightsPanel />}
+                {activePanel === "events" && (
+                  <EventsPanel
+                    onTasksAdded={loadAll}
+                    onViewTodo={() => setActivePanel(null)}
+                  />
+                )}
+                {activePanel === "lifeevents" && (
+                  <LifeEventsPanel onTasksChanged={loadAll} />
+                )}
+                {activePanel === "goals" && (
+                  <GoalsPanel onTasksChanged={loadAll} />
+                )}
+                {activePanel === "projects" && (
+                  <ProjectsPanel onTasksChanged={loadAll} />
+                )}
+                {activePanel === "affirmations" && <AffirmationsPanel />}
+                {activePanel === "calls" && <CallsPanel />}
+                {activePanel === "vacation" && (
+                  <VacationPanel
+                    onTasksChanged={async () => {
+                      await loadAll();
+                      await refreshVacationStatus();
+                    }}
+                  />
+                )}
+                {activePanel === "oncall" && (
+                  <OnCallPanel onShiftsChanged={refreshOnCall} />
+                )}
+              </div>
+            )
+          )}
+        </div>
+      </main>
 
       {/* Modals */}
       {deleteTarget && (

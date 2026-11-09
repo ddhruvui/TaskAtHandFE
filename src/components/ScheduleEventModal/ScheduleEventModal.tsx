@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { EventTemplate } from "../../types";
 import { addDaysToDateKey, formatDateKey, todayDateKey } from "../../utils/ecd";
 import { EcdCalendar } from "../DatePicker";
+import { Modal } from "../Modal";
+import { Icon } from "../Icon";
 import "./ScheduleEventModal.css";
 
 /** Quick date picks above the calendar: today, tomorrow and the next
@@ -80,109 +82,116 @@ export default function ScheduleEventModal({
   }
 
   return (
-    <div className="schedule-modal__overlay" onClick={onCancel}>
-      <div className="schedule-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="schedule-modal__title">
-          Add to todo{" "}
-          <span className="schedule-modal__title-event">— {event.name}</span>
-        </h3>
+    <Modal
+      onClose={onCancel}
+      className="schedule-modal"
+      overlayClassName="schedule-modal__overlay"
+      labelledBy="schedule-modal-title"
+    >
+      <h3
+        id="schedule-modal-title"
+        className="ui-modal__title schedule-modal__title"
+      >
+        Add to todo{" "}
+        <span className="ui-modal__subtitle schedule-modal__title-event">
+          — {event.name}
+        </span>
+      </h3>
 
-        {/* Date */}
-        <div className="schedule-modal__section">
-          <span className="schedule-modal__label">Date</span>
-          <div className="schedule-modal__shortcuts">
-            {shortcuts.map((s) => {
-              const active = s.key === date;
-              return (
-                <button
-                  key={s.label}
-                  type="button"
-                  className={`schedule-modal__shortcut${active ? " schedule-modal__shortcut--active" : ""}`}
-                  onClick={() => pickShortcut(s.key)}
-                  aria-pressed={active}
-                  title={formatDateKey(s.key)}
-                >
-                  {s.label}
-                  <span className="schedule-modal__shortcut-date">
-                    {formatDateKey(s.key)
-                      .replace(/, \d{4}$/, "")
-                      .replace(/^\w+, /, "")}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <EcdCalendar
-            key={calendarKey}
-            mode="date"
-            value={date}
-            onChange={setDate}
-          />
-        </div>
-
-        {/* Task checklist */}
-        <div className="schedule-modal__section">
-          <div className="schedule-modal__tasks-header">
-            <span className="schedule-modal__label">Tasks</span>
-            <button
-              type="button"
-              className="schedule-modal__toggle-all"
-              onClick={toggleAll}
-            >
-              {allSelected ? "Unselect all" : "Select all"}
-            </button>
-          </div>
-          <ul className="schedule-modal__task-list">
-            {event.tasks.map((task, i) => (
-              <li key={i} className="schedule-modal__task-row">
-                <button
-                  type="button"
-                  className={`schedule-modal__checkbox${selected.has(i) ? " schedule-modal__checkbox--checked" : ""}`}
-                  onClick={() => toggleTask(i)}
-                  aria-label={
-                    selected.has(i) ? `Unmark ${task}` : `Mark ${task}`
-                  }
-                  aria-pressed={selected.has(i)}
-                >
-                  {selected.has(i) && (
-                    <svg
-                      viewBox="0 0 16 16"
-                      className="schedule-modal__check-icon"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"
-                      />
-                    </svg>
-                  )}
-                </button>
-                <span
-                  className={`schedule-modal__task-name${selected.has(i) ? "" : " schedule-modal__task-name--unselected"}`}
-                  onClick={() => toggleTask(i)}
-                >
-                  {task}
+      {/* Date */}
+      <div className="schedule-modal__section">
+        <span className="field__label schedule-modal__label">Date</span>
+        <div className="segmented schedule-modal__shortcuts">
+          {shortcuts.map((s) => {
+            const active = s.key === date;
+            return (
+              <button
+                key={s.label}
+                type="button"
+                className={`segmented__btn schedule-modal__shortcut${active ? " segmented__btn--active schedule-modal__shortcut--active" : ""}`}
+                onClick={() => pickShortcut(s.key)}
+                aria-pressed={active}
+                title={formatDateKey(s.key)}
+              >
+                {s.label}
+                <span className="schedule-modal__shortcut-date">
+                  {formatDateKey(s.key)
+                    .replace(/, \d{4}$/, "")
+                    .replace(/^\w+, /, "")}
                 </span>
-              </li>
-            ))}
-          </ul>
+              </button>
+            );
+          })}
         </div>
-
-        <div className="schedule-modal__actions">
-          <button
-            className="schedule-modal__btn schedule-modal__btn--cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="schedule-modal__btn schedule-modal__btn--confirm"
-            onClick={handleConfirm}
-            disabled={selected.size === 0}
-          >
-            Add {selected.size} task{selected.size === 1 ? "" : "s"}
-          </button>
-        </div>
+        <EcdCalendar
+          key={calendarKey}
+          mode="date"
+          value={date}
+          onChange={setDate}
+        />
       </div>
-    </div>
+
+      {/* Task checklist */}
+      <div className="schedule-modal__section">
+        <div className="schedule-modal__tasks-header">
+          <span className="field__label schedule-modal__label">Tasks</span>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm schedule-modal__toggle-all"
+            onClick={toggleAll}
+          >
+            {allSelected ? "Unselect all" : "Select all"}
+          </button>
+        </div>
+        <ul className="schedule-modal__task-list">
+          {event.tasks.map((task, i) => (
+            <li key={i} className="schedule-modal__task-row">
+              <button
+                type="button"
+                className={`schedule-modal__checkbox${selected.has(i) ? " schedule-modal__checkbox--checked" : ""}`}
+                onClick={() => toggleTask(i)}
+                aria-label={
+                  selected.has(i) ? `Unmark ${task}` : `Mark ${task}`
+                }
+                aria-pressed={selected.has(i)}
+              >
+                {selected.has(i) && (
+                  <Icon
+                    name="check"
+                    size={12}
+                    strokeWidth={3.5}
+                    className="schedule-modal__check-icon"
+                  />
+                )}
+              </button>
+              <span
+                className={`schedule-modal__task-name${selected.has(i) ? "" : " schedule-modal__task-name--unselected"}`}
+                onClick={() => toggleTask(i)}
+              >
+                {task}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="ui-modal__actions schedule-modal__actions">
+        <button
+          type="button"
+          className="btn btn--secondary schedule-modal__btn schedule-modal__btn--cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn--primary schedule-modal__btn schedule-modal__btn--confirm"
+          onClick={handleConfirm}
+          disabled={selected.size === 0}
+        >
+          Add {selected.size} task{selected.size === 1 ? "" : "s"}
+        </button>
+      </div>
+    </Modal>
   );
 }

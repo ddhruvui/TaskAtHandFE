@@ -381,9 +381,7 @@ test.describe("Integration - Edge Cases", () => {
     await waitForPageLoad(page);
 
     // Verify all tasks display correctly
-    await expect(
-      getTask(page, "Date task").getByText("[ 12/31 ]"),
-    ).toBeVisible();
+    await expect(getTask(page, "Date task").getByText("12/31")).toBeVisible();
     await expect(getTask(page, "Weekly task").getByText("↻ Mon")).toBeVisible();
     await expect(
       getTask(page, "Monthly task").getByText("↻ 1st"),
@@ -392,7 +390,7 @@ test.describe("Integration - Edge Cases", () => {
       getTask(page, "Yearly task").getByText("↻ 1/1/2027"),
     ).toBeVisible();
     await expect(
-      getTask(page, "No date task").getByText("[ No date ]"),
+      getTask(page, "No date task").getByText("No date", { exact: true }),
     ).toBeVisible();
   });
 });

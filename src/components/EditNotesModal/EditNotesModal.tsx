@@ -7,6 +7,7 @@ import {
   todayDateKey,
 } from "../../utils/ecd";
 import { EcdCalendar } from "../DatePicker";
+import { Modal } from "../Modal";
 import "./EditNotesModal.css";
 
 type EcdMode = "date" | "week" | "month" | "year" | "none";
@@ -201,29 +202,205 @@ export default function EditNotesModal({
     });
   }
 
+  const modeLabel = (m: EcdMode) =>
+    m === "none"
+      ? "None"
+      : m === "date"
+        ? "Date"
+        : m === "week"
+          ? "Weekly"
+          : m === "month"
+            ? "Monthly"
+            : "Yearly";
+
   return (
-    <div className="edit-modal__overlay" onClick={onCancel}>
-      <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="edit-modal__title">{taskName}</h3>
+    <Modal
+      onClose={onCancel}
+      className="edit-modal"
+      overlayClassName="edit-modal__overlay"
+      labelledBy="edit-modal-title"
+      wide
+    >
+      <h3 id="edit-modal-title" className="ui-modal__title edit-modal__title">
+        Edit task
+      </h3>
+
+      <label className="field">
+        <span className="field__label">Name</span>
         <input
-          className={`edit-modal__name-input${goalManaged ? " edit-modal__name-input--locked" : ""}`}
+          className={`input edit-modal__name-input${goalManaged ? " edit-modal__name-input--locked" : ""}`}
           type="text"
           value={nameDraft}
           onChange={(e) => setNameDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSave();
+          }}
           placeholder="Task name"
           readOnly={goalManaged}
           title={
             goalManaged ? "Managed by its goal — name is locked" : undefined
           }
         />
+      </label>
+      {goalManaged && (
+        <p className="edit-modal__ecd-hint edit-modal__locked-hint">
+          Habit managed by its goal — name and schedule are locked. Change its
+          days in the Goals view.
+        </p>
+      )}
+      {formError && (
+        <p className="edit-modal__ecd-hint edit-modal__error" role="alert">
+          {formError}
+        </p>
+      )}
+
+      {/* ── ECD section ── */}
+      <div className="edit-modal__ecd">
+        <span className="field__label edit-modal__ecd-label">Due</span>
         {goalManaged && (
-          <p className="edit-modal__ecd-hint">
-            Habit managed by its goal — name and schedule are locked. Change
-            its days in the Goals view.
+          // The goal owns the schedule — read it off the task rather than
+          // assuming every day, since a step can be started on any subset of
+          // the week. Changing it is done in the Goals view.
+          <p className="edit-modal__ecd-hint edit-modal__schedule">
+            ↻ {goalSchedule}, for life
           </p>
         )}
-        {formError && <p className="edit-modal__ecd-hint">{formError}</p>}
+        {!goalManaged && (
+          <>
+            <div
+              className="segmented edit-modal__ecd-modes"
+              role="group"
+              aria-label="Due"
+            >
+              {(["none", "date", "week", "month", "year"] as EcdMode[]).map(
+                (m) => (
+                  <button
+                    key={m}
+                    className={`segmented__btn edit-modal__mode-btn${
+                      mode === m
+                        ? " segmented__btn--active edit-modal__mode-btn--active"
+                        : ""
+                    }`}
+                    aria-pressed={mode === m}
+                    onClick={() => setMode(m)}
+                    type="button"
+                  >
+                    {modeLabel(m)}
+                  </button>
+                ),
+              )}
+            </div>
 
+            {mode === "date" && (
+              <EcdCalendar mode="date" value={dateVal} onChange={setDateVal} />
+            )}
+
+            {mode === "week" && (
+              <div className="edit-modal__dow">
+                {DOW_LABELS.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className={`edit-modal__dow-btn${
+                      dowVal.includes(label)
+                        ? " edit-modal__dow-btn--active"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      setDowVal((prev) => toggleInArray(prev, label))
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {mode === "month" && (
+              <div className="edit-modal__dom">
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`edit-modal__dom-btn${
+                      domVal.includes(d) ? " edit-modal__dom-btn--active" : ""
+                    }`}
+                    onClick={() => setDomVal((prev) => toggleInArray(prev, d))}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {mode === "year" && (
+              <EcdCalendar mode="year" value={yearVal} onChange={setYearVal} />
+            )}
+
+            {mode === "week" && dowVal.length > 0 && (
+              <p className="edit-modal__ecd-hint">
+                Repeats every {dowVal.join(", ")}
+              </p>
+            )}
+            {mode === "month" && domVal.length > 0 && (
+              <p className="edit-modal__ecd-hint">
+                Repeats on the{" "}
+                {[...domVal]
+                  .sort((a, b) => a - b)
+                  .map((d) => getOrdinal(d))
+                  .join(", ")}{" "}
+                of each month
+              </p>
+            )}
+            {mode === "year" && yearVal && (
+              <p className="edit-modal__ecd-hint">
+                Repeats annually on {yearVal}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── Postpone reason (only when pushing a one-time date later) ── */}
+      {isPostpone && (
+        <div className="field edit-modal__postpone">
+          <label
+            className="field__label edit-modal__ecd-label"
+            htmlFor="edit-modal-reason"
+          >
+            Why postpone? (optional)
+          </label>
+          <textarea
+            id="edit-modal-reason"
+            className="textarea edit-modal__reason-input"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. blocked on a dependency, sick, real emergency…"
+            rows={2}
+          />
+          <p className="edit-modal__ecd-hint">
+            No reason is logged as procrastination; a valid one counts as a
+            legitimate deferral.
+          </p>
+        </div>
+      )}
+
+      <label className="field">
+        <span className="field__label">Notes</span>
+        <textarea
+          ref={textareaRef}
+          className="textarea edit-modal__textarea"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSave();
+          }}
+          placeholder="Add notes…"
+          rows={4}
+        />
+      </label>
+
+      <div className="edit-modal__footer">
         <div className="edit-modal__meta">
           <span>
             <span className="edit-modal__meta-label">Created</span>{" "}
@@ -235,173 +412,21 @@ export default function EditNotesModal({
             {formatDate(updatedAt)}
           </span>
         </div>
-
-        {/* ── ECD section ── */}
-        <div className="edit-modal__ecd">
-          <span className="edit-modal__ecd-label">Due</span>
-          {goalManaged && (
-            // The goal owns the schedule — read it off the task rather than
-            // assuming every day, since a step can be started on any subset of
-            // the week. Changing it is done in the Goals view.
-            <p className="edit-modal__ecd-hint">
-              ↻ {goalSchedule}, for life
-            </p>
-          )}
-          {!goalManaged && (
-            <>
-              <div className="edit-modal__ecd-modes">
-                {(["none", "date", "week", "month", "year"] as EcdMode[]).map(
-                  (m) => (
-                    <button
-                      key={m}
-                      className={`edit-modal__mode-btn${
-                        mode === m ? " edit-modal__mode-btn--active" : ""
-                      }`}
-                      onClick={() => setMode(m)}
-                      type="button"
-                    >
-                      {m === "none"
-                        ? "None"
-                        : m === "date"
-                          ? "Date"
-                          : m === "week"
-                            ? "Weekly"
-                            : m === "month"
-                              ? "Monthly"
-                              : "Yearly"}
-                    </button>
-                  ),
-                )}
-              </div>
-
-              {mode === "date" && (
-                <EcdCalendar
-                  mode="date"
-                  value={dateVal}
-                  onChange={setDateVal}
-                />
-              )}
-
-              {mode === "week" && (
-                <div className="edit-modal__dow">
-                  {DOW_LABELS.map((label) => (
-                    <button
-                      key={label}
-                      type="button"
-                      className={`edit-modal__dow-btn${
-                        dowVal.includes(label)
-                          ? " edit-modal__dow-btn--active"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        setDowVal((prev) => toggleInArray(prev, label))
-                      }
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {mode === "month" && (
-                <div className="edit-modal__dom">
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      className={`edit-modal__dom-btn${
-                        domVal.includes(d) ? " edit-modal__dom-btn--active" : ""
-                      }`}
-                      onClick={() =>
-                        setDomVal((prev) => toggleInArray(prev, d))
-                      }
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {mode === "year" && (
-                <EcdCalendar
-                  mode="year"
-                  value={yearVal}
-                  onChange={setYearVal}
-                />
-              )}
-
-              {mode === "week" && dowVal.length > 0 && (
-                <p className="edit-modal__ecd-hint">
-                  Repeats every {dowVal.join(", ")}
-                </p>
-              )}
-              {mode === "month" && domVal.length > 0 && (
-                <p className="edit-modal__ecd-hint">
-                  Repeats on the{" "}
-                  {[...domVal]
-                    .sort((a, b) => a - b)
-                    .map((d) => getOrdinal(d))
-                    .join(", ")}{" "}
-                  of each month
-                </p>
-              )}
-              {mode === "year" && yearVal && (
-                <p className="edit-modal__ecd-hint">
-                  Repeats annually on {yearVal}
-                </p>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* ── Postpone reason (only when pushing a one-time date later) ── */}
-        {isPostpone && (
-          <div className="edit-modal__postpone">
-            <label
-              className="edit-modal__ecd-label"
-              htmlFor="edit-modal-reason"
-            >
-              Why postpone? (optional)
-            </label>
-            <textarea
-              id="edit-modal-reason"
-              className="edit-modal__reason-input"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. blocked on a dependency, sick, real emergency…"
-              rows={2}
-            />
-            <p className="edit-modal__ecd-hint">
-              No reason is logged as procrastination; a valid one counts as a
-              legitimate deferral.
-            </p>
-          </div>
-        )}
-
-        <textarea
-          ref={textareaRef}
-          className="edit-modal__textarea"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Add notes…"
-          rows={5}
-        />
-
-        <div className="edit-modal__actions">
+        <div className="ui-modal__actions edit-modal__actions">
           <button
-            className="edit-modal__btn edit-modal__btn--cancel"
+            className="btn btn--secondary edit-modal__btn edit-modal__btn--cancel"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="edit-modal__btn edit-modal__btn--confirm"
+            className="btn btn--primary edit-modal__btn edit-modal__btn--confirm"
             onClick={handleSave}
           >
             Save
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

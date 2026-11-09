@@ -1,115 +1,157 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Life events view — one card of rows, laid out like the todo's TaskCard.
+
+   Row:   [○ done] [name                 ] [↑ ↓ ✎ 🗑]
+                   [↻ 7 Mar · in todo    ]
+
+   Chips, icon buttons and alerts come from styles/ui.css; this file only
+   holds the row layout. Move/edit/delete stay quiet until the row is
+   hovered or focused on pointer devices; the done ring is always visible.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .lifeevents-panel {
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 
-/* ── Toolbar ── */
-.lifeevents-panel__toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 24px;
+.lifeevents-panel__error {
+  margin: 0;
 }
 
-/* ── Life event list ── */
+/* ── List card ── */
 .lifeevents-panel__list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
 }
 
 .lifeevents-panel__row {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 10px 11px 16px;
+  border-top: 1px solid var(--border);
+  transition: background var(--duration-fast) var(--ease);
 }
 
-.lifeevents-panel__row:last-child {
-  border-bottom: none;
+.lifeevents-panel__row:first-child {
+  border-top: 0;
 }
 
-.lifeevents-panel__row--done {
-  opacity: 0.6;
+.lifeevents-panel__row:hover,
+.lifeevents-panel__row:focus-within {
+  background: var(--surface-hover);
 }
 
-/* ── Done checkbox (mirrors the task-card checkbox) ── */
+/* ── Done ring (same as the todo's task checkbox) ── */
 .lifeevents-panel__checkbox {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  border-radius: 3px;
-  border: 2px solid var(--rm-border-muted, #d0d7de);
-  cursor: pointer;
   display: grid;
   place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
   padding: 0;
-  background: transparent;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-on-accent);
+  cursor: pointer;
   transition:
-    background 0.15s,
-    border-color 0.15s;
+    background var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
 .lifeevents-panel__checkbox:hover {
-  border-color: #2da44e;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .lifeevents-panel__checkbox--checked {
-  background: #2da44e;
-  border-color: #2da44e;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
-.lifeevents-panel__check-icon {
-  width: 10px;
-  height: 10px;
-  fill: #fff;
-  display: block;
+/* ── Body: name over a meta line ── */
+.lifeevents-panel__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .lifeevents-panel__checkbox:hover {
-    border-color: #3fb950;
-  }
-
-  .lifeevents-panel__checkbox--checked {
-    background: #3fb950;
-    border-color: #3fb950;
-  }
-}
-
-/* ── Name (strikethrough when done, like a done task) ── */
 .lifeevents-panel__name {
-  font-size: 15px;
-  color: var(--rm-text, #1f2328);
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 .lifeevents-panel__name--done {
+  color: var(--text-subtle);
   text-decoration: line-through;
-  color: var(--rm-text-muted, #656d76);
+  text-decoration-color: color-mix(in srgb, var(--text-subtle), transparent 40%);
 }
 
-/* ── Annual date badge (matches the recurring-ECD look of task cards) ── */
-.lifeevents-panel__date {
-  font-size: 13px;
-  color: var(--rm-text-muted, #656d76);
-  white-space: nowrap;
-}
-
-/* ── "in todo" hint while a linked task exists ── */
-.lifeevents-panel__intodo {
-  font-size: 12px;
-  padding: 1px 8px;
-  border: 1px solid var(--rm-border-muted, #d0d7de);
-  border-radius: 10px;
-  color: var(--rm-text-muted, #656d76);
-  white-space: nowrap;
-}
-
-/* ── Row action buttons ── */
-.lifeevents-panel__actions {
-  margin-left: auto;
+.lifeevents-panel__meta {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+/* Done this year: the chips step back with the name */
+.lifeevents-panel__row--done .lifeevents-panel__date {
+  background: var(--surface-sunken);
+  color: var(--text-subtle);
+}
+
+/* ── Actions: quiet until the row is hovered or focused ── */
+.lifeevents-panel__actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin: -4px 0 -4px auto;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+.icon-btn.lifeevents-panel__action-btn {
+  width: 28px;
+  height: 28px;
+}
+
+@media (hover: hover) {
+  .lifeevents-panel__actions {
+    opacity: 0;
+  }
+
+  .lifeevents-panel__row:hover .lifeevents-panel__actions,
+  .lifeevents-panel__row:focus-within .lifeevents-panel__actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .lifeevents-panel__row {
+    padding: 12px 6px 12px 12px;
+    gap: 10px;
+  }
+
+  .icon-btn.lifeevents-panel__action-btn {
+    width: 30px;
+    height: 30px;
+  }
 }

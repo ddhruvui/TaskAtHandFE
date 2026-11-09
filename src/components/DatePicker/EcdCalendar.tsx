@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import "./EcdCalendar.css";
+import { Icon } from "../Icon";
 
 interface EcdCalendarProps {
   /** "date" = full date (YYYY-MM-DD), "year" = day-of-year (D/M/YYYY) */
@@ -134,7 +135,7 @@ export default function EcdCalendar({
           onClick={prevMonth}
           aria-label="Previous month"
         >
-          ‹
+          <Icon name="chevron-left" />
         </button>
         <span className="ecd-calendar__month-label">
           {MONTH_NAMES[viewMonth]} {viewYear}
@@ -145,7 +146,7 @@ export default function EcdCalendar({
           onClick={nextMonth}
           aria-label="Next month"
         >
-          ›
+          <Icon name="chevron-right" />
         </button>
       </div>
 

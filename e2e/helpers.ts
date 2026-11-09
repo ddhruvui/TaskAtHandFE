@@ -380,7 +380,7 @@ export function calendarMonthLabel(offsetMonths: number): string {
 
 /**
  * TaskCard label for a date ECD on the given day of the month
- * `offsetMonths` from now: "[ MM/DD ]", plus "/YY" when not the current year
+ * `offsetMonths` from now: "MM/DD", plus "/YY" when not the current year
  */
 export function dateEcdLabel(offsetMonths: number, day: number): string {
   const d = monthAt(offsetMonths);
@@ -390,7 +390,7 @@ export function dateEcdLabel(offsetMonths: number, day: number): string {
     d.getFullYear() === new Date().getFullYear()
       ? ""
       : `/${String(d.getFullYear()).slice(-2)}`;
-  return `[ ${mm}/${dd}${yearSuffix} ]`;
+  return `${mm}/${dd}${yearSuffix}`;
 }
 
 /**

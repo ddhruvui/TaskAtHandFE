@@ -46,7 +46,7 @@ These tests verify that users can create new tasks with various configurations.
   2. Enter name "Write report"
   3. Select "Date" mode
   4. Choose date 2026-06-15
-- **Expected Output**: Task displays "[ 06/15 ]" showing the target date
+- **Expected Output**: Task displays "06/15" showing the target date
 
 #### Test: "should create task with weekly ECD"
 
@@ -132,14 +132,14 @@ These tests verify that tasks display correctly with their information.
 - **Description**: Notes appear below task name with arrow indicator
 - **Steps**: Create task with notes "Include Q1 data"
 - **Expected Output**:
-  - Task shows "=>" indicator
+  - Task shows the notes line (`.task-card__notes-text`) under the name
   - Notes text is visible
 
 #### Test: "should show ECD date correctly"
 
 - **Description**: One-time dates display in short format
 - **Steps**: Create task with date ECD 2026-06-15
-- **Expected Output**: Task shows "[ 06/15 ]"
+- **Expected Output**: Task shows "06/15"
 
 #### Test: "should show recurring ECD with special icon"
 
@@ -217,7 +217,7 @@ These tests verify editing task details.
   3. Navigate the calendar forward to September 2026 and pick the 20th (a later date)
   4. Confirm the reason field appears; type "blocked on the vendor's reply" and Save
 - **Expected Output**:
-  - Task shows `[ 09/20 ]`
+  - Task shows `09/20`
   - Backend logs a `task_rescheduled` event with `pushedLater: true` and `reason` matching the entered text
 
 #### Test: "should archive a reason-less postpone with reason=null"
@@ -228,7 +228,7 @@ These tests verify editing task details.
   2. Navigate the calendar forward to September 2026 and pick the 20th
   3. Leave the (visible) reason field blank and Save
 - **Expected Output**:
-  - Task shows `[ 09/20 ]`
+  - Task shows `09/20`
   - Backend logs a `task_rescheduled` event with `pushedLater: true` and `reason: null`
 
 #### Test: "should clear ECD by selecting None"
@@ -238,7 +238,7 @@ These tests verify editing task details.
   1. Edit task with a date
   2. Select "None" mode
   3. Save
-- **Expected Output**: Task shows "[ No date ]"
+- **Expected Output**: Task shows "No date"
 
 #### Test: "should show created and updated timestamps in edit modal"
 
@@ -455,7 +455,7 @@ These tests verify that done tasks display correctly with appropriate visual sty
 - **Steps**: Create a done task with notes and reload
 - **Expected Output**:
   - Task has done styling
-  - "=>" indicator is visible
+  - The notes line (`.task-card__notes-text`) is visible
   - Notes text is displayed
 
 #### Test: "should display done tasks with ECD correctly"
@@ -464,7 +464,7 @@ These tests verify that done tasks display correctly with appropriate visual sty
 - **Steps**: Create a done task with date ECD and reload
 - **Expected Output**:
   - Task has done styling
-  - Date "[ 06/15 ]" is visible
+  - Date "06/15" is visible
 
 ---
 

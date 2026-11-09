@@ -1,31 +1,51 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Projects view. The section card (.readme-section…), buttons and alerts
+   come from styles/ui.css; task rows are the todo's own .task-card rows
+   (TaskCard.css, imported by ProjectsPanel.tsx) so the two lists stay in
+   lockstep. Only what is specific to projects lives here.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .projects-panel {
   display: flex;
   flex-direction: column;
 }
 
-/* ── Toolbar ── */
+/* The "+" toolbar; App lifts it into the page header via .page-actions */
 .projects-panel__toolbar {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 24px;
 }
 
-/* ── Progress badge in project heading ── */
+.projects-panel__error {
+  margin-bottom: 16px;
+}
+
+/* ── Project heading ── */
+
+/* Name + "n/m done": the count drops under the name when the heading runs
+   out of room instead of squeezing it. */
+.projects-panel .readme-heading__title {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
 .projects-panel__progress {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 10px;
-  border: 1px solid var(--rm-border, #d0d7de);
-  border-radius: 999px;
-  color: var(--rm-text-muted, #656d76);
   white-space: nowrap;
 }
 
-/* ── Task rows ──
-   Layout, borders, hover and typography all come from the todo's .task-card
-   rules (TaskCard.css, imported by ProjectsPanel.tsx) so the two lists stay
-   in lockstep. Only the project-specific bits live here. */
+/* The heading "+" stays visible and accent-coloured — the section's main
+   action, same as the todo header's add-task button. */
+.projects-panel__add-task {
+  margin-left: 2px;
+  color: var(--accent-text);
+}
+
+.projects-panel__add-task:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* ── Task rows ── */
 
 /* The done toggle is mid-flight: the todo checkbox has no busy state because
    its mutations are instant, but a project toggle syncs the linked todo task
@@ -35,11 +55,37 @@
   cursor: wait;
 }
 
-/* Empty state under a project heading */
-.projects-panel__no-tasks {
-  margin: 0;
-  padding: 6px 4px;
-  font-size: 13px;
-  font-style: italic;
-  color: var(--rm-text-muted, #656d76);
+/* Empty project: a quiet line where the tasks will go */
+.readme-tasks > .projects-panel__no-tasks {
+  padding: 14px 16px;
+  text-align: left;
+}
+
+/* ── Empty view (no projects at all) ── */
+.projects-panel__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 48px 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.projects-panel__empty-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.projects-panel__empty .empty-message {
+  max-width: 520px;
+  padding: 0;
+  line-height: 1.6;
 }

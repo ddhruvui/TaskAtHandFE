@@ -2,17 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   activeShift,
   formatDuration,
+  formatMoment,
+  formatSpan,
   isActive,
   isEnded,
   isOvernight,
   minutesLeft,
+  onCallAgenda,
   parseQuickAdd,
   shiftEnd,
   shiftMinutes,
   upcomingShifts,
-  weekSegments,
-  weekStartKey,
-  weekTotals,
 } from "./oncall";
 
 // Mon Nov 9 2026, 17:48 local — the date the design mockups use.
@@ -135,43 +135,98 @@ describe("parseQuickAdd", () => {
   });
 });
 
-describe("week timeline", () => {
-  it("weeks start on Monday", () => {
-    expect(weekStartKey("2026-11-09")).toBe("2026-11-09"); // Mon
-    expect(weekStartKey("2026-11-15")).toBe("2026-11-09"); // Sun
-    expect(weekStartKey("2026-11-16")).toBe("2026-11-16");
+describe("agenda wording", () => {
+  it("formats spans of a day or more in days and hours", () => {
+    expect(formatSpan(45)).toBe("45m");
+    expect(formatSpan(780)).toBe("13h");
+    expect(formatSpan(1440)).toBe("1d");
+    expect(formatSpan(7 * 1440 + 11 * 60 + 25)).toBe("7d 11h");
   });
 
-  it("splits an overnight shift into two bars across days", () => {
-    const days = weekSegments(
-      [shift("2026-11-12", "22:00", "06:00")],
-      "2026-11-09",
+  it("words moments as Today / Tomorrow / weekday MM/DD", () => {
+    expect(formatMoment(new Date(2026, 10, 9, 22, 0), NOW)).toBe("Today 22:00");
+    expect(formatMoment(new Date(2026, 10, 10, 9, 0), NOW)).toBe(
+      "Tomorrow 09:00",
     );
-    const thu = days.find((d) => d.date === "2026-11-12")!;
-    const fri = days.find((d) => d.date === "2026-11-13")!;
-    expect(thu.segments).toMatchObject([
-      { from: 1320, to: 1440, part: "start" },
-    ]);
-    expect(fri.segments).toMatchObject([{ from: 0, to: 360, part: "end" }]);
-  });
-
-  it("shows the tail of an overnight shift from the previous week", () => {
-    const days = weekSegments(
-      [shift("2026-11-15", "22:00", "06:00")],
-      "2026-11-16",
+    expect(formatMoment(new Date(2026, 10, 24, 9, 0), NOW)).toBe(
+      "Tue 11/24 09:00",
     );
-    expect(days[0].segments).toMatchObject([{ from: 0, to: 360, part: "end" }]);
+    expect(formatMoment(new Date(2027, 0, 5, 7, 30), NOW)).toBe(
+      "Tue 01/05/27 07:30",
+    );
+  });
+});
+
+describe("onCallAgenda", () => {
+  const kinds = (items: { kind: string }[]) => items.map((i) => i.kind);
+
+  it("is empty with nothing upcoming", () => {
+    expect(onCallAgenda([shift("2026-11-08", "09:00", "17:00")], NOW)).toEqual({
+      items: [],
+      freeAfter: null,
+    });
   });
 
-  it("totals only the minutes inside the week, per type", () => {
-    const totals = weekTotals(
+  it("opens with 'not on call now' and shows the gap between shifts", () => {
+    const { items, freeAfter } = onCallAgenda(
+      [
+        shift("2026-11-24", "09:00", "17:00"),
+        shift("2026-11-16", "09:00", "22:00"),
+      ],
+      NOW,
+    );
+    expect(kinds(items)).toEqual(["gap", "shift", "gap", "shift"]);
+    const [now, , between] = items as Extract<
+      (typeof items)[number],
+      { kind: "gap" }
+    >[];
+    expect(now).toMatchObject({ fromNow: true, from: NOW });
+    expect(now.to).toEqual(new Date(2026, 10, 16, 9, 0));
+    // Mon 11/16 22:00 → Tue 11/24 09:00
+    expect(between).toMatchObject({ fromNow: false, minutes: 7 * 1440 + 660 });
+    expect(between.from).toEqual(new Date(2026, 10, 16, 22, 0));
+    expect(between.to).toEqual(new Date(2026, 10, 24, 9, 0));
+    expect(freeAfter).toEqual(new Date(2026, 10, 24, 17, 0));
+  });
+
+  it("starts with the running shift, no gap, when on call now", () => {
+    const { items } = onCallAgenda(
       [
         shift("2026-11-09", "09:00", "22:00"),
-        shift("2026-11-11", "10:00", "18:00", "secondary"),
-        shift("2026-11-15", "22:00", "06:00"), // only 2h fall in this week
+        shift("2026-11-10", "09:00", "22:00"),
       ],
-      "2026-11-09",
+      NOW,
     );
-    expect(totals).toEqual({ primary: 780 + 120, secondary: 480 });
+    expect(kinds(items)).toEqual(["shift", "gap", "shift"]);
+    expect(items[1]).toMatchObject({ kind: "gap", minutes: 660 }); // 22:00 → 09:00
+  });
+
+  it("treats back-to-back and overlapping shifts as one stretch of cover", () => {
+    const { items, freeAfter } = onCallAgenda(
+      [
+        shift("2026-11-16", "09:00", "17:00"),
+        shift("2026-11-16", "17:00", "22:00", "secondary"), // back-to-back
+        shift("2026-11-16", "20:00", "06:00"), // overlaps, runs overnight
+        shift("2026-11-17", "06:00", "09:00", "secondary"), // back-to-back again
+      ],
+      NOW,
+    );
+    expect(kinds(items)).toEqual(["gap", "shift", "shift", "shift", "shift"]);
+    expect(freeAfter).toEqual(new Date(2026, 10, 17, 9, 0));
+  });
+
+  it("measures a gap from the end of the longest cover, not the last shift", () => {
+    const { items } = onCallAgenda(
+      [
+        shift("2026-11-16", "08:00", "20:00"),
+        shift("2026-11-16", "09:00", "10:00", "secondary"), // inside the first
+        shift("2026-11-17", "08:00", "12:00"),
+      ],
+      NOW,
+    );
+    expect(kinds(items)).toEqual(["gap", "shift", "shift", "gap", "shift"]);
+    expect((items[3] as { from: Date }).from).toEqual(
+      new Date(2026, 10, 16, 20, 0),
+    );
   });
 });

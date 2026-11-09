@@ -1,14 +1,17 @@
-/* ── Calendar container ── */
+/* ═══════════════════════════════════════════════════════════════════════
+   Month calendar used by the add/edit task dialogs (and other date pickers).
+   Tokens only — it sits inside whichever dialog renders it.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .ecd-calendar {
-  width: 280px;
-  margin: 0 auto; /* centered */
-  border: 1px solid var(--m-border);
-  border-radius: var(--m-radius, 6px);
-  padding: 12px;
-  background: var(--m-bg, #ffffff);
-  font-family: inherit;
-  font-size: 13px;
-  color: var(--m-text, #1f2328);
+  width: 100%;
+  max-width: 320px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-sm);
 }
 
 /* ── Month navigation row ── */
@@ -16,105 +19,98 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .ecd-calendar__nav {
-  width: 28px;
-  height: 28px;
   display: grid;
   place-items: center;
-  border: none;
-  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--m-text-muted, #656d76);
+  color: var(--text-muted);
   cursor: pointer;
   transition:
-    background 0.12s,
-    color 0.12s;
-  font-family: inherit;
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .ecd-calendar__nav:hover {
-  background: rgba(31, 35, 40, 0.08);
-  color: var(--m-text, #1f2328);
+  background: var(--surface-hover);
+  color: var(--text);
 }
 
 .ecd-calendar__month-label {
-  font-weight: 600;
-  font-size: 13px;
+  font-size: var(--text-sm);
+  font-weight: 650;
   user-select: none;
 }
 
 /* ── 7-column grid ── */
 .ecd-calendar__grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 2px;
   text-align: center;
 }
 
 .ecd-calendar__day-header {
+  padding: 4px 0 6px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--m-text-muted, #656d76);
-  padding: 4px 0;
+  letter-spacing: 0.02em;
+  color: var(--text-subtle);
   user-select: none;
 }
 
 .ecd-calendar__blank {
-  /* empty cell */
+  height: 36px;
 }
 
-/* ── Day button ── */
 .ecd-calendar__day {
-  width: 34px;
-  height: 34px;
-  margin: 0 auto;
+  justify-self: center;
   display: grid;
   place-items: center;
-  border: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
   background: transparent;
-  font-size: 13px;
-  font-weight: 400;
-  font-family: inherit;
-  color: var(--m-text, #1f2328);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition:
-    background 0.12s,
-    color 0.12s;
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .ecd-calendar__day:hover {
-  background: rgba(31, 35, 40, 0.08);
+  background: var(--surface-hover);
 }
 
 .ecd-calendar__day--today {
+  color: var(--accent-text);
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px var(--m-accent, #1a7f37);
+  box-shadow: inset 0 0 0 1.5px var(--accent-soft);
 }
 
-.ecd-calendar__day--selected {
-  background: var(--m-accent, #1a7f37);
-  color: #fff;
-  font-weight: 600;
-}
-
+.ecd-calendar__day--selected,
 .ecd-calendar__day--selected:hover {
-  background: var(--m-accent-hover, #157a32);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: 650;
+  box-shadow: var(--shadow-sm);
 }
 
-/* ── Dark mode overrides ── */
-@media (prefers-color-scheme: dark) {
-  .ecd-calendar__nav:hover {
-    background: rgba(230, 237, 243, 0.1);
-    color: var(--m-text, #e6edf3);
-  }
-
-  .ecd-calendar__day:hover {
-    background: rgba(230, 237, 243, 0.1);
+/* Phones: dialogs are bottom sheets, so let the calendar span the sheet
+   instead of leaving a ragged gap on the right. */
+@media (max-width: 560px) {
+  .ecd-calendar {
+    max-width: none;
   }
 }

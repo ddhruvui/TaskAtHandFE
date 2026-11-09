@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { Goal } from "../../types";
+import { Modal } from "../Modal";
 import "./GoalModal.css";
 
 interface GoalModalProps {
@@ -39,58 +40,66 @@ export default function GoalModal({
   }
 
   return (
-    <div className="goal-modal__overlay" onClick={onCancel}>
-      <div className="goal-modal" onClick={(e) => e.stopPropagation()}>
-        <h3 className="goal-modal__title">{goal ? "Edit Goal" : "Add Goal"}</h3>
+    <Modal
+      onClose={onCancel}
+      className="goal-modal"
+      overlayClassName="goal-modal__overlay"
+      labelledBy="goal-modal-title"
+    >
+      <h3 id="goal-modal-title" className="ui-modal__title goal-modal__title">
+        {goal ? "Edit Goal" : "Add Goal"}
+      </h3>
 
-        <input
-          ref={nameRef}
-          className="goal-modal__name-input"
-          type="text"
-          placeholder="Goal name… (e.g. Improve Health)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSubmit();
-            if (e.key === "Escape") onCancel();
-          }}
+      <input
+        ref={nameRef}
+        className="input goal-modal__name-input"
+        type="text"
+        placeholder="Goal name… (e.g. Improve Health)"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSubmit();
+        }}
+      />
+
+      <div className="field goal-modal__steps">
+        <label
+          htmlFor="goal-modal-steps"
+          className="field__label goal-modal__steps-label"
+        >
+          Steps
+        </label>
+        <textarea
+          id="goal-modal-steps"
+          className="textarea goal-modal__textarea"
+          value={stepsText}
+          onChange={(e) => setStepsText(e.target.value)}
+          placeholder={"One small step per line…\nWake up at 6\nHave 1 fruit a day"}
+          rows={6}
+          aria-describedby="goal-modal-steps-hint"
         />
-
-        <div className="goal-modal__steps">
-          <span className="goal-modal__steps-label">Steps</span>
-          <textarea
-            className="goal-modal__textarea"
-            value={stepsText}
-            onChange={(e) => setStepsText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") onCancel();
-            }}
-            placeholder={"One small step per line…\nWake up at 6\nHave 1 fruit a day"}
-            rows={6}
-          />
-          <p className="goal-modal__hint">
-            One step per line, in the order you want to build them —{" "}
-            {parsedSteps.length} step{parsedSteps.length === 1 ? "" : "s"}
-            {goal ? ". Steps keeping their name keep their progress." : ""}
-          </p>
-        </div>
-
-        <div className="goal-modal__actions">
-          <button
-            className="goal-modal__btn goal-modal__btn--cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="goal-modal__btn goal-modal__btn--confirm"
-            onClick={handleSubmit}
-            disabled={!name.trim()}
-          >
-            {goal ? "Save" : "Add"}
-          </button>
-        </div>
+        <p id="goal-modal-steps-hint" className="field__hint goal-modal__hint">
+          One step per line, in the order you want to build them —{" "}
+          {parsedSteps.length} step{parsedSteps.length === 1 ? "" : "s"}
+          {goal ? ". Steps keeping their name keep their progress." : ""}
+        </p>
       </div>
-    </div>
+
+      <div className="ui-modal__actions goal-modal__actions">
+        <button
+          className="btn btn--secondary goal-modal__btn goal-modal__btn--cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn btn--primary goal-modal__btn goal-modal__btn--confirm"
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+        >
+          {goal ? "Save" : "Add"}
+        </button>
+      </div>
+    </Modal>
   );
 }
