@@ -139,9 +139,7 @@ test.describe("Events - Update", () => {
     await createEvent("Burger Night", ["Procure onion"]);
     await openEventsView(page);
 
-    await page
-      .getByRole("button", { name: "Edit event Burger Night" })
-      .click();
+    await page.getByRole("button", { name: "Edit event Burger Night" }).click();
     await expect(page.getByText("Edit Event")).toBeVisible();
 
     const nameInput = page.getByPlaceholder("Event name… (e.g. Burger Night)");
@@ -182,9 +180,7 @@ test.describe("Events - Delete", () => {
     await expect(page.getByText("No events yet — add one!")).toBeVisible();
   });
 
-  test("should keep the event when deletion is cancelled", async ({
-    page,
-  }) => {
+  test("should keep the event when deletion is cancelled", async ({ page }) => {
     await createEvent("Burger Night", ["Procure onion"]);
     await openEventsView(page);
 
@@ -261,10 +257,14 @@ test.describe("Events - Add to todo", () => {
     await page.getByRole("button", { name: "Unmark Procure onion" }).click();
     await page.getByRole("button", { name: "Add 1 task", exact: true }).click();
     // The modal closes only once the tasks have been created
-    await expect(page.getByText("Add to todo — Burger Night")).not.toBeVisible();
+    await expect(
+      page.getByText("Add to todo — Burger Night"),
+    ).not.toBeVisible();
 
     await page.locator(".events-toggle-btn").click();
-    const section = page.locator(".readme-section", { hasText: "Burger Night" });
+    const section = page.locator(".readme-section", {
+      hasText: "Burger Night",
+    });
     await expect(section.locator(".task-card")).toHaveCount(1);
     const names = await getTaskNamesInHeader(page, "Burger Night");
     expect(names).toEqual(["Procure bun"]);
@@ -304,10 +304,14 @@ test.describe("Events - Add to todo", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "Add 1 task", exact: true }).click();
     // The modal closes only once the tasks have been created
-    await expect(page.getByText("Add to todo — Burger Night")).not.toBeVisible();
+    await expect(
+      page.getByText("Add to todo — Burger Night"),
+    ).not.toBeVisible();
 
     await page.locator(".events-toggle-btn").click();
-    const section = page.locator(".readme-section", { hasText: "Burger Night" });
+    const section = page.locator(".readme-section", {
+      hasText: "Burger Night",
+    });
     await expect(section.locator(".task-card")).toHaveCount(1);
     const names = await getTaskNamesInHeader(page, "Burger Night");
     expect(names).toEqual(["Procure onion"]);
@@ -330,7 +334,9 @@ test.describe("Events - Add to todo", () => {
       .click();
     await page.getByRole("button", { name: "Add 1 task", exact: true }).click();
     // The modal closes only once the tasks have been created
-    await expect(page.getByText("Add to todo — Burger Night")).not.toBeVisible();
+    await expect(
+      page.getByText("Add to todo — Burger Night"),
+    ).not.toBeVisible();
 
     const headers = await getHeaders();
     const eventHeaders = headers.filter(
@@ -339,9 +345,122 @@ test.describe("Events - Add to todo", () => {
     expect(eventHeaders).toHaveLength(1);
 
     await page.locator(".events-toggle-btn").click();
-    const section = page.locator(".readme-section", { hasText: "Burger Night" });
+    const section = page.locator(".readme-section", {
+      hasText: "Burger Night",
+    });
     await expect(section.locator(".task-card")).toHaveCount(2);
     const names = await getTaskNamesInHeader(page, "Burger Night");
     expect(names).toEqual(["Procure onion", "Procure onion"]);
+  });
+});
+
+test.describe("Events - Accordion", () => {
+  test("should expand exactly one event on load and toggle others", async ({
+    page,
+  }) => {
+    await createEvent("Burger Night", ["Procure onion", "Procure bun"]);
+    await createEvent("Pizza Night", ["Procure dough", "Procure cheese"]);
+    await openEventsView(page);
+
+    const toggles = page.locator(".events-panel__toggle");
+    await expect(toggles).toHaveCount(2);
+    await expect(
+      page.locator('.events-panel__toggle[aria-expanded="true"]'),
+    ).toHaveCount(1);
+    await expect(page.locator(".events-panel__task-list")).toHaveCount(1);
+
+    // The collapsed event shows its task count and a one-line preview
+    const collapsed = page.locator(".readme-section", {
+      has: page.locator('.events-panel__toggle[aria-expanded="false"]'),
+    });
+    await expect(collapsed.locator(".events-panel__event-count")).toHaveText(
+      "2 tasks",
+    );
+    await expect(
+      collapsed.locator(".events-panel__event-preview"),
+    ).toBeVisible();
+
+    // Expanding it shows its tasks and hides the preview
+    await collapsed.locator(".events-panel__toggle").click();
+    await expect(
+      page.locator('.events-panel__toggle[aria-expanded="true"]'),
+    ).toHaveCount(2);
+    await expect(page.locator(".events-panel__task-list")).toHaveCount(2);
+    await expect(page.locator(".events-panel__event-preview")).toHaveCount(0);
+
+    // Collapsing one event leaves the other open
+    await toggles.first().click();
+    await expect(page.locator(".events-panel__task-list")).toHaveCount(1);
+  });
+
+  test("should open a newly created event", async ({ page }) => {
+    await createEvent("Burger Night", ["Procure onion"]);
+    await openEventsView(page);
+
+    await page.getByRole("button", { name: "Add event" }).click();
+    await page
+      .getByPlaceholder("Event name… (e.g. Burger Night)")
+      .fill("Pizza Night");
+    await page.locator(".event-modal__textarea").fill("Procure dough");
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+
+    const section = page.locator(".readme-section", { hasText: "Pizza Night" });
+    await expect(section.locator(".events-panel__toggle")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(section.locator(".events-panel__task-name")).toHaveText([
+      "Procure dough",
+    ]);
+  });
+});
+
+test.describe("Events - Date shortcuts and notice", () => {
+  test("should schedule for tomorrow with the date shortcut", async ({
+    page,
+  }) => {
+    await createEvent("Burger Night", ["Procure onion"]);
+    await openEventsView(page);
+
+    await page
+      .getByRole("button", { name: "Add Burger Night to todo" })
+      .click();
+
+    const today = page.getByRole("button", { name: /^Today/ });
+    const tomorrow = page.getByRole("button", { name: /^Tomorrow/ });
+    await expect(today).toHaveAttribute("aria-pressed", "true");
+    await tomorrow.click();
+    await expect(tomorrow).toHaveAttribute("aria-pressed", "true");
+    await expect(today).toHaveAttribute("aria-pressed", "false");
+
+    await page.getByRole("button", { name: "Add 1 task", exact: true }).click();
+    await expect(
+      page.getByText(
+        `Added 1 task under "Burger Night" for ${formatDateKey(dateKey(1))}.`,
+      ),
+    ).toBeVisible();
+  });
+
+  test("should go back to the todo from the notice", async ({ page }) => {
+    await createEvent("Burger Night", ["Procure onion"]);
+    await openEventsView(page);
+
+    await page
+      .getByRole("button", { name: "Add Burger Night to todo" })
+      .click();
+    await page.getByRole("button", { name: "Add 1 task", exact: true }).click();
+    await page.getByRole("button", { name: "View in todo" }).click();
+
+    await expect(page.locator(".events-panel")).not.toBeVisible();
+    await expect(page.locator(".events-toggle-btn")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    const section = page.locator(".readme-section", {
+      hasText: "Burger Night",
+    });
+    await expect(section.locator(".task-card")).toHaveCount(1);
+    const names = await getTaskNamesInHeader(page, "Burger Night");
+    expect(names).toEqual(["Procure onion"]);
   });
 });

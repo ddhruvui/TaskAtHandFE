@@ -85,7 +85,7 @@ Any code change MUST include, in the same task: (1) updated/new tests per the ta
 | `e2e/insights.spec.ts`            | `test_doc/INSIGHTS_TEST_DOCUMENTATION.md`                                |
 | `e2e/viewmodes.spec.ts`           | `test_doc/VIEWMODES_TEST_DOCUMENTATION.md`                               |
 | `e2e/lifeevents.spec.ts`          | `test_doc/LIFEEVENTS_TEST_DOCUMENTATION.md`                              |
-| `e2e/events.spec.ts`              | **currently undocumented** — when touching it, create its `*_TEST_DOCUMENTATION.md` in `test_doc/` in the same format as the existing ones |
+| `e2e/events.spec.ts`              | `test_doc/EVENTS_TEST_DOCUMENTATION.md`                                  |
 | Anything about the backend API contract | `API_REFERENCE.md` + `todo_app_structure.md` — these mirror the copies in the TaskAtHandBE repo; a backend contract change means updating all four files across both repos |
 
 **Shleeji parity (MANDATORY):** this web FE and the Shleeji Expo app (`../Shleeji`) are two clients of the same backend and must stay at feature parity. Any user-facing feature or behavior change here (new views/panels, API resources, ECD logic, task flows) MUST be replicated in Shleeji in the same task — FE view modes map to Shleeji bottom tabs (Affirmations view ↔ Affirmations tab, Calls view ↔ Calls tab), and Shleeji's `api/` and `utils/ecd.js` mirror this repo's `src/api/` and `src/utils/ecd.ts`. Purely web-specific changes (CSS polish, e2e/test infra, Vite config) are exempt, but state the exemption explicitly in your summary. See `../Shleeji/CLAUDE.md` for that app's conventions and manual-verification policy.

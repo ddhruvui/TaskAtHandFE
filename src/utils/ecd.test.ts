@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  addDaysToDateKey,
   buildEcdFromInputs,
   formatDateKey,
   getEcdDateKey,
@@ -44,9 +45,7 @@ describe("ecd utils", () => {
     });
 
     it("returns false for a date that is not today", () => {
-      expect(isTaskDueToday({ type: "date", value: "2026-06-18" })).toBe(
-        false,
-      );
+      expect(isTaskDueToday({ type: "date", value: "2026-06-18" })).toBe(false);
     });
 
     it("returns true when day_of_week includes today's weekday", () => {
@@ -160,9 +159,7 @@ describe("ecd utils", () => {
       expect(getEcdDateKey({ type: "day_of_week", value: ["Wed"] })).toBe(
         "2026-06-17",
       );
-      expect(getEcdDateKey({ type: "day_of_week", value: ["Mon"] })).toBe(
-        null,
-      );
+      expect(getEcdDateKey({ type: "day_of_week", value: ["Mon"] })).toBe(null);
     });
 
     it("returns today's key for day_of_month when due today, null otherwise", () => {
@@ -170,6 +167,25 @@ describe("ecd utils", () => {
         "2026-06-17",
       );
       expect(getEcdDateKey({ type: "day_of_month", value: [16] })).toBe(null);
+    });
+  });
+
+  describe("addDaysToDateKey", () => {
+    it("adds days within a month", () => {
+      expect(addDaysToDateKey("2026-06-17", 1)).toBe("2026-06-18");
+    });
+
+    it("returns the same key for zero days", () => {
+      expect(addDaysToDateKey("2026-06-17", 0)).toBe("2026-06-17");
+    });
+
+    it("rolls over month and year boundaries", () => {
+      expect(addDaysToDateKey("2026-06-30", 1)).toBe("2026-07-01");
+      expect(addDaysToDateKey("2026-12-31", 1)).toBe("2027-01-01");
+    });
+
+    it("handles negative offsets and leap days", () => {
+      expect(addDaysToDateKey("2028-03-01", -1)).toBe("2028-02-29");
     });
   });
 

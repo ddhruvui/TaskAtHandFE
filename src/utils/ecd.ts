@@ -55,10 +55,7 @@ export function isTaskDueToday(ecd: ECD | null): boolean {
  * backend's `isPushedLater` (Task.js): only `date` → `date` where the new value
  * is strictly later. YYYY-MM-DD strings compare lexicographically.
  */
-export function isPushedLater(
-  fromEcd: ECD | null,
-  toEcd: ECD | null,
-): boolean {
+export function isPushedLater(fromEcd: ECD | null, toEcd: ECD | null): boolean {
   if (!fromEcd || !toEcd) return false;
   if (fromEcd.type !== "date" || toEcd.type !== "date") return false;
   return toEcd.value > fromEcd.value;
@@ -92,6 +89,20 @@ export function getEcdDateKey(ecd: ECD | null): string | null {
  * Formats a YYYY-MM-DD key into a readable heading, e.g. "Fri, Jun 26, 2026".
  * Parsed from components to avoid timezone shifts.
  */
+/**
+ * Shift a "YYYY-MM-DD" key by a number of calendar days. Parsed into
+ * components (never `new Date("YYYY-MM-DD")`) so it is timezone safe;
+ * month and year roll over through the Date constructor.
+ */
+export function addDaysToDateKey(key: string, days: number): string {
+  const [y, mo, d] = key.split("-").map((n) => parseInt(n, 10));
+  const date = new Date(y, mo - 1, d + days);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
 export function formatDateKey(key: string): string {
   const [y, mo, d] = key.split("-").map((n) => parseInt(n, 10));
   const date = new Date(y, mo - 1, d);

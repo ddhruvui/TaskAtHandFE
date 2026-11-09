@@ -760,7 +760,12 @@ function App() {
 
         {insightsMode && <InsightsPanel />}
 
-        {!insightsMode && eventsMode && <EventsPanel onTasksAdded={loadAll} />}
+        {!insightsMode && eventsMode && (
+          <EventsPanel
+            onTasksAdded={loadAll}
+            onViewTodo={() => setEventsMode(false)}
+          />
+        )}
 
         {!insightsMode && !eventsMode && lifeEventsMode && (
           <LifeEventsPanel onTasksChanged={loadAll} />

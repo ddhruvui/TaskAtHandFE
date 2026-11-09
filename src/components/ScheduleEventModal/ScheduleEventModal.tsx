@@ -1,8 +1,23 @@
 import { useState } from "react";
 import type { EventTemplate } from "../../types";
-import { todayDateKey } from "../../utils/ecd";
+import { addDaysToDateKey, formatDateKey, todayDateKey } from "../../utils/ecd";
 import { EcdCalendar } from "../DatePicker";
 import "./ScheduleEventModal.css";
+
+/** Quick date picks above the calendar: today, tomorrow and the next
+ * Saturday that is not already one of those two. */
+function dateShortcuts(): { label: string; key: string }[] {
+  const today = todayDateKey();
+  const [y, m, d] = today.split("-").map((n) => parseInt(n, 10));
+  const weekday = new Date(y, m - 1, d).getDay();
+  let toSaturday = (6 - weekday + 7) % 7;
+  if (toSaturday < 2) toSaturday += 7;
+  return [
+    { label: "Today", key: today },
+    { label: "Tomorrow", key: addDaysToDateKey(today, 1) },
+    { label: "Saturday", key: addDaysToDateKey(today, toSaturday) },
+  ];
+}
 
 interface ScheduleEventModalProps {
   event: EventTemplate;
@@ -19,6 +34,14 @@ export default function ScheduleEventModal({
   onCancel,
 }: ScheduleEventModalProps) {
   const [date, setDate] = useState(todayDateKey);
+  const [shortcuts] = useState(dateShortcuts);
+  // Remounts the calendar after a shortcut so it jumps to that date's month
+  const [calendarKey, setCalendarKey] = useState(0);
+
+  function pickShortcut(key: string) {
+    setDate(key);
+    setCalendarKey((k) => k + 1);
+  }
   const [selected, setSelected] = useState<Set<number>>(() => {
     if (!initialSelected) return new Set(event.tasks.map((_, i) => i));
     return new Set(
@@ -67,7 +90,34 @@ export default function ScheduleEventModal({
         {/* Date */}
         <div className="schedule-modal__section">
           <span className="schedule-modal__label">Date</span>
-          <EcdCalendar mode="date" value={date} onChange={setDate} />
+          <div className="schedule-modal__shortcuts">
+            {shortcuts.map((s) => {
+              const active = s.key === date;
+              return (
+                <button
+                  key={s.label}
+                  type="button"
+                  className={`schedule-modal__shortcut${active ? " schedule-modal__shortcut--active" : ""}`}
+                  onClick={() => pickShortcut(s.key)}
+                  aria-pressed={active}
+                  title={formatDateKey(s.key)}
+                >
+                  {s.label}
+                  <span className="schedule-modal__shortcut-date">
+                    {formatDateKey(s.key)
+                      .replace(/, \d{4}$/, "")
+                      .replace(/^\w+, /, "")}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <EcdCalendar
+            key={calendarKey}
+            mode="date"
+            value={date}
+            onChange={setDate}
+          />
         </div>
 
         {/* Task checklist */}
@@ -89,7 +139,9 @@ export default function ScheduleEventModal({
                   type="button"
                   className={`schedule-modal__checkbox${selected.has(i) ? " schedule-modal__checkbox--checked" : ""}`}
                   onClick={() => toggleTask(i)}
-                  aria-label={selected.has(i) ? `Unmark ${task}` : `Mark ${task}`}
+                  aria-label={
+                    selected.has(i) ? `Unmark ${task}` : `Mark ${task}`
+                  }
                   aria-pressed={selected.has(i)}
                 >
                   {selected.has(i) && (
