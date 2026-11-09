@@ -1,0 +1,264 @@
+/* On-call view — option B: week timeline over a list of upcoming shifts.
+   Primary = solid red, secondary = dashed outline in the same red family,
+   so the two differ by shape as well as weight. */
+.oncall-panel {
+  --oc-red: #cf222e;
+  --oc-red-text: #a40e26;
+  --oc-red-soft: rgba(207, 34, 46, 0.08);
+  --oc-red-border: rgba(207, 34, 46, 0.55);
+  --oc-track: #f6f8fa;
+
+  display: flex;
+  flex-direction: column;
+}
+
+@media (prefers-color-scheme: dark) {
+  .oncall-panel {
+    --oc-red: #da3633;
+    --oc-red-text: #ff7b72;
+    --oc-red-soft: rgba(248, 81, 73, 0.12);
+    --oc-red-border: rgba(248, 81, 73, 0.6);
+    --oc-track: #161b22;
+  }
+}
+
+/* ── Toolbar: week navigation + totals, add button right-aligned ── */
+.oncall-panel__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.oncall-panel__week-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: var(--rm-text, #1f2328);
+}
+
+.oncall-panel__nav-btn {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--rm-text-muted, #656d76);
+  background: none;
+  border: 1px solid var(--rm-border, #d0d7de);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.oncall-panel__nav-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.oncall-panel__week-label {
+  font-weight: 600;
+}
+
+.oncall-panel__totals {
+  font-size: 0.8rem;
+  color: var(--rm-text-muted, #656d76);
+}
+
+/* ── Timeline ── */
+.oncall-panel__week {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.oncall-panel__day {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.oncall-panel__day-label {
+  font-size: 0.8rem;
+  color: var(--rm-text-muted, #656d76);
+}
+
+.oncall-panel__day-label--today {
+  font-weight: 600;
+  color: var(--rm-text, #1f2328);
+}
+
+.oncall-panel__track {
+  position: relative;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--oc-track);
+  border: 1px solid var(--rm-border-muted, #eaeef2);
+}
+
+.oncall-panel__bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.oncall-panel__bar--primary {
+  background: var(--oc-red);
+  color: #fff;
+}
+
+.oncall-panel__bar--secondary {
+  background: var(--oc-red-soft);
+  border: 1.5px dashed var(--oc-red-border);
+  color: var(--oc-red-text);
+}
+
+.oncall-panel__now {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--rm-text, #1f2328);
+}
+
+.oncall-panel__axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0 0 66px;
+  font-size: 11px;
+  color: var(--rm-text-muted, #656d76);
+}
+
+.oncall-panel__legend {
+  display: flex;
+  gap: 16px;
+  margin: 10px 0 0 66px;
+  font-size: 11px;
+  color: var(--rm-text-muted, #656d76);
+}
+
+.oncall-panel__swatch {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+
+.oncall-panel__swatch--primary {
+  background: var(--oc-red);
+}
+
+.oncall-panel__swatch--secondary {
+  background: var(--oc-red-soft);
+  border: 1.5px dashed var(--oc-red-border);
+}
+
+/* ── Upcoming list ── */
+.oncall-panel__list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--rm-border, #d0d7de);
+}
+
+.oncall-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px 10px 10px;
+  border-bottom: 1px solid var(--rm-border-muted, #eaeef2);
+}
+
+.oncall-panel__row:last-child {
+  border-bottom: none;
+}
+
+.oncall-panel__row--primary {
+  border-left: 3px solid var(--oc-red);
+}
+
+.oncall-panel__row--secondary {
+  border-left: 3px dashed var(--oc-red-border);
+}
+
+.oncall-panel__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.oncall-panel__times {
+  font-weight: 600;
+  color: var(--rm-text, #1f2328);
+}
+
+.oncall-panel__plus1 {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--rm-text-muted, #656d76);
+}
+
+.oncall-panel__meta {
+  font-size: 0.8rem;
+  color: var(--rm-text-muted, #656d76);
+}
+
+.oncall-panel__pill {
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 400;
+  border-radius: 999px;
+  border: 1px solid var(--oc-red-border);
+  color: var(--oc-red-text);
+}
+
+.oncall-panel__pill--now {
+  background: var(--oc-red);
+  border-color: var(--oc-red);
+  color: #fff;
+}
+
+.oncall-panel__icon-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--rm-text-muted, #656d76);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.oncall-panel__icon-btn:hover {
+  border-color: var(--rm-border, #d0d7de);
+  color: var(--rm-text, #1f2328);
+}
+
+.oncall-panel__icon-btn--danger:hover {
+  color: #cf222e;
+  border-color: #cf222e;
+}

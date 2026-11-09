@@ -143,6 +143,31 @@ export interface Call {
   updatedAt: string; // ISO 8601 timestamp
 }
 
+// ── On-call shifts ──────────────────────────────────────────────────────────
+
+/** Primary is the default and by far the common case. */
+export type OnCallType = "primary" | "secondary";
+
+/**
+ * An on-call shift. **Recorded separately — it never affects tasks.**
+ *
+ * `date` is the day the shift starts; `start`/`end` are local "HH:mm". An end
+ * at or before the start runs past midnight ("22:00"–"06:00"), and "24:00" is
+ * a legal end meaning midnight at the close of `date`. The backend keeps
+ * shifts dated yesterday onward (cron step 12 deletes older ones); the clients
+ * hide a shift the moment its end passes on the local clock.
+ */
+export interface OnCallShift {
+  _id: string;
+  date: string; // "YYYY-MM-DD"
+  start: string; // "HH:mm", 00:00–23:59
+  end: string; // "HH:mm", 00:00–24:00
+  type: OnCallType;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Vacation (booked time off) ──────────────────────────────────────────────
 
 /**

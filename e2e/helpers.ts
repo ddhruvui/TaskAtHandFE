@@ -220,6 +220,33 @@ export async function runCron() {
 /**
  * Clean all vacations from the database
  */
+export async function cleanOnCall() {
+  const shifts = await fetch(`${API_BASE}/oncall`).then((r) => r.json());
+  for (const shift of shifts) {
+    await fetch(`${API_BASE}/oncall/${shift._id}`, { method: "DELETE" });
+  }
+}
+
+/** Create an on-call shift via API. `type` defaults to primary server-side. */
+export async function createOnCall(body: {
+  date: string;
+  start: string;
+  end: string;
+  type?: "primary" | "secondary";
+  note?: string;
+}) {
+  const res = await fetch(`${API_BASE}/oncall`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+export async function getOnCall() {
+  return fetch(`${API_BASE}/oncall`).then((r) => r.json());
+}
+
 export async function cleanVacations() {
   const vacations = await fetch(`${API_BASE}/vacations`).then((r) => r.json());
   for (const vacation of vacations) {

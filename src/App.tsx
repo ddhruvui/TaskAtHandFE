@@ -12,11 +12,14 @@ import { ProjectsPanel } from "./components/ProjectsPanel";
 import { AffirmationsPanel } from "./components/AffirmationsPanel";
 import { CallsPanel } from "./components/CallsPanel";
 import { VacationPanel } from "./components/VacationPanel";
-import type { Header, Task, VacationStatus } from "./types";
+import { OnCallPanel } from "./components/OnCallPanel";
+import type { Header, OnCallShift, Task, VacationStatus } from "./types";
 import type { EditPayload } from "./components/TaskCard/TaskCard.types";
 import * as headersApi from "./api/headers";
 import * as tasksApi from "./api/tasks";
 import * as vacationsApi from "./api/vacations";
+import * as onCallApi from "./api/oncall";
+import { activeShift, formatDuration, minutesLeft } from "./utils/oncall";
 import { getEcdDateKey, formatDateKey, todayDateKey } from "./utils/ecd";
 import {
   fetchOneStepStreaks,
@@ -57,6 +60,12 @@ function App() {
   const [affirmationsMode, setAffirmationsMode] = useState(false);
   const [callsMode, setCallsMode] = useState(false);
   const [vacationMode, setVacationMode] = useState(false);
+  const [onCallMode, setOnCallMode] = useState(false);
+
+  // On-call shifts are app-level so the "on call now" banner shows from every
+  // view. On-call is a record only — it never feeds into tasks or stats.
+  const [onCallShifts, setOnCallShifts] = useState<OnCallShift[]>([]);
+  const [clock, setClock] = useState(() => new Date());
 
   // Vacation status is app-level, not panel-level, on purpose: the most likely
   // real-world failure of this feature is booking time off and forgetting, then
@@ -83,6 +92,7 @@ function App() {
     setAffirmationsMode,
     setCallsMode,
     setVacationMode,
+    setOnCallMode,
   ];
   const togglePanelMode = (setter: (typeof panelModeSetters)[number]) => {
     panelModeSetters.forEach((s) => {
@@ -146,11 +156,30 @@ function App() {
     }
   }, []);
 
+  /** On-call shifts for the banner. A failure just hides the banner. */
+  const refreshOnCall = useCallback(async () => {
+    try {
+      setOnCallShifts(await onCallApi.getAll());
+    } catch {
+      setOnCallShifts([]);
+    }
+  }, []);
+
   useEffect(() => {
     loadAll();
     refreshVacationStatus();
     refreshStreaks();
-  }, [loadAll, refreshVacationStatus, refreshStreaks]);
+    refreshOnCall();
+  }, [loadAll, refreshVacationStatus, refreshStreaks, refreshOnCall]);
+
+  // The banner's "time left" and its disappearance at shift end follow the
+  // local clock, so tick once a minute.
+  useEffect(() => {
+    const id = setInterval(() => setClock(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const currentShift = activeShift(onCallShifts, clock);
 
   /* ── Reload tasks for a single header ── */
   const reloadHeaderTasks = useCallback(async (headerId: string) => {
@@ -511,6 +540,32 @@ function App() {
               </button>
             </div>
           )}
+        {/* On call right now — shown in every view, including On-call. */}
+        {currentShift && (
+          <div
+            className={`app-oncall-banner app-oncall-banner--${currentShift.type}`}
+            role="status"
+          >
+            <span className="app-oncall-banner__text">
+              <strong>
+                {currentShift.type === "primary" ? "Primary" : "Secondary"} on
+                call now
+              </strong>{" "}
+              · until{" "}
+              {currentShift.end === "24:00" ? "midnight" : currentShift.end} ·{" "}
+              {formatDuration(minutesLeft(currentShift, clock))} left
+            </span>
+            {!onCallMode && (
+              <button
+                className="app-oncall-banner__btn"
+                onClick={() => togglePanelMode(setOnCallMode)}
+                aria-label="Manage on-call"
+              >
+                Manage
+              </button>
+            )}
+          </div>
+        )}
         {/* View-mode toggle buttons at the top */}
         <div
           style={{
@@ -518,6 +573,9 @@ function App() {
             display: "flex",
             gap: "12px",
             justifyContent: "flex-end",
+            // Ten toggles no longer fit one row on a narrow window; wrapping
+            // keeps the leftmost ones reachable instead of clipping them.
+            flexWrap: "wrap",
           }}
         >
           <button
@@ -733,6 +791,29 @@ function App() {
             </svg>
             Vacation
           </button>
+          <button
+            className={`readme-heading__add-btn oncall-toggle-btn${onCallMode ? " oncall-toggle-btn--active" : ""}`}
+            onClick={() => togglePanelMode(setOnCallMode)}
+            aria-label={onCallMode ? "Hide on-call" : "Show on-call"}
+            aria-pressed={onCallMode}
+            title={
+              onCallMode
+                ? "On-call on — your shifts, kept separate from tasks"
+                : "Manage on-call shifts (kept separate from tasks)"
+            }
+            style={{
+              width: "auto",
+              padding: "8px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+              <path d="M8 16a2 2 0 0 0 1.985-1.75c.017-.137-.097-.25-.235-.25h-3.5c-.138 0-.252.113-.235.25A2 2 0 0 0 8 16ZM3 5a5 5 0 0 1 10 0v2.947c0 .05.015.098.042.139l1.703 2.555A1.519 1.519 0 0 1 13.482 13H2.518a1.516 1.516 0 0 1-1.263-2.36l1.703-2.554A.255.255 0 0 0 3 7.947Zm5-3.5A3.5 3.5 0 0 0 4.5 5v2.947c0 .346-.102.683-.294.97l-1.703 2.556a.017.017 0 0 0-.003.01l.001.006c0 .002.002.004.004.006l.006.004.007.001h10.964l.007-.001.006-.004.004-.006.001-.007a.017.017 0 0 0-.003-.01l-1.703-2.554a1.745 1.745 0 0 1-.294-.97V5A3.5 3.5 0 0 0 8 1.5Z" />
+            </svg>
+            On-call
+          </button>
         </div>
 
         {/* Add Header on its own row, todo view only */}
@@ -743,7 +824,8 @@ function App() {
           !projectsMode &&
           !affirmationsMode &&
           !callsMode &&
-          !vacationMode && (
+          !vacationMode &&
+          !onCallMode && (
             <div
               style={{
                 marginBottom: "24px",
@@ -803,6 +885,7 @@ function App() {
           !projectsMode &&
           !affirmationsMode &&
           !callsMode &&
+          !onCallMode &&
           vacationMode && (
             <VacationPanel
               onTasksChanged={async () => {
@@ -812,6 +895,8 @@ function App() {
             />
           )}
 
+        {onCallMode && <OnCallPanel onShiftsChanged={refreshOnCall} />}
+
         {!insightsMode &&
           !eventsMode &&
           !lifeEventsMode &&
@@ -820,6 +905,7 @@ function App() {
           !affirmationsMode &&
           !callsMode &&
           !vacationMode &&
+          !onCallMode &&
           !byDateMode &&
           headers.map((header, idx) => {
             const visibleTasks = header.tasks;
@@ -961,6 +1047,7 @@ function App() {
           !affirmationsMode &&
           !callsMode &&
           !vacationMode &&
+          !onCallMode &&
           !byDateMode &&
           headers.length === 0 && (
             <p className="empty-message">No headers yet — add one!</p>
@@ -974,6 +1061,7 @@ function App() {
           !affirmationsMode &&
           !callsMode &&
           !vacationMode &&
+          !onCallMode &&
           byDateMode && (
             <>
               {byDateSections.map((section, sectionIdx) => (

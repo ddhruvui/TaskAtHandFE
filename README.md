@@ -28,6 +28,7 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   - **Affirmations** — short lines to read daily (see below)
   - **Calls** — people to call biweekly or monthly (see below)
   - **Vacation** — days off, where missed work isn't procrastination (see below)
+  - **On-call** — your on-call shifts, kept separate from tasks (see below)
 
   The panel toggles (everything except By Date) are mutually exclusive:
   clicking one opens that panel and deactivates whichever was open, and
@@ -151,6 +152,18 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
   **Streaks restart on return rather than spanning the break.** While away, the
   Insights numbers freeze at the day before departure and coach reports are
   skipped entirely; the first report back opens with a restart plan
+- **On-call view** — on-call shifts (date, start–end, primary or secondary),
+  **recorded separately: they never change a task**. A week timeline (Mon–Sun,
+  ‹ › to move between weeks, weekly primary/secondary hours) draws each shift as
+  a bar — **primary solid red, secondary a dashed red outline** — with an
+  overnight shift split across the two days and a line marking now. Below it,
+  the upcoming shifts with edit/delete. The add dialog takes the shorthand
+  `11/16 9-22` (add `s` for secondary; `22-6` runs past midnight; `24` is a
+  legal end) and fills the date/time fields, which stay editable; Primary is
+  the default. Overlapping shifts are rejected by the backend. Ended shifts
+  disappear on your clock the minute they end, and the backend cron deletes
+  them overnight — there is no past list. **A running shift shows an "on call
+  now · Xh left" banner in every view.**
 - **Insights view** — powered by the backend's archive and insights endpoints:
   - Habit cards: completion %, current/best streak, the **all-time** number of
     times the habit has been done, and a dot row of recent scheduled days
@@ -176,7 +189,7 @@ REST API (base URL from `VITE_API_BASE_URL` in `.env`).
 ```
 src/
 ├── App.tsx                    # Main app: header/task views + mode toggles
-├── types.ts                   # Shared types (Task, Header, ECD, Insight*, HabitStat, Vacation*)
+├── types.ts                   # Shared types (Task, Header, ECD, Insight*, HabitStat, Vacation*, OnCallShift)
 ├── api/
 │   ├── client.ts              # fetch wrapper (VITE_API_BASE_URL)
 │   ├── headers.ts / tasks.ts  # CRUD calls
@@ -187,6 +200,7 @@ src/
 │   ├── affirmations.ts        # /affirmations CRUD (short daily lines)
 │   ├── calls.ts               # /calls CRUD (people to call biweekly/monthly)
 │   ├── vacations.ts           # /vacations CRUD + /status + the re-date task list
+│   ├── oncall.ts              # /oncall CRUD (on-call shifts; never affects tasks)
 │   └── insights.ts            # /insights/stats, /insights/latest, /insights/generate
 ├── components/
 │   ├── TaskCard/  HeaderModal/  AddTaskModal/  ConfirmModal/  EditNotesModal/
@@ -199,11 +213,13 @@ src/
 │   ├── ProjectsPanel/  ProjectModal/  ProjectTaskModal/ # Projects view
 │   ├── AffirmationsPanel/  AffirmationModal/            # Affirmations view
 │   ├── CallsPanel/  CallModal/                          # Calls view
-│   └── VacationPanel/  VacationModal/                   # Vacation view
+│   ├── VacationPanel/  VacationModal/                   # Vacation view
+│   └── OnCallPanel/  OnCallModal/                       # On-call view (week timeline)
 ├── utils/ecd.ts               # ECD due-today/date-key helpers
 ├── utils/goalSync.ts          # goal step ↔ todo sync + habit-day helpers
 ├── utils/projectSync.ts       # project task ↔ todo sync helpers
-└── utils/lifeEventSync.ts     # life event ↔ todo sync helpers
+├── utils/lifeEventSync.ts     # life event ↔ todo sync helpers
+└── utils/oncall.ts            # on-call shift maths, quick-add parser, week timeline
 ```
 
 ## Setup & Run

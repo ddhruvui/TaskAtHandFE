@@ -129,6 +129,18 @@ Validates frontend wrapper methods for the Vacations collection (7 tests):
 | remove DELETEs and returns the deleted id | Delete request maps to correct endpoint and method |
 | propagates the backend's overlap rejection | An overlapping range rejects rather than resolving — overlaps would double-count a day |
 
+### `src/api/oncall.test.ts`
+
+Validates frontend wrapper methods for on-call shifts (5 tests):
+
+| Test | What it checks |
+| --- | --- |
+| getAll calls GET `/oncall` and returns the list | Wrapper maps to the correct endpoint |
+| create POSTs the shift body | `{ date, start, end }` is serialized; type left to the server default |
+| update PUTs a partial body to `/oncall/:id` | Only the fields given are sent |
+| remove DELETEs `/oncall/:id` | Delete request maps to correct endpoint and method |
+| propagates API errors | An overlap rejection rejects rather than resolving |
+
 ### `src/api/insights.test.ts`
 
 Validates frontend wrapper methods for the Insights endpoints (5 tests):
@@ -155,6 +167,19 @@ Validates the ECD utility functions with a fixed fake system time (40 tests):
 | `formatDateKey` | YYYY-MM-DD → "Fri, Jun 26, 2026" heading format |
 | `isValidYearDate` | valid D/M/YYYY, rejected formats, format-only (no range check) |
 | `buildEcdFromInputs` | all five modes incl. validation errors (bad date format, empty weekdays, out-of-range month days, bad yearly format) and trimming |
+
+### `src/utils/oncall.test.ts`
+
+Validates on-call shift maths, the quick-add parser and the week timeline against a fixed "now" (Mon Nov 9 2026, 17:48 local) (17 tests):
+
+| Function | Coverage |
+| --- | --- |
+| `shiftMinutes` / `isOvernight` / `shiftEnd` | same-day, overnight, `24:00` and empty shifts; an overnight end lands on the next local day |
+| `isActive` / `isEnded` / `minutesLeft` | a running shift and its time left; an ended shift; yesterday's overnight shift survives until 06:00 |
+| `upcomingShifts` / `activeShift` | ended shifts dropped, start order; primary wins when two run at once |
+| `formatDuration` | `13h`, `8h 30m`, `45m` |
+| `parseQuickAdd` | `11/16 9-22` → primary; minutes, overnight, `24` end; `s`/`sec`/`secondary` suffix; year roll-over (yesterday kept); malformed/impossible/equal-time input → null |
+| `weekStartKey` / `weekSegments` / `weekTotals` | Monday weeks; an overnight shift split into two bars, including across a week boundary; per-type minutes inside the week only |
 
 ### `src/utils/projectSync.test.ts`
 

@@ -223,6 +223,80 @@
   border-color: #0b7285 !important;
 }
 
+/* ─── On-call toggle button active state ───
+   Red: the one hue no other view uses, and it reads as "pager". */
+.oncall-toggle-btn--active {
+  background: #cf222e !important;
+  border-color: #cf222e !important;
+  color: #ffffff !important;
+}
+
+.oncall-toggle-btn--active:hover {
+  background: #a40e26 !important;
+  border-color: #a40e26 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .oncall-toggle-btn--active {
+    background: #da3633 !important;
+    border-color: #da3633 !important;
+  }
+
+  .oncall-toggle-btn--active:hover {
+    background: #f85149 !important;
+    border-color: #f85149 !important;
+  }
+}
+
+/* ── On-call banner ──
+   Same shape and purple tint as the vacation banner, with a red left edge
+   (solid for primary, dashed for secondary) so a running shift stands out. */
+.app-oncall-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
+  border-left: 4px solid #cf222e;
+  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.app-oncall-banner--secondary {
+  border-left-style: dashed;
+}
+
+.app-oncall-banner__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-oncall-banner__btn {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--accent, #aa3bff);
+  background: none;
+  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.5));
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.app-oncall-banner__btn:hover {
+  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-oncall-banner {
+    border-left-color: #da3633;
+  }
+}
+
 /* ─── Vacation toggle button active state ─── */
 .vacation-toggle-btn--active {
   background: #bf8700 !important;
